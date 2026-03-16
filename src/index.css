@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-purple: #4A00F8;
+  --color-purple-light: #7C3AED;
+  --color-purple-pale: #EDE9FF;
+  --color-purple-faint: #F5F3FF;
+  --color-navy: #0F0A2E;
+  --color-gray: #6B7A8D;
+  --color-gray-light: #E8EAF0;
+  --color-gray-faint: #F8F9FA;
+  --color-amber: #F59E0B;
+  --color-amber-light: #FEF3C7;
+  --color-green: #10B981;
+  --color-green-light: #D1FAE5;
+  --color-red: #EF4444;
+  --color-red-light: #FEE2E2;
+  --color-ice: #F0EEE9;
+
+  --font-family-sans: 'Inter', system-ui, sans-serif;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: #F0EEE9;
+}
+
+.fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pulse-dot {
+  animation: pulseDot 2s ease-in-out infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #E8EAF0; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #6B7A8D; }
+
+/* Radio / checkbox resets */
+input[type="radio"], input[type="checkbox"] {
+  accent-color: #4A00F8;
+}
+
+/* Textarea */
+textarea:focus, input:focus, select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #EDE9FF, 0 0 0 4px #4A00F8;
+}
+
+/* Transition helpers */
+.transition-all-fast {
+  transition: all 0.15s ease;
+}

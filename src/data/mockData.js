@@ -1,0 +1,104 @@
+export const USERS = {
+  superadmin: { id: 'u1', name: 'Maria Santos', role: 'Super Admin', email: 'maria.santos@beroe.com', avatar: 'MS' },
+  admin: { id: 'u2', name: 'Sarah Chen', role: 'Admin', email: 'sarah.chen@beroe.com', avatar: 'SC' },
+  researcher: { id: 'u3', name: 'Marco Rossi', role: 'Researcher', email: 'm.rossi@beroe.com', avatar: 'MR' },
+};
+
+export const EXPERTS = [
+  { id: 'e1', name: 'Dr. James Wright', email: 'j.wright@steelcorp.com', company: 'SteelCorp', title: 'VP Procurement', expertise: ['Steel', 'Metals'], status: 'Active', tags: ['Tier 1', 'NA Region'], waves: 4 },
+  { id: 'e2', name: 'Anna Kowalski', email: 'a.kowalski@mfg.pl', company: 'EuroMfg', title: 'Category Manager', expertise: ['Steel', 'Raw Materials'], status: 'Active', tags: ['EU Region'], waves: 2 },
+  { id: 'e3', name: 'Raj Patel', email: 'r.patel@tata.com', company: 'Tata Steel', title: 'Head of Sourcing', expertise: ['Steel', 'APAC Markets'], status: 'Active', tags: ['APAC Region', 'Tier 1'], waves: 3 },
+  { id: 'e4', name: 'Sophie Dubois', email: 's.dubois@arcelormittal.com', company: 'ArcelorMittal', title: 'Market Analyst', expertise: ['Steel', 'Flat Products'], status: 'Active', tags: ['EU Region'], waves: 1 },
+  { id: 'e5', name: 'Carlos Mendez', email: 'c.mendez@ternium.com', company: 'Ternium', title: 'Procurement Director', expertise: ['Steel', 'LATAM'], status: 'Active', tags: ['LATAM Region', 'Tier 1'], waves: 2 },
+  { id: 'e6', name: 'Linda Park', email: 'l.park@posco.com', company: 'POSCO', title: 'Strategic Buyer', expertise: ['Steel', 'APAC Markets'], status: 'Opted-out', tags: ['APAC Region'], waves: 1 },
+];
+
+export const PROJECTS = [
+  {
+    id: 'p1', name: 'Q2 2026 Steel Market Signal', category: 'Metals & Mining', owner: 'Sarah Chen',
+    status: 'Active', created: '2026-03-01', surveysCount: 2, lastActivity: '2026-03-10',
+  },
+  {
+    id: 'p2', name: 'H1 2026 Chemical Feedstocks', category: 'Chemicals', owner: 'Marco Rossi',
+    status: 'Active', created: '2026-02-15', surveysCount: 1, lastActivity: '2026-03-08',
+  },
+  {
+    id: 'p3', name: 'Q1 2026 Packaging Trends', category: 'Packaging', owner: 'Sarah Chen',
+    status: 'Active', created: '2026-01-10', surveysCount: 3, lastActivity: '2026-03-05',
+  },
+];
+
+export const SURVEYS = [
+  {
+    id: 's1', projectId: 'p1', name: 'Steel Price Outlook — Wave 1',
+    status: 'Running', wave: 1,
+    createdBy: 'Marco Rossi', approvedBy: 'Sarah Chen',
+    sendDate: '2026-03-05', closeDate: '2026-03-20',
+    expertsTargeted: 5, responsesReceived: 3, responseRate: 60,
+    questions: [
+      { id: 'q1', type: 'single_choice', required: true, text: 'How do you expect hot-rolled coil (HRC) prices to trend in Q3 2026?', options: ['Increase >10%', 'Increase 5–10%', 'Stay flat (±5%)', 'Decrease 5–10%', 'Decrease >10%'] },
+      { id: 'q2', type: 'single_choice', required: true, text: 'What is your primary steel procurement region?', options: ['North America', 'Europe', 'Asia-Pacific', 'Latin America', 'Middle East & Africa'] },
+      { id: 'q3', type: 'rating_scale', required: true, text: 'How confident are you in your supply chain stability over the next 6 months?', scale: 5, labels: ['Very low', 'Very high'] },
+      { id: 'q4', type: 'multi_choice', required: false, text: 'Which factors are most influencing your steel procurement strategy? (select all that apply)', options: ['Energy costs', 'Raw material availability', 'Logistics disruptions', 'Currency fluctuations', 'Geopolitical risk', 'Demand shifts'] },
+      { id: 'q5', type: 'open_text', required: false, text: 'What are the top 1–2 risks you are monitoring in the steel market over the next quarter?' },
+    ],
+    responses: [
+      { expertId: 'e1', expertName: 'Dr. James Wright', company: 'SteelCorp', submittedAt: '2026-03-06 09:12', answers: { q1: 'Increase 5–10%', q2: 'North America', q3: 4, q4: ['Energy costs', 'Logistics disruptions'], q5: 'Rising energy costs in EU and potential trade tariffs from US remain key watch points.' }, excluded: false, annotation: '' },
+      { expertId: 'e2', expertName: 'Anna Kowalski', company: 'EuroMfg', submittedAt: '2026-03-07 14:35', answers: { q1: 'Stay flat (±5%)', q2: 'Europe', q3: 3, q4: ['Geopolitical risk', 'Currency fluctuations'], q5: 'EU demand softness and geopolitical uncertainty around eastern Europe.' }, excluded: false, annotation: 'Outlook more conservative than panel average' },
+      { expertId: 'e3', expertName: 'Raj Patel', company: 'Tata Steel', submittedAt: '2026-03-08 11:20', answers: { q1: 'Increase >10%', q2: 'Asia-Pacific', q3: 4, q4: ['Raw material availability', 'Demand shifts'], q5: 'India infrastructure spend driving significant demand. Iron ore tightness is a real concern.' }, excluded: true, annotation: 'Outlier — APAC-specific view, not representative of global panel' },
+    ],
+    reminders: [{ sent: '2026-03-12', type: 'Reminder 1' }],
+    emailStatus: [
+      { expertId: 'e1', expertName: 'Dr. James Wright', status: 'opened', lastEvent: '2026-03-05' },
+      { expertId: 'e2', expertName: 'Anna Kowalski', status: 'opened', lastEvent: '2026-03-06' },
+      { expertId: 'e3', expertName: 'Raj Patel', status: 'clicked', lastEvent: '2026-03-05' },
+      { expertId: 'e4', expertName: 'Sophie Dubois', status: 'delivered', lastEvent: '2026-03-05' },
+      { expertId: 'e5', expertName: 'Carlos Mendez', status: 'bounced', lastEvent: '2026-03-05' },
+    ],
+  },
+  {
+    id: 's2', projectId: 'p1', name: 'Steel Supply Chain Risk — Wave 1',
+    status: 'Submitted', wave: 1,
+    createdBy: 'Marco Rossi', approvedBy: null,
+    sendDate: null, closeDate: null,
+    expertsTargeted: 4, responsesReceived: 0, responseRate: 0,
+    questions: [
+      { id: 'q1', type: 'single_choice', required: true, text: 'How would you rate the current supply chain risk level for steel procurement?', options: ['Critical', 'High', 'Medium', 'Low', 'Minimal'] },
+      { id: 'q2', type: 'multi_choice', required: true, text: 'Which supply chain risks are most critical to your organisation?', options: ['Supplier concentration', 'Port congestion', 'Raw material shortages', 'Quality inconsistency', 'Lead time volatility', 'Regulatory changes'] },
+      { id: 'q3', type: 'open_text', required: false, text: 'Describe any recent supply disruptions and how your team mitigated them.' },
+    ],
+    responses: [],
+    reminders: [],
+    emailStatus: [],
+  },
+  {
+    id: 's3', projectId: 'p2', name: 'Ethylene Pricing Outlook — Wave 2',
+    status: 'Review', wave: 2,
+    createdBy: 'Sarah Chen', approvedBy: 'Maria Santos',
+    sendDate: '2026-02-20', closeDate: '2026-03-08',
+    closeTimestamp: '2026-03-08T23:59:00',
+    autoTransferDate: '2026-03-15',
+    expertsTargeted: 6, responsesReceived: 5, responseRate: 83,
+    questions: [
+      { id: 'q1', type: 'single_choice', required: true, text: 'Where do you expect ethylene contract prices to be in Q3 2026?', options: ['Significantly higher (>15%)', 'Moderately higher (5–15%)', 'Flat (±5%)', 'Moderately lower (5–15%)', 'Significantly lower (>15%)'] },
+      { id: 'q2', type: 'rating_scale', required: true, text: 'Rate feedstock availability confidence for next 6 months', scale: 5, labels: ['Very low', 'Very good'] },
+      { id: 'q3', type: 'open_text', required: false, text: 'Any key market observations for Q2–Q3 2026?' },
+    ],
+    responses: [
+      { expertId: 'e1', expertName: 'Dr. James Wright', company: 'SteelCorp', submittedAt: '2026-02-22', answers: { q1: 'Moderately higher (5–15%)', q2: 3, q3: 'Naphtha feedstock remains tight in Asia.' }, excluded: false, annotation: '' },
+      { expertId: 'e2', expertName: 'Anna Kowalski', company: 'EuroMfg', submittedAt: '2026-02-24', answers: { q1: 'Flat (±5%)', q2: 4, q3: null }, excluded: false, annotation: '' },
+      { expertId: 'e3', expertName: 'Raj Patel', company: 'Tata Steel', submittedAt: '2026-02-25', answers: { q1: 'Significantly higher (>15%)', q2: 2, q3: 'Cracker outages in Middle East adding pressure.' }, excluded: false, annotation: '' },
+      { expertId: 'e4', expertName: 'Sophie Dubois', company: 'ArcelorMittal', submittedAt: '2026-02-28', answers: { q1: 'Moderately higher (5–15%)', q2: 3, q3: null }, excluded: false, annotation: '' },
+      { expertId: 'e5', expertName: 'Carlos Mendez', company: 'Ternium', submittedAt: '2026-03-01', answers: { q1: 'Flat (±5%)', q2: 4, q3: 'LATAM demand recovery could absorb spare capacity.' }, excluded: false, annotation: '' },
+    ],
+    reminders: [],
+    emailStatus: [],
+  },
+];
+
+export const AUDIT_EVENTS = [
+  { id: 'a1', user: 'Marco Rossi', action: 'Survey submitted for approval', target: 'Steel Supply Chain Risk — Wave 1', timestamp: '2026-03-10 16:42' },
+  { id: 'a2', user: 'Sarah Chen', action: 'Survey launched', target: 'Steel Price Outlook — Wave 1', timestamp: '2026-03-05 08:00' },
+  { id: 'a3', user: 'Sarah Chen', action: 'Reminder email sent', target: 'Steel Price Outlook — Wave 1', timestamp: '2026-03-12 09:00' },
+  { id: 'a4', user: 'Maria Santos', action: 'Expert record updated', target: 'Dr. James Wright', timestamp: '2026-03-09 11:15' },
+];
