@@ -55,6 +55,38 @@ export function AppProvider({ children }) {
     return newExpert;
   };
 
+  const createSurvey = ({ projectId, name, questions, status = 'Draft' }) => {
+    const wave = surveys.filter(s => s.projectId === projectId).length + 1;
+    const newSurvey = {
+      id: `s${Date.now()}`,
+      projectId,
+      name,
+      status,
+      wave,
+      createdBy: currentUser.name,
+      approvedBy: null,
+      sendDate: null,
+      closeDate: null,
+      expertsTargeted: experts.length,
+      responsesReceived: 0,
+      responseRate: 0,
+      questions,
+      responses: [],
+      reminders: [],
+      emailStatus: [],
+    };
+    setSurveys(prev => [...prev, newSurvey]);
+    addToast(status === 'Draft' ? 'Draft saved' : 'Survey submitted for approval');
+    return newSurvey;
+  };
+
+  const updateSurvey = ({ surveyId, name, questions, status }) => {
+    setSurveys(prev => prev.map(s =>
+      s.id === surveyId ? { ...s, name, questions, ...(status ? { status } : {}) } : s
+    ));
+    addToast(status === 'Submitted' ? 'Survey submitted for approval' : 'Draft saved');
+  };
+
   const deleteSurvey = (surveyId) => {
     setSurveys(prev => prev.filter(s => s.id !== surveyId));
     addToast('Survey deleted', 'warning');
@@ -118,7 +150,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       currentUser, switchRole,
       surveys, projects, experts, auditEvents,
-      createProject, createExpert, deleteSurvey,
+      createProject, createExpert, createSurvey, updateSurvey, deleteSurvey,
       approveSurvey, rejectSurvey, launchSurvey,
       toggleExclusion, updateAnnotation, transferToDataHub,
       toasts, addToast, removeToast,

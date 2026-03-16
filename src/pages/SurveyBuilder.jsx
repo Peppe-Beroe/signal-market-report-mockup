@@ -375,7 +375,7 @@ function ExpertPreview({ surveyName, questions, currentQIndex, setCurrentQIndex,
 export default function SurveyBuilder({ mode = 'create' }) {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, addToast } = useApp();
+  const { surveys, projects, addToast, createSurvey, updateSurvey } = useApp();
 
   const project = projects.find(p => p.id === projectId);
   const existingSurvey = surveys.find(s => s.id === surveyId);
@@ -425,7 +425,13 @@ export default function SurveyBuilder({ mode = 'create' }) {
   };
 
   const handleSaveDraft = () => {
-    addToast('Draft saved successfully');
+    if (!surveyName.trim()) { addToast('Please enter a survey name first.', 'warning'); return; }
+    if (mode === 'edit' && surveyId) {
+      updateSurvey({ surveyId, name: surveyName, questions });
+    } else {
+      const saved = createSurvey({ projectId, name: surveyName, questions, status: 'Draft' });
+      navigate(`/projects/${projectId}/surveys/${saved.id}/builder`, { replace: true });
+    }
   };
 
   const handleSubmitForApproval = () => {
@@ -436,7 +442,11 @@ export default function SurveyBuilder({ mode = 'create' }) {
 
   const confirmSubmit = () => {
     setShowConfirmModal(false);
-    addToast('Survey submitted for approval');
+    if (mode === 'edit' && surveyId) {
+      updateSurvey({ surveyId, name: surveyName, questions, status: 'Submitted' });
+    } else {
+      createSurvey({ projectId, name: surveyName, questions, status: 'Submitted' });
+    }
     navigate(`/projects/${projectId}`);
   };
 
