@@ -1,15 +1,20 @@
 import { useState } from 'react';
-import { Search, Plus, Mail, Building2, Tag } from 'lucide-react';
+import { Search, Plus, Mail, Building2, Tag, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import StatusBadge from '../components/ui/StatusBadge';
 import Button from '../components/ui/Button';
 
+const EMPTY_FORM = { name: '', email: '', company: '', title: '', expertise: '', tags: '' };
+
 export default function ExpertDatabase() {
-  const { experts, addToast } = useApp();
+  const { experts, createExpert } = useApp();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState({});
 
   const filtered = experts.filter(e => {
     const matchSearch = e.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -19,6 +24,47 @@ export default function ExpertDatabase() {
     return matchSearch && matchStatus;
   });
 
+  const validate = () => {
+    const errs = {};
+    if (!form.name.trim()) errs.name = 'Name is required';
+    if (!form.email.trim()) errs.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Enter a valid email';
+    if (!form.company.trim()) errs.company = 'Company is required';
+    if (!form.title.trim()) errs.title = 'Title is required';
+    return errs;
+  };
+
+  const handleCreate = () => {
+    const errs = validate();
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    createExpert(form);
+    setShowModal(false);
+    setForm(EMPTY_FORM);
+    setErrors({});
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setForm(EMPTY_FORM);
+    setErrors({});
+  };
+
+  const field = (key, label, placeholder, required = false) => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+        {label} {required && <span className="text-red-400">*</span>}
+      </label>
+      <input
+        type={key === 'email' ? 'email' : 'text'}
+        value={form[key]}
+        onChange={e => { setForm(f => ({ ...f, [key]: e.target.value })); setErrors(er => ({ ...er, [key]: '' })); }}
+        placeholder={placeholder}
+        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors ${errors[key] ? 'border-red-300 focus:border-red-400' : 'border-gray-200 focus:border-purple-400'}`}
+      />
+      {errors[key] && <p className="text-xs text-red-500 mt-1">{errors[key]}</p>}
+    </div>
+  );
+
   return (
     <div className="p-6 max-w-6xl mx-auto fade-in">
       <div className="flex items-center justify-between mb-6">
@@ -26,7 +72,7 @@ export default function ExpertDatabase() {
           <h1 className="text-2xl font-bold text-gray-900">Expert Database</h1>
           <p className="text-sm text-gray-500 mt-1">{experts.length} experts · {experts.filter(e => e.status === 'Active').length} active</p>
         </div>
-        <Button onClick={() => addToast('Expert creation is not available in this demo preview.', 'info')}>
+        <Button onClick={() => setShowModal(true)}>
           <Plus size={16} />
           Add Expert
         </Button>
@@ -131,6 +177,54 @@ export default function ExpertDatabase() {
           </table>
         </div>
       </Card>
+
+      {/* Add Expert Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-gray-900">Add Expert</h2>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {field('name', 'Full name', 'Dr. Jane Smith', true)}
+              {field('email', 'Email address', 'jane.smith@company.com', true)}
+              {field('company', 'Company', 'Acme Corp', true)}
+              {field('title', 'Job title', 'VP Procurement', true)}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Expertise areas</label>
+                <input
+                  type="text"
+                  value={form.expertise}
+                  onChange={e => setForm(f => ({ ...f, expertise: e.target.value }))}
+                  placeholder="Steel, Metals (comma-separated)"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors"
+                />
+                <p className="text-xs text-gray-400 mt-1">Separate multiple values with commas</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Tags</label>
+                <input
+                  type="text"
+                  value={form.tags}
+                  onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
+                  placeholder="Tier 1, EU Region (comma-separated)"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors"
+                />
+                <p className="text-xs text-gray-400 mt-1">Separate multiple values with commas</p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <Button variant="secondary" className="flex-1" onClick={closeModal}>Cancel</Button>
+              <Button className="flex-1" onClick={handleCreate}>Add Expert</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

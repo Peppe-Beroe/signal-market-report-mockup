@@ -1,17 +1,31 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Play, BarChart2, Eye, ExternalLink, Users, Calendar, ChevronRight } from 'lucide-react';
+import { Plus, Edit2, Trash2, Play, BarChart2, Eye, ExternalLink, Users, Calendar, ChevronRight, Mail, Shield, UserCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { USERS } from '../data/mockData';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import StatusBadge from '../components/ui/StatusBadge';
 import Button from '../components/ui/Button';
 
+const ROLE_COLORS = {
+  'Super Admin': 'purple',
+  'Admin': 'blue',
+  'Researcher': 'green',
+};
+
+const MOCK_TEAM = [
+  { ...USERS.superadmin, projectRole: 'Owner' },
+  { ...USERS.admin, projectRole: 'Editor' },
+  { ...USERS.researcher, projectRole: 'Editor' },
+];
+
 export default function ProjectDetail() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { projects, surveys, currentUser, launchSurvey, addToast } = useApp();
+  const { projects, surveys, currentUser, launchSurvey, deleteSurvey } = useApp();
   const [activeTab, setActiveTab] = useState('surveys');
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const project = projects.find(p => p.id === projectId);
   if (!project) return (
@@ -24,6 +38,11 @@ export default function ProjectDetail() {
   const projectSurveys = surveys.filter(s => s.projectId === projectId);
   const isAdminOrAbove = currentUser.role === 'Admin' || currentUser.role === 'Super Admin';
 
+  const handleDelete = (surveyId) => {
+    deleteSurvey(surveyId);
+    setConfirmDeleteId(null);
+  };
+
   const getActions = (survey) => {
     const actions = [];
     switch (survey.status) {
@@ -31,11 +50,32 @@ export default function ProjectDetail() {
         actions.push(
           <Button key="edit" size="xs" variant="secondary" onClick={() => navigate(`/projects/${projectId}/surveys/${survey.id}/builder`)}>
             <Edit2 size={12} /> Edit
-          </Button>,
-          <Button key="del" size="xs" variant="ghost" onClick={() => addToast('Delete is not available in this demo preview.', 'info')} className="text-red-400 hover:text-red-600">
-            <Trash2 size={12} />
           </Button>
         );
+        if (confirmDeleteId === survey.id) {
+          actions.push(
+            <span key="confirm" className="flex items-center gap-1">
+              <button
+                onClick={() => handleDelete(survey.id)}
+                className="text-xs font-medium text-white bg-red-500 hover:bg-red-600 px-2 py-1 rounded-lg transition-colors"
+              >
+                Delete?
+              </button>
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="text-xs text-gray-400 hover:text-gray-600 px-1"
+              >
+                Cancel
+              </button>
+            </span>
+          );
+        } else {
+          actions.push(
+            <Button key="del" size="xs" variant="ghost" onClick={() => setConfirmDeleteId(survey.id)} className="text-red-400 hover:text-red-600">
+              <Trash2 size={12} />
+            </Button>
+          );
+        }
         break;
       case 'Submitted':
         if (isAdminOrAbove) {
@@ -127,7 +167,7 @@ export default function ProjectDetail() {
             }`}
             style={activeTab === tab ? { backgroundColor: '#4A00F8' } : {}}
           >
-            {tab === 'surveys' ? `Surveys (${projectSurveys.length})` : 'Team'}
+            {tab === 'surveys' ? `Surveys (${projectSurveys.length})` : `Team (${MOCK_TEAM.length})`}
           </button>
         ))}
       </div>
@@ -211,11 +251,66 @@ export default function ProjectDetail() {
 
       {/* Team tab */}
       {activeTab === 'team' && (
-        <Card className="p-10 text-center">
-          <Users size={36} className="text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">Team management</p>
-          <p className="text-sm text-gray-400 mt-1">Coming soon — invite collaborators and set permissions per project</p>
-        </Card>
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-gray-500">{MOCK_TEAM.length} members with access to this project</p>
+            <Button onClick={() => {}}>
+              <Plus size={16} />
+              Invite Member
+            </Button>
+          </div>
+          <Card>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-5 py-3">Member</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Platform Role</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Project Role</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Access</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {MOCK_TEAM.map(member => (
+                    <tr key={member.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                            style={{ backgroundColor: '#4A00F8' }}
+                          >
+                            {member.avatar}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-800">{member.name}</p>
+                            <div className="flex items-center gap-1 text-xs text-gray-400">
+                              <Mail size={10} />
+                              {member.email}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <Badge color={ROLE_COLORS[member.role] || 'gray'} size="xs">{member.role}</Badge>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="flex items-center gap-1.5 text-sm text-gray-700">
+                          {member.projectRole === 'Owner'
+                            ? <><Shield size={13} className="text-purple-500" /> Owner</>
+                            : <><UserCheck size={13} className="text-blue-500" /> Editor</>
+                          }
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="text-xs text-green-600 font-medium bg-green-50 border border-green-100 px-2 py-0.5 rounded">Active</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
       )}
     </div>
   );

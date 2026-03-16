@@ -1,23 +1,33 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, FolderOpen, Calendar, User, FileText } from 'lucide-react';
+import { Search, Plus, FolderOpen, Calendar, User, FileText, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import StatusBadge from '../components/ui/StatusBadge';
 import Button from '../components/ui/Button';
 
+const CATEGORIES = ['Metals & Mining', 'Chemicals', 'Packaging', 'Energy', 'Agriculture', 'Technology', 'Healthcare', 'Consumer Goods'];
+
 const categoryColors = {
   'Metals & Mining': 'purple',
   'Chemicals': 'amber',
   'Packaging': 'green',
+  'Energy': 'blue',
+  'Agriculture': 'green',
+  'Technology': 'purple',
+  'Healthcare': 'blue',
+  'Consumer Goods': 'amber',
 };
 
 export default function ProjectsList() {
-  const { projects, surveys, addToast } = useApp();
+  const { projects, surveys, createProject } = useApp();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ name: '', category: CATEGORIES[0] });
+  const [errors, setErrors] = useState({});
 
   const categories = ['All', ...new Set(projects.map(p => p.category))];
 
@@ -28,6 +38,24 @@ export default function ProjectsList() {
     return matchSearch && matchFilter;
   });
 
+  const handleCreate = () => {
+    const errs = {};
+    if (!form.name.trim()) errs.name = 'Project name is required';
+    if (!form.category) errs.category = 'Category is required';
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    const project = createProject(form);
+    setShowModal(false);
+    setForm({ name: '', category: CATEGORIES[0] });
+    setErrors({});
+    navigate(`/projects/${project.id}`);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setForm({ name: '', category: CATEGORIES[0] });
+    setErrors({});
+  };
+
   return (
     <div className="p-6 max-w-6xl mx-auto fade-in">
       <div className="flex items-center justify-between mb-6">
@@ -35,10 +63,7 @@ export default function ProjectsList() {
           <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
           <p className="text-sm text-gray-500 mt-1">{projects.length} projects · {surveys.length} total surveys</p>
         </div>
-        <Button
-          onClick={() => addToast('Project creation is not available in this demo preview.', 'info')}
-          title="Not available in demo"
-        >
+        <Button onClick={() => setShowModal(true)}>
           <Plus size={16} />
           New Project
         </Button>
@@ -127,6 +152,51 @@ export default function ProjectsList() {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {/* New Project Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-gray-900">New Project</h2>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Project name <span className="text-red-400">*</span></label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setErrors(er => ({ ...er, name: '' })); }}
+                  placeholder="e.g. Q3 2026 Packaging Trends"
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors ${errors.name ? 'border-red-300 focus:border-red-400' : 'border-gray-200 focus:border-purple-400'}`}
+                  autoFocus
+                />
+                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Category <span className="text-red-400">*</span></label>
+                <select
+                  value={form.category}
+                  onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors bg-white"
+                >
+                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <Button variant="secondary" className="flex-1" onClick={closeModal}>Cancel</Button>
+              <Button className="flex-1" onClick={handleCreate}>Create Project</Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

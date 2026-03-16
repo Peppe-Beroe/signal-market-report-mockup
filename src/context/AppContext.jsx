@@ -6,8 +6,8 @@ const AppContext = createContext();
 export function AppProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(USERS.admin);
   const [surveys, setSurveys] = useState(SURVEYS);
-  const [projects] = useState(PROJECTS);
-  const [experts] = useState(EXPERTS);
+  const [projects, setProjects] = useState(PROJECTS);
+  const [experts, setExperts] = useState(EXPERTS);
   const [auditEvents] = useState(AUDIT_EVENTS);
   const [toasts, setToasts] = useState([]);
 
@@ -20,6 +20,45 @@ export function AppProvider({ children }) {
   };
 
   const removeToast = (id) => setToasts(prev => prev.filter(t => t.id !== id));
+
+  const createProject = (data) => {
+    const today = new Date().toISOString().split('T')[0];
+    const newProject = {
+      id: `p${Date.now()}`,
+      name: data.name,
+      category: data.category,
+      owner: currentUser.name,
+      status: 'Active',
+      created: today,
+      surveysCount: 0,
+      lastActivity: today,
+    };
+    setProjects(prev => [...prev, newProject]);
+    addToast(`Project "${data.name}" created`);
+    return newProject;
+  };
+
+  const createExpert = (data) => {
+    const newExpert = {
+      id: `e${Date.now()}`,
+      name: data.name,
+      email: data.email,
+      company: data.company,
+      title: data.title,
+      expertise: data.expertise ? data.expertise.split(',').map(s => s.trim()).filter(Boolean) : [],
+      tags: data.tags ? data.tags.split(',').map(s => s.trim()).filter(Boolean) : [],
+      status: 'Active',
+      waves: 0,
+    };
+    setExperts(prev => [...prev, newExpert]);
+    addToast(`Expert "${data.name}" added`);
+    return newExpert;
+  };
+
+  const deleteSurvey = (surveyId) => {
+    setSurveys(prev => prev.filter(s => s.id !== surveyId));
+    addToast('Survey deleted', 'warning');
+  };
 
   const approveSurvey = (surveyId) => {
     setSurveys(prev => prev.map(s =>
@@ -79,6 +118,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       currentUser, switchRole,
       surveys, projects, experts, auditEvents,
+      createProject, createExpert, deleteSurvey,
       approveSurvey, rejectSurvey, launchSurvey,
       toggleExclusion, updateAnnotation, transferToDataHub,
       toasts, addToast, removeToast,

@@ -246,6 +246,134 @@ function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange }
   );
 }
 
+function DistributionTab({ survey }) {
+  const activeResponses = survey.responses.filter(r => !r.excluded);
+
+  // Response timeline — group by date
+  const byDate = activeResponses.reduce((acc, r) => {
+    const date = r.submittedAt.split(' ')[0];
+    acc[date] = (acc[date] || 0) + 1;
+    return acc;
+  }, {});
+  const maxDateCount = Math.max(...Object.values(byDate), 1);
+
+  // Company breakdown
+  const byCompany = activeResponses.reduce((acc, r) => {
+    acc[r.company] = (acc[r.company] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Per-question % distribution for choice questions
+  const choiceQuestions = survey.questions.filter(q => q.type === 'single_choice' || q.type === 'multi_choice');
+
+  if (activeResponses.length === 0) {
+    return (
+      <Card className="p-12 text-center">
+        <p className="text-gray-500 font-medium">No responses to analyse yet</p>
+        <p className="text-sm text-gray-400 mt-1">Distribution data will appear once responses are received</p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Response timeline */}
+      <Card className="p-5">
+        <h3 className="text-sm font-semibold text-gray-800 mb-4">Response Timeline</h3>
+        <div className="space-y-2.5">
+          {Object.entries(byDate).sort().map(([date, count]) => (
+            <div key={date} className="flex items-center gap-3">
+              <span className="text-xs text-gray-500 w-24 flex-shrink-0">{date}</span>
+              <div className="flex-1 h-6 bg-gray-100 rounded overflow-hidden">
+                <div
+                  className="h-full rounded transition-all duration-500 flex items-center px-2"
+                  style={{ width: `${(count / maxDateCount) * 100}%`, backgroundColor: '#4A00F8' }}
+                >
+                  <span className="text-white text-xs font-semibold">{count}</span>
+                </div>
+              </div>
+              <span className="text-xs text-gray-400 w-20 flex-shrink-0">
+                {count} response{count !== 1 ? 's' : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Respondent breakdown by company */}
+      <Card className="p-5">
+        <h3 className="text-sm font-semibold text-gray-800 mb-4">Respondents by Company</h3>
+        <div className="space-y-2.5">
+          {Object.entries(byCompany).sort((a, b) => b[1] - a[1]).map(([company, count]) => {
+            const pct = Math.round((count / activeResponses.length) * 100);
+            return (
+              <div key={company} className="flex items-center gap-3">
+                <span className="text-xs text-gray-600 w-36 flex-shrink-0 truncate" title={company}>{company}</span>
+                <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
+                  <div
+                    className="h-full rounded"
+                    style={{ width: `${pct}%`, backgroundColor: '#7C3AED' }}
+                  />
+                </div>
+                <span className="text-xs font-semibold text-gray-700 w-10 text-right">{pct}%</span>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* % distribution per choice question */}
+      {choiceQuestions.map(q => {
+        const counts = {};
+        if (q.type === 'single_choice') {
+          q.options.forEach(o => counts[o] = 0);
+          activeResponses.forEach(r => {
+            const ans = r.answers[q.id];
+            if (ans) counts[ans] = (counts[ans] || 0) + 1;
+          });
+        } else {
+          q.options.forEach(o => counts[o] = 0);
+          activeResponses.forEach(r => {
+            const ans = r.answers[q.id];
+            if (Array.isArray(ans)) ans.forEach(a => counts[a] = (counts[a] || 0) + 1);
+          });
+        }
+        const total = q.type === 'single_choice'
+          ? activeResponses.length
+          : activeResponses.filter(r => Array.isArray(r.answers[q.id]) && r.answers[q.id].length > 0).length || 1;
+
+        return (
+          <Card key={q.id} className="p-5">
+            <div className="flex items-start gap-2 mb-4">
+              <Badge color="gray" size="xs">Q{q.id.replace('q', '')}</Badge>
+              <p className="text-sm font-semibold text-gray-800 flex-1">{q.text}</p>
+            </div>
+            <div className="space-y-2.5">
+              {Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([option, count]) => {
+                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                return (
+                  <div key={option} className="flex items-center gap-3">
+                    <span className="text-xs text-gray-600 w-44 flex-shrink-0 truncate" title={option}>{option}</span>
+                    <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
+                      <div
+                        className="h-full rounded transition-all duration-500"
+                        style={{ width: `${pct}%`, backgroundColor: pct >= 50 ? '#4A00F8' : pct >= 25 ? '#7C3AED' : '#A78BFA' }}
+                      />
+                    </div>
+                    <span className="text-xs font-semibold text-gray-700 w-10 text-right">{pct}%</span>
+                    <span className="text-xs text-gray-400 w-8 text-right">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-gray-400 mt-3">{activeResponses.length} active response{activeResponses.length !== 1 ? 's' : ''} included</p>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function SurveyResults() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
@@ -447,15 +575,7 @@ export default function SurveyResults() {
 
       {/* Distribution tab */}
       {activeTab === 'distribution' && (
-        <Card className="p-12 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B7A8D" strokeWidth="2">
-              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-            </svg>
-          </div>
-          <p className="text-gray-600 font-semibold text-base mb-1">Full distribution analysis</p>
-          <p className="text-sm text-gray-400">Available after the wave closes on {survey.closeDate}</p>
-        </Card>
+        <DistributionTab survey={survey} />
       )}
     </div>
   );
