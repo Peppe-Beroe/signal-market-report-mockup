@@ -8,8 +8,9 @@ export function AppProvider({ children }) {
   const [surveys, setSurveys] = useState(SURVEYS);
   const [projects, setProjects] = useState(PROJECTS);
   const [experts, setExperts] = useState(EXPERTS);
-  const [auditEvents] = useState(AUDIT_EVENTS);
+  const [auditEvents, setAuditEvents] = useState(AUDIT_EVENTS);
   const [toasts, setToasts] = useState([]);
+  const [templates, setTemplates] = useState([]);
 
   const switchRole = (roleKey) => setCurrentUser(USERS[roleKey]);
 
@@ -20,6 +21,20 @@ export function AppProvider({ children }) {
   };
 
   const removeToast = (id) => setToasts(prev => prev.filter(t => t.id !== id));
+
+  const addAuditEvent = (action, target, targetType = 'survey', details = '') => {
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    setAuditEvents(prev => [{
+      id: `a${Date.now()}`,
+      user: currentUser.name,
+      action,
+      target,
+      targetType,
+      timestamp,
+      details,
+    }, ...prev]);
+  };
 
   const createProject = (data) => {
     const today = new Date().toISOString().split('T')[0];
@@ -34,6 +49,7 @@ export function AppProvider({ children }) {
       lastActivity: today,
     };
     setProjects(prev => [...prev, newProject]);
+    addAuditEvent('Project created', data.name, 'project', `New project under ${data.category} category`);
     addToast(`Project "${data.name}" created`);
     return newProject;
   };
@@ -51,8 +67,22 @@ export function AppProvider({ children }) {
       waves: 0,
     };
     setExperts(prev => [...prev, newExpert]);
+    addAuditEvent('Expert added', data.name, 'expert', `New expert record created — ${data.company}, ${data.title}`);
     addToast(`Expert "${data.name}" added`);
     return newExpert;
+  };
+
+  const updateExpert = (expertId, data) => {
+    setExperts(prev => prev.map(e => e.id === expertId ? { ...e, ...data } : e));
+    addAuditEvent('Expert record updated', data.name || expertId, 'expert', 'Expert profile updated');
+    addToast('Expert updated successfully');
+  };
+
+  const deactivateExpert = (expertId) => {
+    setExperts(prev => prev.map(e => e.id === expertId ? { ...e, status: 'Deactivated' } : e));
+    const expert = experts.find(e => e.id === expertId);
+    addAuditEvent('Expert deactivated', expert?.name || expertId, 'expert', 'Expert status set to Deactivated');
+    addToast('Expert deactivated', 'warning');
   };
 
   const createSurvey = ({ projectId, name, questions, status = 'Draft' }) => {
@@ -76,6 +106,7 @@ export function AppProvider({ children }) {
       emailStatus: [],
     };
     setSurveys(prev => [...prev, newSurvey]);
+    addAuditEvent('Survey created', name, 'survey', `Draft survey created with ${questions.length} questions`);
     addToast(status === 'Draft' ? 'Draft saved' : 'Survey submitted for approval');
     return newSurvey;
   };
@@ -84,33 +115,102 @@ export function AppProvider({ children }) {
     setSurveys(prev => prev.map(s =>
       s.id === surveyId ? { ...s, name, questions, ...(status ? { status } : {}) } : s
     ));
+    if (status === 'Submitted') {
+      addAuditEvent('Survey submitted for approval', name, 'survey', 'Survey moved to Submitted status');
+    }
     addToast(status === 'Submitted' ? 'Survey submitted for approval' : 'Draft saved');
   };
 
   const deleteSurvey = (surveyId) => {
+    const survey = surveys.find(s => s.id === surveyId);
     setSurveys(prev => prev.filter(s => s.id !== surveyId));
+    addAuditEvent('Survey deleted', survey?.name || surveyId, 'survey', 'Survey permanently deleted');
     addToast('Survey deleted', 'warning');
   };
 
   const approveSurvey = (surveyId) => {
+    const survey = surveys.find(s => s.id === surveyId);
     setSurveys(prev => prev.map(s =>
       s.id === surveyId ? { ...s, status: 'Approved', approvedBy: currentUser.name } : s
     ));
+    addAuditEvent('Survey approved', survey?.name || surveyId, 'survey', `Approved by ${currentUser.name}`);
     addToast('Survey approved successfully');
   };
 
   const rejectSurvey = (surveyId, reason) => {
+    const survey = surveys.find(s => s.id === surveyId);
     setSurveys(prev => prev.map(s =>
       s.id === surveyId ? { ...s, status: 'Draft', rejectionReason: reason } : s
     ));
+    addAuditEvent('Survey rejected', survey?.name || surveyId, 'survey', `Returned to draft: ${reason}`);
     addToast('Survey returned to draft with feedback', 'warning');
   };
 
   const launchSurvey = (surveyId) => {
+    const survey = surveys.find(s => s.id === surveyId);
     setSurveys(prev => prev.map(s =>
       s.id === surveyId ? { ...s, status: 'Running', sendDate: '2026-03-15', closeDate: '2026-03-29' } : s
     ));
+    addAuditEvent('Survey launched', survey?.name || surveyId, 'survey', 'Invitations sent to experts');
     addToast('Survey launched — invitations sent to experts');
+  };
+
+  const launchSurveyWithConfig = (surveyId, config) => {
+    const survey = surveys.find(s => s.id === surveyId);
+    setSurveys(prev => prev.map(s =>
+      s.id === surveyId
+        ? {
+            ...s,
+            status: 'Running',
+            sendDate: config.sendDate ? config.sendDate.split('T')[0] : '2026-03-16',
+            closeDate: config.closeDate ? config.closeDate.split('T')[0] : '2026-03-30',
+            waveConfig: config,
+            emailStatus: config.selectedExperts
+              ? config.selectedExperts.map(e => ({ expertId: e.id, expertName: e.name, status: 'delivered', lastEvent: config.sendDate ? config.sendDate.split('T')[0] : '2026-03-16' }))
+              : s.emailStatus,
+          }
+        : s
+    ));
+    addAuditEvent('Survey launched', survey?.name || surveyId, 'survey', `Invitations scheduled for ${config.selectedExperts?.length || 0} experts`);
+    addToast('Survey launched — invitations sent to experts');
+  };
+
+  const cloneSurvey = (surveyId) => {
+    const original = surveys.find(s => s.id === surveyId);
+    if (!original) return null;
+    const newSurvey = {
+      ...original,
+      id: `s${Date.now()}`,
+      name: `${original.name} — copy`,
+      status: 'Draft',
+      approvedBy: null,
+      sendDate: null,
+      closeDate: null,
+      responsesReceived: 0,
+      responseRate: 0,
+      responses: [],
+      reminders: [],
+      emailStatus: [],
+      createdBy: currentUser.name,
+      questions: original.questions.map(q => ({ ...q, id: `q${Date.now()}_${Math.random().toString(36).slice(2,6)}` })),
+    };
+    setSurveys(prev => [...prev, newSurvey]);
+    addAuditEvent('Survey cloned', newSurvey.name, 'survey', `Cloned from "${original.name}"`);
+    addToast(`Survey cloned as "${newSurvey.name}"`);
+    return newSurvey;
+  };
+
+  const saveTemplate = (name, questions) => {
+    const template = {
+      id: `tpl${Date.now()}`,
+      name,
+      questions,
+      createdBy: currentUser.name,
+      createdAt: new Date().toISOString().split('T')[0],
+    };
+    setTemplates(prev => [...prev, template]);
+    addToast(`Template "${name}" saved`);
+    return template;
   };
 
   const toggleExclusion = (surveyId, expertId) => {
@@ -138,11 +238,13 @@ export function AppProvider({ children }) {
   };
 
   const transferToDataHub = (surveyId) => {
+    const survey = surveys.find(s => s.id === surveyId);
     setSurveys(prev => prev.map(s =>
       s.id === surveyId
         ? { ...s, status: 'Transferred', transferredAt: new Date().toISOString() }
         : s
     ));
+    addAuditEvent('Dataset transferred to DataHub', survey?.name || surveyId, 'survey', `${survey?.responsesReceived || 0} responses exported`);
     addToast('Dataset transferred to DataHub successfully');
   };
 
@@ -150,8 +252,11 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       currentUser, switchRole,
       surveys, projects, experts, auditEvents,
-      createProject, createExpert, createSurvey, updateSurvey, deleteSurvey,
-      approveSurvey, rejectSurvey, launchSurvey,
+      templates,
+      createProject, createExpert, updateExpert, deactivateExpert,
+      createSurvey, updateSurvey, deleteSurvey,
+      approveSurvey, rejectSurvey, launchSurvey, launchSurveyWithConfig,
+      cloneSurvey, saveTemplate,
       toggleExclusion, updateAnnotation, transferToDataHub,
       toasts, addToast, removeToast,
     }}>

@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, Users, Settings } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Users, Settings, ClipboardList, CheckCircle, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const roleColors = {
@@ -8,8 +9,56 @@ const roleColors = {
   'Researcher': { bg: 'bg-green-100', text: 'text-green-700' },
 };
 
+function OnboardingChecklist({ surveys, experts }) {
+  const [dismissed, setDismissed] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
+  if (dismissed) return null;
+
+  const steps = [
+    { label: 'Create a project', done: true },
+    { label: 'Invite a team member', done: true },
+    { label: 'Configure org timezone', done: false },
+  ];
+
+  const completedCount = steps.filter(s => s.done).length;
+  if (completedCount === steps.length) return null;
+
+  return (
+    <div className="mx-3 mb-3 rounded-xl border border-purple-100 bg-purple-50/60 p-3">
+      <div className="flex items-center justify-between mb-1.5">
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="flex items-center gap-1 text-xs font-semibold text-purple-700 hover:text-purple-900 transition-colors"
+        >
+          {collapsed ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
+          Getting started ({completedCount}/{steps.length})
+        </button>
+        <button
+          onClick={() => setDismissed(true)}
+          className="text-purple-300 hover:text-purple-500 transition-colors"
+        >
+          <X size={12} />
+        </button>
+      </div>
+      {!collapsed && (
+        <div className="space-y-1.5 mt-2">
+          {steps.map((step, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center flex-shrink-0 ${step.done ? 'bg-green-500' : 'border-2 border-purple-300'}`}>
+                {step.done && <CheckCircle size={10} className="text-white" />}
+              </div>
+              <span className={`text-xs ${step.done ? 'text-gray-400 line-through' : 'text-purple-800'}`}>{step.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Sidebar() {
-  const { currentUser, projects, surveys } = useApp();
+  const { currentUser, projects, surveys, experts } = useApp();
   const isAdminOrAbove = currentUser.role === 'Admin' || currentUser.role === 'Super Admin';
   const isSuperAdmin = currentUser.role === 'Super Admin';
   const activeProjectCount = projects.filter(p => p.status === 'Active').length;
@@ -19,6 +68,7 @@ export default function Sidebar() {
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/projects', icon: FolderKanban, label: 'Projects', badge: activeProjectCount },
     ...(isAdminOrAbove ? [{ to: '/experts', icon: Users, label: 'Expert Database' }] : []),
+    ...(isAdminOrAbove ? [{ to: '/audit', icon: ClipboardList, label: 'Audit Log' }] : []),
     ...(isSuperAdmin ? [{ to: '/settings', icon: Settings, label: 'Settings' }] : []),
   ];
 
@@ -83,6 +133,9 @@ export default function Sidebar() {
           </div>
         )}
       </nav>
+
+      {/* Onboarding checklist */}
+      <OnboardingChecklist surveys={surveys} experts={experts} />
 
       {/* User footer */}
       <div className="px-3 py-4 border-t border-gray-100">

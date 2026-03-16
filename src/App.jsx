@@ -10,7 +10,10 @@ import ApprovalReview from './pages/ApprovalReview';
 import SurveyResults from './pages/SurveyResults';
 import PostCloseReview from './pages/PostCloseReview';
 import ExpertDatabase from './pages/ExpertDatabase';
+import ExpertDetail from './pages/ExpertDetail';
 import Settings from './pages/Settings';
+import AuditLog from './pages/AuditLog';
+import WaveSetup from './pages/WaveSetup';
 import ExpertSurvey from './pages/expert/ExpertSurvey';
 import ExpertThankYou from './pages/expert/ExpertThankYou';
 
@@ -32,7 +35,10 @@ export default function App() {
             <Route path="projects/:projectId/surveys/:surveyId/approve" element={<ApprovalReview />} />
             <Route path="projects/:projectId/surveys/:surveyId/results" element={<SurveyResults />} />
             <Route path="projects/:projectId/surveys/:surveyId/review" element={<PostCloseReview />} />
+            <Route path="projects/:projectId/surveys/:surveyId/wave-setup" element={<WaveSetup />} />
             <Route path="experts" element={<ExpertDatabase />} />
+            <Route path="experts/:expertId" element={<ExpertDetail />} />
+            <Route path="audit" element={<AuditLog />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

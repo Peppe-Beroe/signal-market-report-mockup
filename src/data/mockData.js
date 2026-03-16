@@ -97,8 +97,22 @@ export const SURVEYS = [
 ];
 
 export const AUDIT_EVENTS = [
-  { id: 'a1', user: 'Marco Rossi', action: 'Survey submitted for approval', target: 'Steel Supply Chain Risk — Wave 1', timestamp: '2026-03-10 16:42' },
-  { id: 'a2', user: 'Sarah Chen', action: 'Survey launched', target: 'Steel Price Outlook — Wave 1', timestamp: '2026-03-05 08:00' },
-  { id: 'a3', user: 'Sarah Chen', action: 'Reminder email sent', target: 'Steel Price Outlook — Wave 1', timestamp: '2026-03-12 09:00' },
-  { id: 'a4', user: 'Maria Santos', action: 'Expert record updated', target: 'Dr. James Wright', timestamp: '2026-03-09 11:15' },
+  { id: 'a1', user: 'Marco Rossi', action: 'Survey submitted for approval', target: 'Steel Supply Chain Risk — Wave 1', targetType: 'survey', timestamp: '2026-03-10 16:42', details: 'Survey moved to Submitted status' },
+  { id: 'a2', user: 'Sarah Chen', action: 'Survey launched', target: 'Steel Price Outlook — Wave 1', targetType: 'survey', timestamp: '2026-03-05 08:00', details: 'Invitations sent to 5 experts' },
+  { id: 'a3', user: 'Sarah Chen', action: 'Reminder email sent', target: 'Steel Price Outlook — Wave 1', targetType: 'survey', timestamp: '2026-03-12 09:00', details: 'Reminder 1 sent to 2 non-responding experts' },
+  { id: 'a4', user: 'Maria Santos', action: 'Expert record updated', target: 'Dr. James Wright', targetType: 'expert', timestamp: '2026-03-09 11:15', details: 'Email address verified' },
+  { id: 'a5', user: 'Sarah Chen', action: 'User logged in', target: 'sarah.chen@beroe.com', targetType: 'user', timestamp: '2026-03-16 08:30', details: 'Successful login from 192.168.1.1' },
+  { id: 'a6', user: 'Marco Rossi', action: 'User logged in', target: 'm.rossi@beroe.com', targetType: 'user', timestamp: '2026-03-16 09:05', details: 'Successful login from 10.0.0.5' },
+  { id: 'a7', user: 'Marco Rossi', action: 'Survey created', target: 'Steel Supply Chain Risk — Wave 1', targetType: 'survey', timestamp: '2026-03-10 14:20', details: 'Draft survey created with 3 questions' },
+  { id: 'a8', user: 'Sarah Chen', action: 'Survey approved', target: 'Steel Price Outlook — Wave 1', targetType: 'survey', timestamp: '2026-03-04 17:30', details: 'Approved for launch' },
+  { id: 'a9', user: 'Dr. James Wright', action: 'Response submitted', target: 'Steel Price Outlook — Wave 1', targetType: 'survey', timestamp: '2026-03-06 09:12', details: 'Expert submitted all 5 answers' },
+  { id: 'a10', user: 'Anna Kowalski', action: 'Response submitted', target: 'Steel Price Outlook — Wave 1', targetType: 'survey', timestamp: '2026-03-07 14:35', details: 'Expert submitted all 5 answers' },
+  { id: 'a11', user: 'Maria Santos', action: 'Expert added', target: 'Carlos Mendez', targetType: 'expert', timestamp: '2026-02-28 10:00', details: 'New expert record created — Ternium, Procurement Director' },
+  { id: 'a12', user: 'Linda Park', action: 'Expert opted out', target: 'Linda Park', targetType: 'expert', timestamp: '2026-03-01 16:22', details: 'Expert requested removal from survey panel' },
+  { id: 'a13', user: 'Maria Santos', action: 'User role changed', target: 'Marco Rossi', targetType: 'user', timestamp: '2026-02-20 09:00', details: 'Role changed from Viewer to Researcher' },
+  { id: 'a14', user: 'Sarah Chen', action: 'Annotation added', target: 'Steel Price Outlook — Wave 1', targetType: 'survey', timestamp: '2026-03-08 15:45', details: 'Annotation added to Raj Patel response: "Outlier — APAC-specific view"' },
+  { id: 'a15', user: 'Maria Santos', action: 'Survey approved', target: 'Ethylene Pricing Outlook — Wave 2', targetType: 'survey', timestamp: '2026-02-19 14:00', details: 'Approved for launch' },
+  { id: 'a16', user: 'Sarah Chen', action: 'Project created', target: 'Q2 2026 Steel Market Signal', targetType: 'project', timestamp: '2026-03-01 09:00', details: 'New project under Metals & Mining category' },
+  { id: 'a17', user: 'Raj Patel', action: 'Response submitted', target: 'Ethylene Pricing Outlook — Wave 2', targetType: 'survey', timestamp: '2026-02-25 11:30', details: 'Expert submitted 3 answers' },
+  { id: 'a18', user: 'Sarah Chen', action: 'Dataset transferred to DataHub', target: 'Ethylene Pricing Outlook — Wave 2', targetType: 'survey', timestamp: '2026-03-15 10:00', details: '5 responses exported to DataHub' },
 ];

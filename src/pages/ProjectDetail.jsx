@@ -23,7 +23,7 @@ const MOCK_TEAM = [
 export default function ProjectDetail() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { projects, surveys, currentUser, launchSurvey, deleteSurvey } = useApp();
+  const { projects, surveys, currentUser, deleteSurvey } = useApp();
   const [activeTab, setActiveTab] = useState('surveys');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
@@ -91,7 +91,7 @@ export default function ProjectDetail() {
       case 'Approved':
         if (isAdminOrAbove) {
           actions.push(
-            <Button key="launch" size="xs" variant="success" onClick={() => { launchSurvey(survey.id); }}>
+            <Button key="launch" size="xs" variant="success" onClick={() => navigate(`/projects/${projectId}/surveys/${survey.id}/wave-setup`)}>
               <Play size={12} /> Launch
             </Button>
           );

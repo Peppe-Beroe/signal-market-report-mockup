@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, AlertTriangle, Mail, CheckCircle, MousePointerClick, Truck, XCircle, Edit2, EyeOff, Eye } from 'lucide-react';
+import { ChevronDown, ChevronUp, AlertTriangle, Mail, CheckCircle, MousePointerClick, Truck, XCircle, Edit2, EyeOff, Eye, Download, Send, Link, Paperclip, Share2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -120,6 +120,8 @@ function QuestionSummaryCard({ question, responses, excluded }) {
         ))}
       </div>
     ) : <p className="text-sm text-gray-400 italic">No text responses</p>;
+  } else {
+    content = <p className="text-sm text-gray-400 italic">Response visualisation not available for this question type</p>;
   }
 
   return (
@@ -249,7 +251,6 @@ function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange }
 function DistributionTab({ survey }) {
   const activeResponses = survey.responses.filter(r => !r.excluded);
 
-  // Response timeline — group by date
   const byDate = activeResponses.reduce((acc, r) => {
     const date = r.submittedAt.split(' ')[0];
     acc[date] = (acc[date] || 0) + 1;
@@ -257,13 +258,11 @@ function DistributionTab({ survey }) {
   }, {});
   const maxDateCount = Math.max(...Object.values(byDate), 1);
 
-  // Company breakdown
   const byCompany = activeResponses.reduce((acc, r) => {
     acc[r.company] = (acc[r.company] || 0) + 1;
     return acc;
   }, {});
 
-  // Per-question % distribution for choice questions
   const choiceQuestions = survey.questions.filter(q => q.type === 'single_choice' || q.type === 'multi_choice');
 
   if (activeResponses.length === 0) {
@@ -277,7 +276,6 @@ function DistributionTab({ survey }) {
 
   return (
     <div className="space-y-4">
-      {/* Response timeline */}
       <Card className="p-5">
         <h3 className="text-sm font-semibold text-gray-800 mb-4">Response Timeline</h3>
         <div className="space-y-2.5">
@@ -292,15 +290,12 @@ function DistributionTab({ survey }) {
                   <span className="text-white text-xs font-semibold">{count}</span>
                 </div>
               </div>
-              <span className="text-xs text-gray-400 w-20 flex-shrink-0">
-                {count} response{count !== 1 ? 's' : ''}
-              </span>
+              <span className="text-xs text-gray-400 w-20 flex-shrink-0">{count} response{count !== 1 ? 's' : ''}</span>
             </div>
           ))}
         </div>
       </Card>
 
-      {/* Respondent breakdown by company */}
       <Card className="p-5">
         <h3 className="text-sm font-semibold text-gray-800 mb-4">Respondents by Company</h3>
         <div className="space-y-2.5">
@@ -310,10 +305,7 @@ function DistributionTab({ survey }) {
               <div key={company} className="flex items-center gap-3">
                 <span className="text-xs text-gray-600 w-36 flex-shrink-0 truncate" title={company}>{company}</span>
                 <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
-                  <div
-                    className="h-full rounded"
-                    style={{ width: `${pct}%`, backgroundColor: '#7C3AED' }}
-                  />
+                  <div className="h-full rounded" style={{ width: `${pct}%`, backgroundColor: '#7C3AED' }} />
                 </div>
                 <span className="text-xs font-semibold text-gray-700 w-10 text-right">{pct}%</span>
               </div>
@@ -322,21 +314,14 @@ function DistributionTab({ survey }) {
         </div>
       </Card>
 
-      {/* % distribution per choice question */}
       {choiceQuestions.map(q => {
         const counts = {};
         if (q.type === 'single_choice') {
           q.options.forEach(o => counts[o] = 0);
-          activeResponses.forEach(r => {
-            const ans = r.answers[q.id];
-            if (ans) counts[ans] = (counts[ans] || 0) + 1;
-          });
+          activeResponses.forEach(r => { const ans = r.answers[q.id]; if (ans) counts[ans] = (counts[ans] || 0) + 1; });
         } else {
           q.options.forEach(o => counts[o] = 0);
-          activeResponses.forEach(r => {
-            const ans = r.answers[q.id];
-            if (Array.isArray(ans)) ans.forEach(a => counts[a] = (counts[a] || 0) + 1);
-          });
+          activeResponses.forEach(r => { const ans = r.answers[q.id]; if (Array.isArray(ans)) ans.forEach(a => counts[a] = (counts[a] || 0) + 1); });
         }
         const total = q.type === 'single_choice'
           ? activeResponses.length
@@ -374,10 +359,61 @@ function DistributionTab({ survey }) {
   );
 }
 
+function AttachReportSection({ addToast, responsesReceived }) {
+  const [attachedFile, setAttachedFile] = useState(null);
+  const [shared, setShared] = useState(false);
+
+  const handleAttach = () => {
+    setAttachedFile('Q2_2026_Steel_Market_Signal.pdf');
+    addToast('Report attached successfully');
+  };
+
+  const handleShare = () => {
+    setShared(true);
+    addToast(`Report shared with ${responsesReceived} experts who responded`);
+  };
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <Paperclip size={15} className="text-gray-400" />
+        <h3 className="text-sm font-semibold text-gray-800">Attach Market Intelligence Report</h3>
+      </div>
+      {!attachedFile ? (
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-gray-500 flex-1">Attach the final research report PDF to share with respondents.</p>
+          <Button variant="secondary" size="sm" onClick={handleAttach}>
+            <Paperclip size={13} /> Attach PDF
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-green-50 border border-green-100">
+          <div className="w-9 h-9 rounded-lg bg-white border border-green-200 flex items-center justify-center flex-shrink-0">
+            <Paperclip size={16} className="text-green-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-800 truncate">{attachedFile}</p>
+            <p className="text-xs text-gray-400">PDF · Attached just now</p>
+          </div>
+          {!shared ? (
+            <Button size="sm" onClick={handleShare}>
+              <Share2 size={13} /> Share with respondents
+            </Button>
+          ) : (
+            <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+              <CheckCircle size={13} /> Shared
+            </span>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function SurveyResults() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, toggleExclusion, updateAnnotation } = useApp();
+  const { surveys, projects, toggleExclusion, updateAnnotation, addToast } = useApp();
   const [activeTab, setActiveTab] = useState('responses');
   const [emailCollapsed, setEmailCollapsed] = useState(false);
 
@@ -389,8 +425,52 @@ export default function SurveyResults() {
   const excludedCount = survey.responses.filter(r => r.excluded).length;
   const pendingExperts = survey.emailStatus.filter(e => !survey.responses.find(r => r.expertId === e.expertId));
   const bouncedCount = survey.emailStatus.filter(e => e.status === 'bounced').length;
+  const isRunning = survey.status === 'Running';
+  const nonResponding = survey.emailStatus.filter(e => !survey.responses.find(r => r.expertId === e.expertId)).length;
 
   const tabs = ['Responses', 'Summary', 'Distribution'];
+
+  const handleExportCSV = () => addToast('Results exported to CSV');
+  const handleCopySurveyLink = () => addToast('Survey link copied');
+  const handleSendReminder = () => addToast(`Reminder sent to ${nonResponding} non-responding experts`);
+
+  // Empty state for running survey with no responses
+  if (isRunning && survey.responses.length === 0) {
+    return (
+      <div className="p-6 max-w-6xl mx-auto fade-in">
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-xl font-bold text-gray-900">{survey.name}</h1>
+              <StatusBadge status={survey.status} />
+            </div>
+            <p className="text-sm text-gray-500">{project?.name} · Wave {survey.wave}</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" onClick={handleExportCSV}><Download size={13} /> Export CSV</Button>
+            <Button variant="secondary" size="sm" onClick={() => navigate(`/projects/${projectId}`)}>← Back to Project</Button>
+          </div>
+        </div>
+
+        <Card className="p-12 text-center">
+          <div className="text-5xl font-bold mb-3" style={{ color: '#9CA3AF' }}>0%</div>
+          <p className="text-lg font-semibold text-gray-700 mb-2">Awaiting first response</p>
+          <p className="text-sm text-gray-400 mb-6">Survey is live — waiting for experts to respond</p>
+          <div className="flex items-center justify-center gap-3">
+            <Button variant="secondary" size="sm" onClick={handleCopySurveyLink}>
+              <Link size={13} /> Copy survey link
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleSendReminder}>
+              <Send size={13} /> Send reminder
+            </Button>
+          </div>
+          {survey.closeDate && (
+            <p className="text-xs text-gray-400 mt-4">Closes {survey.closeDate}</p>
+          )}
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-6xl mx-auto fade-in">
@@ -403,9 +483,19 @@ export default function SurveyResults() {
           </div>
           <p className="text-sm text-gray-500">{project?.name} · Wave {survey.wave}</p>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => navigate(`/projects/${projectId}`)}>
-          ← Back to Project
-        </Button>
+        <div className="flex items-center gap-2">
+          {isRunning && (
+            <Button variant="secondary" size="sm" onClick={handleSendReminder}>
+              <Send size={13} /> Send Reminder ({nonResponding})
+            </Button>
+          )}
+          <Button variant="secondary" size="sm" onClick={handleExportCSV}>
+            <Download size={13} /> Export CSV
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => navigate(`/projects/${projectId}`)}>
+            ← Back to Project
+          </Button>
+        </div>
       </div>
 
       {/* Stats row */}
@@ -415,9 +505,20 @@ export default function SurveyResults() {
           <p className="text-xs text-gray-400 mt-2">Response Rate</p>
         </Card>
         <Card className="p-4 text-center">
-          <p className="text-2xl font-bold text-gray-900">9 days</p>
-          <p className="text-xs text-gray-400 mt-2">Until close</p>
-          <p className="text-xs text-gray-400">Closes {survey.closeDate}</p>
+          {isRunning ? (
+            <>
+              <p className="text-2xl font-bold text-gray-900">
+                {survey.closeDate ? `${Math.max(0, Math.ceil((new Date(survey.closeDate) - new Date()) / (1000*60*60*24)))} days` : '—'}
+              </p>
+              <p className="text-xs text-gray-400 mt-2">Until close</p>
+              <p className="text-xs text-gray-400">Closes {survey.closeDate}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-2xl font-bold text-gray-900">{survey.closeDate || '—'}</p>
+              <p className="text-xs text-gray-400 mt-2">Closed</p>
+            </>
+          )}
         </Card>
         <Card className="p-4 text-center">
           <p className="text-2xl font-bold text-gray-900">{survey.reminders.length}</p>
@@ -427,9 +528,7 @@ export default function SurveyResults() {
           )}
         </Card>
         <Card className={`p-4 text-center ${bouncedCount > 0 ? 'border-amber-200 bg-amber-50' : ''}`}>
-          <p className={`text-2xl font-bold ${bouncedCount > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
-            {bouncedCount}
-          </p>
+          <p className={`text-2xl font-bold ${bouncedCount > 0 ? 'text-amber-600' : 'text-gray-900'}`}>{bouncedCount}</p>
           <p className="text-xs text-gray-400 mt-2">Bounced emails</p>
           {bouncedCount > 0 && (
             <div className="flex items-center justify-center gap-1 mt-1">
@@ -439,6 +538,13 @@ export default function SurveyResults() {
           )}
         </Card>
       </div>
+
+      {/* Post-close attach report section */}
+      {(survey.status === 'Review' || survey.status === 'Closed' || survey.status === 'Transferred') && (
+        <div className="mb-5">
+          <AttachReportSection addToast={addToast} responsesReceived={survey.responsesReceived} />
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 bg-white rounded-xl border border-gray-100 p-1 w-fit mb-5 shadow-sm">
@@ -489,7 +595,6 @@ export default function SurveyResults() {
                       onAnnotationChange={(expertId, ann) => updateAnnotation(surveyId, expertId, ann)}
                     />
                   ))}
-                  {/* Pending rows */}
                   {survey.emailStatus
                     .filter(e => !survey.responses.find(r => r.expertId === e.expertId))
                     .map(e => (
@@ -505,14 +610,10 @@ export default function SurveyResults() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-400">—</td>
-                        <td className="px-4 py-3">
-                          <EmailStatusIcon status={e.status} />
-                        </td>
+                        <td className="px-4 py-3"><EmailStatusIcon status={e.status} /></td>
                         <td className="px-4 py-3 text-xs text-gray-300 italic">—</td>
                         <td className="px-4 py-3 text-xs text-gray-400">
-                          {e.status === 'bounced' ? (
-                            <Badge color="amber" size="xs">Email bounced</Badge>
-                          ) : 'Awaiting response'}
+                          {e.status === 'bounced' ? <Badge color="amber" size="xs">Email bounced</Badge> : 'Awaiting response'}
                         </td>
                       </tr>
                     ))}
@@ -574,9 +675,7 @@ export default function SurveyResults() {
       )}
 
       {/* Distribution tab */}
-      {activeTab === 'distribution' && (
-        <DistributionTab survey={survey} />
-      )}
+      {activeTab === 'distribution' && <DistributionTab survey={survey} />}
     </div>
   );
 }
