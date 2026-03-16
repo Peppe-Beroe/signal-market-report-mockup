@@ -132,3 +132,26 @@ export const AUDIT_EVENTS = [
   { id: 'a17', user: 'Raj Patel', action: 'Response submitted', target: 'Ethylene Pricing Outlook — Wave 2', targetType: 'survey', timestamp: '2026-02-25 11:30', details: 'Expert submitted 3 answers' },
   { id: 'a18', user: 'Sarah Chen', action: 'Dataset transferred to DataHub', target: 'Ethylene Pricing Outlook — Wave 2', targetType: 'survey', timestamp: '2026-03-15 10:00', details: '5 responses exported to DataHub' },
 ];
+
+export const INTERNAL_USERS = [
+  { id: 'u1', firstName: 'Maria', lastName: 'Santos', email: 'maria.santos@beroe.com', role: 'Super Admin', status: 'Active', projects: [{ id: 'p1', name: 'Q2 2026 Steel Market Signal', projectRole: 'Owner' }, { id: 'p2', name: 'H1 2026 Chemical Feedstocks', projectRole: 'Viewer' }] },
+  { id: 'u2', firstName: 'Sarah', lastName: 'Chen', email: 'sarah.chen@beroe.com', role: 'Admin', status: 'Active', projects: [{ id: 'p1', name: 'Q2 2026 Steel Market Signal', projectRole: 'Owner' }, { id: 'p3', name: 'Q1 2026 Packaging Trends', projectRole: 'Owner' }] },
+  { id: 'u3', firstName: 'Marco', lastName: 'Rossi', email: 'm.rossi@beroe.com', role: 'Standard User', status: 'Active', projects: [{ id: 'p1', name: 'Q2 2026 Steel Market Signal', projectRole: 'Editor' }] },
+  { id: 'u4', firstName: 'Priya', lastName: 'Mehta', email: 'p.mehta@beroe.com', role: 'Admin', status: 'Active', projects: [] },
+  { id: 'u5', firstName: 'Tom', lastName: 'Baker', email: 't.baker@beroe.com', role: 'Standard User', status: 'Active', projects: [{ id: 'p2', name: 'H1 2026 Chemical Feedstocks', projectRole: 'Editor' }] },
+  { id: 'u6', firstName: 'Jin', lastName: 'Park', email: 'j.park@beroe.com', role: 'Standard User', status: 'Deactivated', projects: [] },
+];
+
+export const PROPOSALS = [
+  { id: 'pr1', type: 'membership', submittedBy: 'u3', submittedByName: 'Marco Rossi', targetUser: 'u4', targetUserName: 'Priya Mehta', project: 'p1', projectName: 'Q2 2026 Steel Market Signal', proposedRole: 'Editor', justification: 'Priya needs to collaborate on the Steel survey', submittedDate: '2026-03-14', status: 'Pending', version: 1 },
+  { id: 'pr2', type: 'platform_invite', submittedBy: 'u3', submittedByName: 'Marco Rossi', inviteEmail: 'anna.lewis@beroe.com', inviteFirstName: 'Anna', inviteLastName: 'Lewis', requestedRole: 'Standard User', justification: 'New researcher joining the steel team', submittedDate: '2026-03-12', status: 'Approved', actedByName: 'Maria Santos', actionDate: '2026-03-13' },
+  { id: 'pr3', type: 'membership', submittedBy: 'u2', submittedByName: 'Sarah Chen', targetUser: 'u5', targetUserName: 'Tom Baker', project: 'p3', projectName: 'Q1 2026 Packaging Trends', proposedRole: 'Viewer', justification: 'Tom can monitor packaging results', submittedDate: '2026-03-10', status: 'Rejected', actedByName: 'Sarah Chen', actionDate: '2026-03-11', rejectionReason: 'Project is already fully staffed' },
+];
+
+export const NOTIFICATIONS = [
+  { id: 'n1', type: 'approval', message: 'Steel Supply Chain Risk — Wave 1 needs your approval', timestamp: '2 hours ago', read: false, link: '/projects/p1/surveys/s2/approve' },
+  { id: 'n2', type: 'rejection', message: 'Your survey was rejected — revision required. Reason: "Questions need more specificity"', timestamp: '1 day ago', read: false, link: '/projects/p2' },
+  { id: 'n3', type: 'proposal', message: 'Marco Rossi proposed adding Priya Mehta to Q2 Steel Market Signal', timestamp: '2 days ago', read: true, link: '/people' },
+  { id: 'n4', type: 'invite', message: 'Platform invite request for Anna Lewis was approved', timestamp: '3 days ago', read: true, link: '/people' },
+  { id: 'n5', type: 'alert', message: 'Response rate below 40% on Steel Price Outlook — 3 days remaining', timestamp: '4 days ago', read: true, link: '/projects/p1/surveys/s1/results' },
+];

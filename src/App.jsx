@@ -14,6 +14,8 @@ import ExpertDetail from './pages/ExpertDetail';
 import Settings from './pages/Settings';
 import AuditLog from './pages/AuditLog';
 import WaveSetup from './pages/WaveSetup';
+import PeoplePage from './pages/PeoplePage';
+import NotificationsPage from './pages/NotificationsPage';
 import ExpertSurvey from './pages/expert/ExpertSurvey';
 import ExpertThankYou from './pages/expert/ExpertThankYou';
 
@@ -38,6 +40,8 @@ export default function App() {
             <Route path="projects/:projectId/surveys/:surveyId/wave-setup" element={<WaveSetup />} />
             <Route path="experts" element={<ExpertDatabase />} />
             <Route path="experts/:expertId" element={<ExpertDetail />} />
+            <Route path="people" element={<PeoplePage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
             <Route path="audit" element={<AuditLog />} />
             <Route path="settings" element={<Settings />} />
           </Route>

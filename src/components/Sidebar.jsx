@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, Users, Settings, ClipboardList, CheckCircle, ChevronUp, ChevronDown, X } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Users, UserCheck, Settings, ClipboardList, CheckCircle, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const roleColors = {
@@ -65,11 +65,12 @@ export default function Sidebar() {
   const submittedCount = surveys.filter(s => s.status === 'Submitted').length;
 
   const navItems = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
     { to: '/projects', icon: FolderKanban, label: 'Projects', badge: activeProjectCount },
-    ...(isAdminOrAbove ? [{ to: '/experts', icon: Users, label: 'Expert Database' }] : []),
-    ...(isAdminOrAbove ? [{ to: '/audit', icon: ClipboardList, label: 'Audit Log' }] : []),
-    ...(isSuperAdmin ? [{ to: '/settings', icon: Settings, label: 'Settings' }] : []),
+    { to: '/experts', icon: Users, label: 'Experts' },
+    { to: '/people', icon: UserCheck, label: 'People' },
+    ...(isAdminOrAbove ? [{ to: '/settings', icon: Settings, label: 'Settings' }] : []),
+    ...(isSuperAdmin ? [{ to: '/audit', icon: ClipboardList, label: 'Audit Log' }] : []),
   ];
 
   const rc = roleColors[currentUser.role] || roleColors['Researcher'];

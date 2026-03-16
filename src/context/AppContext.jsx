@@ -1,5 +1,5 @@
 import { createContext, useContext, useState } from 'react';
-import { USERS, PROJECTS, SURVEYS, EXPERTS, AUDIT_EVENTS } from '../data/mockData';
+import { USERS, PROJECTS, SURVEYS, EXPERTS, AUDIT_EVENTS, INTERNAL_USERS, PROPOSALS, NOTIFICATIONS } from '../data/mockData';
 
 const AppContext = createContext();
 
@@ -12,6 +12,15 @@ export function AppProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [changeRequests, setChangeRequests] = useState([]);
+  const [internalUsers] = useState(INTERNAL_USERS);
+  const [proposals] = useState(PROPOSALS);
+  const [notifications, setNotifications] = useState(NOTIFICATIONS);
+
+  const markNotificationRead = (id) =>
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+
+  const markAllNotificationsRead = () =>
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
 
   const switchRole = (roleKey) => setCurrentUser(USERS[roleKey]);
 
@@ -318,6 +327,8 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       currentUser, switchRole,
       surveys, projects, experts, auditEvents,
+      internalUsers, proposals,
+      notifications, markNotificationRead, markAllNotificationsRead,
       templates, changeRequests,
       createProject, createExpert, updateExpert, deactivateExpert,
       archiveProject, unarchiveProject, archiveSurvey, unarchiveSurvey,
