@@ -11,6 +11,7 @@ export function AppProvider({ children }) {
   const [auditEvents, setAuditEvents] = useState(AUDIT_EVENTS);
   const [toasts, setToasts] = useState([]);
   const [templates, setTemplates] = useState([]);
+  const [changeRequests, setChangeRequests] = useState([]);
 
   const switchRole = (roleKey) => setCurrentUser(USERS[roleKey]);
 
@@ -112,9 +113,21 @@ export function AppProvider({ children }) {
   };
 
   const updateSurvey = ({ surveyId, name, questions, status }) => {
-    setSurveys(prev => prev.map(s =>
-      s.id === surveyId ? { ...s, name, questions, ...(status ? { status } : {}) } : s
-    ));
+    setSurveys(prev => prev.map(s => {
+      if (s.id !== surveyId) return s;
+      // If re-submitting after rejection, store the current questions as previousSnapshot
+      const isResubmit = status === 'Submitted' && s.rejectionReason;
+      return {
+        ...s,
+        name,
+        questions,
+        ...(status ? { status } : {}),
+        ...(isResubmit ? {
+          previousSnapshot: { submittedAt: s.previousSnapshot?.submittedAt || null, questions: s.questions },
+          rejectionReason: s.rejectionReason, // keep for diff display
+        } : {}),
+      };
+    }));
     if (status === 'Submitted') {
       addAuditEvent('Survey submitted for approval', name, 'survey', 'Survey moved to Submitted status');
     }
@@ -237,6 +250,59 @@ export function AppProvider({ children }) {
     }));
   };
 
+  const archiveProject = (projectId) => {
+    const project = projects.find(p => p.id === projectId);
+    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, archived: true, status: 'Archived' } : p));
+    addAuditEvent('Project archived', project?.name || projectId, 'project', 'Project moved to archive');
+    addToast(`Project archived`);
+  };
+
+  const unarchiveProject = (projectId) => {
+    const project = projects.find(p => p.id === projectId);
+    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, archived: false, status: 'Active' } : p));
+    addAuditEvent('Project restored', project?.name || projectId, 'project', 'Project restored from archive');
+    addToast(`Project restored`);
+  };
+
+  const archiveSurvey = (surveyId) => {
+    const survey = surveys.find(s => s.id === surveyId);
+    setSurveys(prev => prev.map(s => s.id === surveyId ? { ...s, archived: true } : s));
+    addAuditEvent('Survey archived', survey?.name || surveyId, 'survey', 'Survey moved to archive');
+    addToast(`Survey archived`);
+  };
+
+  const unarchiveSurvey = (surveyId) => {
+    const survey = surveys.find(s => s.id === surveyId);
+    setSurveys(prev => prev.map(s => s.id === surveyId ? { ...s, archived: false } : s));
+    addAuditEvent('Survey restored', survey?.name || surveyId, 'survey', 'Survey restored from archive');
+    addToast(`Survey restored`);
+  };
+
+  const submitChangeRequest = (data) => {
+    const refNum = `REQ-${String(changeRequests.length + 1).padStart(3, '0')}`;
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const newReq = {
+      id: `req${Date.now()}`,
+      refNum,
+      requestType: data.requestType,
+      expertName: data.expertName,
+      details: data.details,
+      justification: data.justification,
+      submittedBy: currentUser.name,
+      status: 'Pending',
+      timestamp,
+    };
+    setChangeRequests(prev => [newReq, ...prev]);
+    addAuditEvent('Expert change request submitted', data.expertName, 'expert', `${data.requestType} request — ${data.details}`);
+    return newReq;
+  };
+
+  const resolveChangeRequest = (reqId) => {
+    setChangeRequests(prev => prev.map(r => r.id === reqId ? { ...r, status: 'Resolved' } : r));
+    addToast('Request marked as resolved');
+  };
+
   const transferToDataHub = (surveyId) => {
     const survey = surveys.find(s => s.id === surveyId);
     setSurveys(prev => prev.map(s =>
@@ -252,11 +318,13 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       currentUser, switchRole,
       surveys, projects, experts, auditEvents,
-      templates,
+      templates, changeRequests,
       createProject, createExpert, updateExpert, deactivateExpert,
+      archiveProject, unarchiveProject, archiveSurvey, unarchiveSurvey,
       createSurvey, updateSurvey, deleteSurvey,
       approveSurvey, rejectSurvey, launchSurvey, launchSurveyWithConfig,
       cloneSurvey, saveTemplate,
+      submitChangeRequest, resolveChangeRequest,
       toggleExclusion, updateAnnotation, transferToDataHub,
       toasts, addToast, removeToast,
     }}>

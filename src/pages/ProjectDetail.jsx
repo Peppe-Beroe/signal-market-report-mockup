@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Play, BarChart2, Eye, ExternalLink, Users, Calendar, ChevronRight, Mail, Shield, UserCheck } from 'lucide-react';
+import { Plus, Edit2, Trash2, Play, BarChart2, Eye, ExternalLink, Users, Calendar, ChevronRight, Mail, Shield, UserCheck, Archive, ArchiveRestore } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { USERS } from '../data/mockData';
 import Card from '../components/ui/Card';
@@ -23,9 +23,10 @@ const MOCK_TEAM = [
 export default function ProjectDetail() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { projects, surveys, currentUser, deleteSurvey } = useApp();
+  const { projects, surveys, currentUser, deleteSurvey, archiveSurvey, unarchiveSurvey } = useApp();
   const [activeTab, setActiveTab] = useState('surveys');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [showArchivedSurveys, setShowArchivedSurveys] = useState(false);
 
   const project = projects.find(p => p.id === projectId);
   if (!project) return (
@@ -35,7 +36,9 @@ export default function ProjectDetail() {
     </div>
   );
 
-  const projectSurveys = surveys.filter(s => s.projectId === projectId);
+  const allProjectSurveys = surveys.filter(s => s.projectId === projectId);
+  const projectSurveys = allProjectSurveys.filter(s => showArchivedSurveys ? s.archived : !s.archived);
+  const archivedSurveyCount = allProjectSurveys.filter(s => s.archived).length;
   const isAdminOrAbove = currentUser.role === 'Admin' || currentUser.role === 'Super Admin';
 
   const handleDelete = (surveyId) => {
@@ -124,6 +127,19 @@ export default function ProjectDetail() {
       default:
         break;
     }
+    if (isAdminOrAbove && !survey.archived) {
+      actions.push(
+        <Button key="archive" size="xs" variant="ghost" onClick={() => archiveSurvey(survey.id)} title="Archive survey" className="text-gray-400 hover:text-gray-600">
+          <Archive size={12} />
+        </Button>
+      );
+    } else if (isAdminOrAbove && survey.archived) {
+      actions.push(
+        <Button key="unarchive" size="xs" variant="ghost" onClick={() => unarchiveSurvey(survey.id)} title="Restore survey" className="text-gray-400 hover:text-gray-600">
+          <ArchiveRestore size={12} />
+        </Button>
+      );
+    }
     return actions;
   };
 
@@ -176,11 +192,26 @@ export default function ProjectDetail() {
       {activeTab === 'surveys' && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-gray-500">{projectSurveys.length} survey{projectSurveys.length !== 1 ? 's' : ''} in this project</p>
-            <Button onClick={() => navigate(`/projects/${projectId}/surveys/new`)}>
-              <Plus size={16} />
-              New Survey
-            </Button>
+            <div className="flex items-center gap-3">
+              <p className="text-sm text-gray-500">{projectSurveys.length} survey{projectSurveys.length !== 1 ? 's' : ''}{showArchivedSurveys ? ' (archived)' : ' in this project'}</p>
+              {archivedSurveyCount > 0 && (
+                <button
+                  onClick={() => setShowArchivedSurveys(!showArchivedSurveys)}
+                  className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg border transition-colors ${
+                    showArchivedSurveys ? 'text-white' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                  }`}
+                  style={showArchivedSurveys ? { backgroundColor: '#6B7280', borderColor: '#6B7280' } : {}}
+                >
+                  <Archive size={11} /> Archived ({archivedSurveyCount})
+                </button>
+              )}
+            </div>
+            {!showArchivedSurveys && (
+              <Button onClick={() => navigate(`/projects/${projectId}/surveys/new`)}>
+                <Plus size={16} />
+                New Survey
+              </Button>
+            )}
           </div>
 
           {projectSurveys.length === 0 ? (

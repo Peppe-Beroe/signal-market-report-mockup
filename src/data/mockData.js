@@ -16,15 +16,19 @@ export const EXPERTS = [
 export const PROJECTS = [
   {
     id: 'p1', name: 'Q2 2026 Steel Market Signal', category: 'Metals & Mining', owner: 'Sarah Chen',
-    status: 'Active', created: '2026-03-01', surveysCount: 2, lastActivity: '2026-03-10',
+    status: 'Active', created: '2026-03-01', surveysCount: 2, lastActivity: '2026-03-10', archived: false,
   },
   {
     id: 'p2', name: 'H1 2026 Chemical Feedstocks', category: 'Chemicals', owner: 'Marco Rossi',
-    status: 'Active', created: '2026-02-15', surveysCount: 1, lastActivity: '2026-03-08',
+    status: 'Active', created: '2026-02-15', surveysCount: 1, lastActivity: '2026-03-08', archived: false,
   },
   {
     id: 'p3', name: 'Q1 2026 Packaging Trends', category: 'Packaging', owner: 'Sarah Chen',
-    status: 'Active', created: '2026-01-10', surveysCount: 3, lastActivity: '2026-03-05',
+    status: 'Active', created: '2026-01-10', surveysCount: 3, lastActivity: '2026-03-05', archived: false,
+  },
+  {
+    id: 'p4', name: 'Q4 2025 Energy Procurement Review', category: 'Energy', owner: 'Sarah Chen',
+    status: 'Archived', created: '2025-10-01', surveysCount: 1, lastActivity: '2025-12-20', archived: true,
   },
 ];
 
@@ -34,7 +38,7 @@ export const SURVEYS = [
     status: 'Running', wave: 1,
     createdBy: 'Marco Rossi', approvedBy: 'Sarah Chen',
     sendDate: '2026-03-05', closeDate: '2026-03-20',
-    expertsTargeted: 5, responsesReceived: 3, responseRate: 60,
+    expertsTargeted: 6, responsesReceived: 3, responseRate: 50,
     questions: [
       { id: 'q1', type: 'single_choice', required: true, text: 'How do you expect hot-rolled coil (HRC) prices to trend in Q3 2026?', options: ['Increase >10%', 'Increase 5–10%', 'Stay flat (±5%)', 'Decrease 5–10%', 'Decrease >10%'] },
       { id: 'q2', type: 'single_choice', required: true, text: 'What is your primary steel procurement region?', options: ['North America', 'Europe', 'Asia-Pacific', 'Latin America', 'Middle East & Africa'] },
@@ -47,6 +51,7 @@ export const SURVEYS = [
       { expertId: 'e2', expertName: 'Anna Kowalski', company: 'EuroMfg', submittedAt: '2026-03-07 14:35', answers: { q1: 'Stay flat (±5%)', q2: 'Europe', q3: 3, q4: ['Geopolitical risk', 'Currency fluctuations'], q5: 'EU demand softness and geopolitical uncertainty around eastern Europe.' }, excluded: false, annotation: 'Outlook more conservative than panel average' },
       { expertId: 'e3', expertName: 'Raj Patel', company: 'Tata Steel', submittedAt: '2026-03-08 11:20', answers: { q1: 'Increase >10%', q2: 'Asia-Pacific', q3: 4, q4: ['Raw material availability', 'Demand shifts'], q5: 'India infrastructure spend driving significant demand. Iron ore tightness is a real concern.' }, excluded: true, annotation: 'Outlier — APAC-specific view, not representative of global panel' },
     ],
+    archived: false,
     reminders: [{ sent: '2026-03-12', type: 'Reminder 1' }],
     emailStatus: [
       { expertId: 'e1', expertName: 'Dr. James Wright', status: 'opened', lastEvent: '2026-03-05' },
@@ -54,6 +59,7 @@ export const SURVEYS = [
       { expertId: 'e3', expertName: 'Raj Patel', status: 'clicked', lastEvent: '2026-03-05' },
       { expertId: 'e4', expertName: 'Sophie Dubois', status: 'delivered', lastEvent: '2026-03-05' },
       { expertId: 'e5', expertName: 'Carlos Mendez', status: 'bounced', lastEvent: '2026-03-05' },
+      { expertId: 'e6', expertName: 'Linda Park', status: 'opted_out', lastEvent: '2026-03-01' },
     ],
   },
   {
@@ -62,6 +68,14 @@ export const SURVEYS = [
     createdBy: 'Marco Rossi', approvedBy: null,
     sendDate: null, closeDate: null,
     expertsTargeted: 4, responsesReceived: 0, responseRate: 0,
+    rejectionReason: 'Please add a question about procurement volume to make the survey more actionable. Also clarify the scope of "supply chain risks" in Q2.',
+    previousSnapshot: {
+      submittedAt: '2026-03-09 10:00',
+      questions: [
+        { id: 'q1', type: 'single_choice', required: true, text: 'How would you rate the overall supply chain risk for steel procurement?', options: ['Critical', 'High', 'Medium', 'Low', 'Minimal'] },
+        { id: 'q2', type: 'multi_choice', required: true, text: 'Which supply chain risks affect your organisation?', options: ['Supplier concentration', 'Port congestion', 'Raw material shortages', 'Quality inconsistency', 'Lead time volatility', 'Regulatory changes'] },
+      ],
+    },
     questions: [
       { id: 'q1', type: 'single_choice', required: true, text: 'How would you rate the current supply chain risk level for steel procurement?', options: ['Critical', 'High', 'Medium', 'Low', 'Minimal'] },
       { id: 'q2', type: 'multi_choice', required: true, text: 'Which supply chain risks are most critical to your organisation?', options: ['Supplier concentration', 'Port congestion', 'Raw material shortages', 'Quality inconsistency', 'Lead time volatility', 'Regulatory changes'] },
@@ -70,6 +84,7 @@ export const SURVEYS = [
     responses: [],
     reminders: [],
     emailStatus: [],
+    archived: false,
   },
   {
     id: 's3', projectId: 'p2', name: 'Ethylene Pricing Outlook — Wave 2',
@@ -93,6 +108,7 @@ export const SURVEYS = [
     ],
     reminders: [],
     emailStatus: [],
+    archived: false,
   },
 ];
 

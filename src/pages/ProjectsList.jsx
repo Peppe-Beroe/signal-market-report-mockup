@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, FolderOpen, Calendar, User, FileText, X } from 'lucide-react';
+import { Search, Plus, FolderOpen, Calendar, User, FileText, X, Archive, ArchiveRestore } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -21,22 +21,27 @@ const categoryColors = {
 };
 
 export default function ProjectsList() {
-  const { projects, surveys, createProject } = useApp();
+  const { projects, surveys, currentUser, createProject, archiveProject, unarchiveProject } = useApp();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
+  const [showArchived, setShowArchived] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', category: CATEGORIES[0] });
   const [errors, setErrors] = useState({});
 
-  const categories = ['All', ...new Set(projects.map(p => p.category))];
+  const isAdminOrAbove = currentUser.role === 'Admin' || currentUser.role === 'Super Admin';
+  const categories = ['All', ...new Set(projects.filter(p => !p.archived).map(p => p.category))];
 
   const filtered = projects.filter(p => {
+    const matchArchive = showArchived ? p.archived : !p.archived;
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.category.toLowerCase().includes(search.toLowerCase());
     const matchFilter = filter === 'All' || p.category === filter;
-    return matchSearch && matchFilter;
+    return matchArchive && matchSearch && matchFilter;
   });
+
+  const archivedCount = projects.filter(p => p.archived).length;
 
   const handleCreate = () => {
     const errs = {};
@@ -61,7 +66,7 @@ export default function ProjectsList() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-          <p className="text-sm text-gray-500 mt-1">{projects.length} projects · {surveys.length} total surveys</p>
+          <p className="text-sm text-gray-500 mt-1">{projects.filter(p => !p.archived).length} active projects · {surveys.length} total surveys</p>
         </div>
         <Button onClick={() => setShowModal(true)}>
           <Plus size={16} />
@@ -82,7 +87,7 @@ export default function ProjectsList() {
           />
         </div>
         <div className="flex gap-2">
-          {categories.map(cat => (
+          {!showArchived && categories.map(cat => (
             <button
               key={cat}
               onClick={() => setFilter(cat)}
@@ -97,6 +102,16 @@ export default function ProjectsList() {
             </button>
           ))}
         </div>
+        <button
+          onClick={() => { setShowArchived(!showArchived); setFilter('All'); }}
+          className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+            showArchived ? 'text-white' : 'border-gray-200 text-gray-500 bg-white hover:bg-gray-50'
+          }`}
+          style={showArchived ? { backgroundColor: '#6B7280', borderColor: '#6B7280' } : {}}
+        >
+          <Archive size={13} />
+          Archived{archivedCount > 0 && ` (${archivedCount})`}
+        </button>
       </div>
 
       {/* Grid */}
@@ -147,7 +162,18 @@ export default function ProjectsList() {
 
                 <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
                   <span className="text-xs text-gray-400">Created {p.created}</span>
-                  <span className="text-xs font-medium" style={{ color: '#4A00F8' }}>View →</span>
+                  <div className="flex items-center gap-2">
+                    {isAdminOrAbove && (
+                      <button
+                        onClick={e => { e.stopPropagation(); p.archived ? unarchiveProject(p.id) : archiveProject(p.id); }}
+                        className="text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1"
+                        title={p.archived ? 'Restore project' : 'Archive project'}
+                      >
+                        {p.archived ? <ArchiveRestore size={12} /> : <Archive size={12} />}
+                      </button>
+                    )}
+                    {!p.archived && <span className="text-xs font-medium" style={{ color: '#4A00F8' }}>View →</span>}
+                  </div>
                 </div>
               </Card>
             );

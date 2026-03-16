@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, AlertTriangle, Mail, CheckCircle, MousePointerClick, Truck, XCircle, Edit2, EyeOff, Eye, Download, Send, Link, Paperclip, Share2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, AlertTriangle, Mail, CheckCircle, MousePointerClick, Truck, XCircle, Edit2, EyeOff, Eye, Download, Send, Link, Paperclip, Share2, Clock, UserX, Filter, ArrowUpDown } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -26,6 +26,8 @@ function EmailStatusIcon({ status }) {
     clicked: { icon: MousePointerClick, color: 'text-purple-500', label: 'Clicked' },
     delivered: { icon: Truck, color: 'text-blue-400', label: 'Delivered' },
     bounced: { icon: XCircle, color: 'text-red-500', label: 'Bounced' },
+    not_sent: { icon: Clock, color: 'text-gray-400', label: 'Not sent' },
+    opted_out: { icon: UserX, color: 'text-orange-500', label: 'Opted-out' },
   };
   const c = config[status] || config.delivered;
   const Icon = c.icon;
@@ -416,6 +418,8 @@ export default function SurveyResults() {
   const { surveys, projects, toggleExclusion, updateAnnotation, addToast } = useApp();
   const [activeTab, setActiveTab] = useState('responses');
   const [emailCollapsed, setEmailCollapsed] = useState(false);
+  const [responseFilter, setResponseFilter] = useState('all');
+  const [responseSort, setResponseSort] = useState('newest');
 
   const survey = surveys.find(s => s.id === surveyId);
   const project = projects.find(p => p.id === projectId);
@@ -573,6 +577,45 @@ export default function SurveyResults() {
               </p>
             </div>
           )}
+
+          {/* Filter + sort controls */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
+              <Filter size={13} /> Filter:
+            </div>
+            {[
+              { key: 'all', label: 'All' },
+              { key: 'responded', label: 'Responded' },
+              { key: 'awaiting', label: 'Awaiting' },
+              { key: 'excluded', label: 'Excluded' },
+              { key: 'bounced', label: 'Bounced' },
+              { key: 'opted_out', label: 'Opted-out' },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setResponseFilter(f.key)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                  responseFilter === f.key ? 'text-white' : 'border-gray-200 text-gray-600 bg-white hover:bg-gray-50'
+                }`}
+                style={responseFilter === f.key ? { backgroundColor: '#4A00F8', borderColor: '#4A00F8' } : {}}
+              >
+                {f.label}
+              </button>
+            ))}
+            <div className="flex items-center gap-1.5 ml-3 text-xs text-gray-500 font-medium">
+              <ArrowUpDown size={13} /> Sort:
+            </div>
+            <select
+              value={responseSort}
+              onChange={e => setResponseSort(e.target.value)}
+              className="border border-gray-200 rounded-lg px-2.5 py-1 text-xs bg-white text-gray-700 focus:border-purple-400 focus:outline-none"
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="name">Expert name (A–Z)</option>
+            </select>
+          </div>
+
           <Card>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -586,37 +629,81 @@ export default function SurveyResults() {
                   </tr>
                 </thead>
                 <tbody>
-                  {survey.responses.map(r => (
-                    <ResponseRow
-                      key={r.expertId}
-                      response={r}
-                      survey={survey}
-                      onToggleExclusion={(expertId) => toggleExclusion(surveyId, expertId)}
-                      onAnnotationChange={(expertId, ann) => updateAnnotation(surveyId, expertId, ann)}
-                    />
-                  ))}
-                  {survey.emailStatus
-                    .filter(e => !survey.responses.find(r => r.expertId === e.expertId))
-                    .map(e => (
-                      <tr key={e.expertId} className="border-b border-gray-50 opacity-60">
-                        <td className="px-5 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">
-                              {e.expertName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-500">{e.expertName}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-400">—</td>
-                        <td className="px-4 py-3"><EmailStatusIcon status={e.status} /></td>
-                        <td className="px-4 py-3 text-xs text-gray-300 italic">—</td>
-                        <td className="px-4 py-3 text-xs text-gray-400">
-                          {e.status === 'bounced' ? <Badge color="amber" size="xs">Email bounced</Badge> : 'Awaiting response'}
-                        </td>
-                      </tr>
-                    ))}
+                  {(() => {
+                    // Build unified rows: submitted responses + non-responded email entries
+                    const nonRespondedEmails = survey.emailStatus.filter(e => !survey.responses.find(r => r.expertId === e.expertId));
+
+                    // Filter responses
+                    let filteredResponses = survey.responses;
+                    if (responseFilter === 'responded') filteredResponses = survey.responses;
+                    else if (responseFilter === 'excluded') filteredResponses = survey.responses.filter(r => r.excluded);
+                    else if (responseFilter === 'awaiting') filteredResponses = [];
+                    else if (responseFilter === 'bounced') filteredResponses = [];
+                    else if (responseFilter === 'opted_out') filteredResponses = [];
+
+                    // Sort responses
+                    const sortedResponses = [...filteredResponses].sort((a, b) => {
+                      if (responseSort === 'newest') return (b.submittedAt || '').localeCompare(a.submittedAt || '');
+                      if (responseSort === 'oldest') return (a.submittedAt || '').localeCompare(b.submittedAt || '');
+                      if (responseSort === 'name') return a.expertName.localeCompare(b.expertName);
+                      return 0;
+                    });
+
+                    // Filter non-responded by email status filter
+                    let filteredEmails = nonRespondedEmails;
+                    if (responseFilter === 'responded') filteredEmails = [];
+                    else if (responseFilter === 'excluded') filteredEmails = [];
+                    else if (responseFilter === 'awaiting') filteredEmails = nonRespondedEmails.filter(e => !['bounced', 'opted_out'].includes(e.status));
+                    else if (responseFilter === 'bounced') filteredEmails = nonRespondedEmails.filter(e => e.status === 'bounced');
+                    else if (responseFilter === 'opted_out') filteredEmails = nonRespondedEmails.filter(e => e.status === 'opted_out');
+
+                    const sortedEmails = [...filteredEmails].sort((a, b) =>
+                      responseSort === 'name' ? a.expertName.localeCompare(b.expertName) : 0
+                    );
+
+                    return (
+                      <>
+                        {sortedResponses.map(r => (
+                          <ResponseRow
+                            key={r.expertId}
+                            response={r}
+                            survey={survey}
+                            onToggleExclusion={(expertId) => toggleExclusion(surveyId, expertId)}
+                            onAnnotationChange={(expertId, ann) => updateAnnotation(surveyId, expertId, ann)}
+                          />
+                        ))}
+                        {sortedEmails.map(e => (
+                          <tr key={e.expertId} className="border-b border-gray-50 opacity-60">
+                            <td className="px-5 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">
+                                  {e.expertName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-500">{e.expertName}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-400">—</td>
+                            <td className="px-4 py-3"><EmailStatusIcon status={e.status} /></td>
+                            <td className="px-4 py-3 text-xs text-gray-300 italic">—</td>
+                            <td className="px-4 py-3 text-xs text-gray-400">
+                              {e.status === 'bounced' ? <Badge color="amber" size="xs">Email bounced</Badge> :
+                               e.status === 'opted_out' ? <Badge color="orange" size="xs">Opted out</Badge> :
+                               'Awaiting response'}
+                            </td>
+                          </tr>
+                        ))}
+                        {sortedResponses.length === 0 && sortedEmails.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="px-5 py-8 text-center text-sm text-gray-400">
+                              No responses match the current filter
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })()}
                 </tbody>
               </table>
             </div>

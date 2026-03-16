@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Save,
@@ -58,7 +58,7 @@ function QuestionTypeIcon({ type }) {
   );
 }
 
-function QuestionCard({ question, index, total, onChange, onDelete }) {
+function QuestionCard({ question, index, total, onChange, onDelete, dragHandlers, isDragOver }) {
   const [collapsed, setCollapsed] = useState(false);
 
   const updateOption = (i, value) => {
@@ -97,10 +97,18 @@ function QuestionCard({ question, index, total, onChange, onDelete }) {
   };
 
   return (
-    <div className="border border-gray-200 rounded-xl bg-white overflow-hidden">
+    <div className={`border rounded-xl bg-white overflow-hidden transition-all ${isDragOver ? 'border-purple-400 shadow-lg ring-2 ring-purple-200' : 'border-gray-200'}`}>
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-100">
-        <GripVertical size={16} className="text-gray-300 cursor-grab" />
+        <div
+          {...dragHandlers}
+          draggable
+          className="cursor-grab active:cursor-grabbing touch-none select-none"
+          onClick={e => e.stopPropagation()}
+          title="Drag to reorder"
+        >
+          <GripVertical size={16} className="text-gray-400 hover:text-gray-600" />
+        </div>
         <span className="text-xs font-semibold text-gray-400 w-5">Q{index + 1}</span>
         <QuestionTypeIcon type={question.type} />
         {question.required && (
@@ -644,6 +652,8 @@ export default function SurveyBuilder({ mode = 'create' }) {
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
   const [showUseTemplateModal, setShowUseTemplateModal] = useState(false);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const dragIndexRef = useRef(null);
   const autoSaveTimerRef = useRef(null);
 
   const triggerAutoSave = () => {
@@ -749,6 +759,38 @@ export default function SurveyBuilder({ mode = 'create' }) {
     setPendingNavTarget(null);
   };
 
+  const handleDragStart = (i) => {
+    dragIndexRef.current = i;
+  };
+
+  const handleDragOver = (e, i) => {
+    e.preventDefault();
+    if (dragIndexRef.current !== null && dragIndexRef.current !== i) {
+      setDragOverIndex(i);
+    }
+  };
+
+  const handleDrop = (i) => {
+    if (dragIndexRef.current === null || dragIndexRef.current === i) {
+      setDragOverIndex(null);
+      dragIndexRef.current = null;
+      return;
+    }
+    const newQ = [...questions];
+    const [removed] = newQ.splice(dragIndexRef.current, 1);
+    newQ.splice(i, 0, removed);
+    setQuestions(newQ);
+    setCurrentQIndex(i);
+    dragIndexRef.current = null;
+    setDragOverIndex(null);
+    triggerAutoSave();
+  };
+
+  const handleDragEnd = () => {
+    dragIndexRef.current = null;
+    setDragOverIndex(null);
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Builder top bar */}
@@ -817,14 +859,25 @@ export default function SurveyBuilder({ mode = 'create' }) {
           {/* Questions */}
           <div className="space-y-3 mb-4">
             {questions.map((q, i) => (
-              <div key={q.id} onClick={() => setCurrentQIndex(i)} className="rounded-xl transition-all">
-                <div style={currentQIndex === i ? { boxShadow: `0 0 0 2px #4A00F8` } : {}} className="rounded-xl">
+              <div
+                key={q.id}
+                onClick={() => setCurrentQIndex(i)}
+                onDragOver={(e) => handleDragOver(e, i)}
+                onDrop={() => handleDrop(i)}
+                className="rounded-xl transition-all"
+              >
+                <div style={currentQIndex === i && dragOverIndex !== i ? { boxShadow: `0 0 0 2px #4A00F8` } : {}} className="rounded-xl">
                   <QuestionCard
                     question={q}
                     index={i}
                     total={questions.length}
                     onChange={(updated) => handleQuestionChange(i, updated)}
                     onDelete={() => deleteQuestion(i)}
+                    isDragOver={dragOverIndex === i}
+                    dragHandlers={{
+                      onDragStart: () => handleDragStart(i),
+                      onDragEnd: handleDragEnd,
+                    }}
                   />
                 </div>
               </div>

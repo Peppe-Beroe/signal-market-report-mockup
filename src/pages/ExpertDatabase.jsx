@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Mail, Building2, Tag, X, Upload, FileText, Check, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Search, Plus, Mail, Building2, Tag, X, Upload, FileText, Check, AlertTriangle, ChevronRight, Bell, Clock, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -16,15 +16,16 @@ const MOCK_PREFLIGHT = [
   { row: 5, name: 'Dr. James Wright', email: 'j.wright@steelcorp.com', company: 'SteelCorp', title: 'VP Procurement', status: 'error', error: 'Duplicate email: j.wright@steelcorp.com' },
 ];
 
-function RequestChangeModal({ onClose, addToast }) {
+function RequestChangeModal({ onClose, onSubmit }) {
   const [form, setForm] = useState({ requestType: 'Add', expertName: '', details: '', justification: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [refNum, setRefNum] = useState('');
 
   const handleSubmit = () => {
     if (!form.expertName.trim() || !form.details.trim()) return;
+    const req = onSubmit(form);
+    setRefNum(req.refNum);
     setSubmitted(true);
-    addToast('Request #REQ-001 submitted. Super Admin has been notified.');
-    setTimeout(onClose, 1500);
   };
 
   return (
@@ -40,7 +41,9 @@ function RequestChangeModal({ onClose, addToast }) {
               <Check size={24} className="text-green-600" />
             </div>
             <p className="font-semibold text-gray-800">Request submitted!</p>
-            <p className="text-sm text-gray-500 mt-1">Reference: #REQ-001</p>
+            <p className="text-sm text-gray-500 mt-1">Reference: <span className="font-bold text-purple-700">#{refNum}</span></p>
+            <p className="text-xs text-gray-400 mt-2">Super Admin has been notified. You can track this request in the Pending Requests section.</p>
+            <button onClick={onClose} className="mt-4 px-4 py-1.5 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: '#4A00F8' }}>Close</button>
           </div>
         ) : (
           <div className="space-y-4">
@@ -250,7 +253,7 @@ function CSVImportModal({ onClose, onImport, addToast }) {
 
 export default function ExpertDatabase() {
   const navigate = useNavigate();
-  const { experts, currentUser, createExpert, addToast } = useApp();
+  const { experts, currentUser, changeRequests, createExpert, addToast, submitChangeRequest, resolveChangeRequest } = useApp();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [showModal, setShowModal] = useState(false);
@@ -261,6 +264,7 @@ export default function ExpertDatabase() {
 
   const isSuperAdmin = currentUser.role === 'Super Admin';
   const isAdminOrResearcher = currentUser.role !== 'Super Admin';
+  const pendingRequestCount = isSuperAdmin ? changeRequests.filter(r => r.status === 'Pending').length : 0;
 
   const filtered = experts.filter(e => {
     const matchSearch = e.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -319,7 +323,14 @@ export default function ExpertDatabase() {
     <div className="p-6 max-w-6xl mx-auto fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Expert Database</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Expert Database</h1>
+            {isSuperAdmin && pendingRequestCount > 0 && (
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-white px-2 py-0.5 rounded-full" style={{ backgroundColor: '#EF4444' }}>
+                <Bell size={10} /> {pendingRequestCount} pending
+              </span>
+            )}
+          </div>
           <p className="text-sm text-gray-500 mt-1">{experts.length} experts · {experts.filter(e => e.status === 'Active').length} active</p>
         </div>
         <div className="flex items-center gap-2">
@@ -445,6 +456,89 @@ export default function ExpertDatabase() {
         </div>
       </Card>
 
+      {/* Pending Requests section */}
+      {(() => {
+        const myRequests = isSuperAdmin
+          ? changeRequests
+          : changeRequests.filter(r => r.submittedBy === currentUser.name);
+        const pendingCount = myRequests.filter(r => r.status === 'Pending').length;
+        if (myRequests.length === 0) return null;
+        return (
+          <div className="mt-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Bell size={15} className="text-gray-500" />
+              <h2 className="text-sm font-semibold text-gray-800">
+                {isSuperAdmin ? 'Expert Change Requests' : 'My Pending Requests'}
+              </h2>
+              {pendingCount > 0 && (
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold text-white" style={{ backgroundColor: '#EF4444' }}>{pendingCount}</span>
+              )}
+            </div>
+            <Card>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-5 py-3">Ref</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Type</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Expert</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Details</th>
+                      {isSuperAdmin && <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Submitted by</th>}
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Date</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Status</th>
+                      {isSuperAdmin && <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Action</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {myRequests.map(req => (
+                      <tr key={req.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-5 py-3">
+                          <span className="text-xs font-bold text-purple-700">#{req.refNum}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-gray-600">{req.requestType}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-medium text-gray-800">{req.expertName}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-gray-500 max-w-48 block truncate" title={req.details}>{req.details}</span>
+                        </td>
+                        {isSuperAdmin && <td className="px-4 py-3 text-xs text-gray-500">{req.submittedBy}</td>}
+                        <td className="px-4 py-3 text-xs text-gray-400">{req.timestamp}</td>
+                        <td className="px-4 py-3">
+                          {req.status === 'Pending' ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded">
+                              <Clock size={10} /> Pending
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 border border-green-100 px-2 py-0.5 rounded">
+                              <CheckCircle2 size={10} /> Resolved
+                            </span>
+                          )}
+                        </td>
+                        {isSuperAdmin && (
+                          <td className="px-4 py-3">
+                            {req.status === 'Pending' && (
+                              <button
+                                onClick={() => resolveChangeRequest(req.id)}
+                                className="text-xs text-green-600 hover:text-green-800 font-medium"
+                              >
+                                Mark resolved
+                              </button>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        );
+      })()}
+
       {/* Add Expert Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -491,7 +585,10 @@ export default function ExpertDatabase() {
 
       {/* Request Change Modal */}
       {showRequestModal && (
-        <RequestChangeModal onClose={() => setShowRequestModal(false)} addToast={addToast} />
+        <RequestChangeModal
+          onClose={() => setShowRequestModal(false)}
+          onSubmit={(form) => submitChangeRequest(form)}
+        />
       )}
 
       {/* CSV Import Modal */}

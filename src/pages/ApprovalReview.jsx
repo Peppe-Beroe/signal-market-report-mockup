@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, AlertTriangle, Check, List, CheckSquare, Star, AlignLeft, Info } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Check, List, CheckSquare, Star, AlignLeft, Info, GitCompare, Plus, Minus, Edit3 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -106,50 +106,129 @@ export default function ApprovalReview() {
         <StatusBadge status={survey.status} />
       </div>
 
-      <div className="flex gap-6 items-start">
-        {/* Left: Survey content */}
-        <div className="flex-1 min-w-0 space-y-4">
-          {/* Diff view banner */}
-          <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
-            <AlertTriangle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-amber-700">
-              This is a first submission — no previous version to compare against.
-            </p>
-          </div>
+      {/* Diff computation */}
+      {(() => {
+        const isResubmission = Boolean(survey.rejectionReason);
+        const prevQuestions = survey.previousSnapshot?.questions || [];
+        const currQuestions = survey.questions;
 
-          {/* Survey metadata */}
-          <Card className="p-5">
-            <h2 className="font-semibold text-gray-900 mb-3 text-sm">Survey Details</h2>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              {[
-                { label: 'Created by', value: survey.createdBy },
-                { label: 'Project', value: project?.name },
-                { label: 'Wave', value: `Wave ${survey.wave}` },
-                { label: 'Questions', value: survey.questions.length },
-                { label: 'Experts targeted', value: survey.expertsTargeted },
-                { label: 'Submitted', value: '2026-03-10 16:42' },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex flex-col gap-0.5">
-                  <span className="text-xs text-gray-400 font-medium">{label}</span>
-                  <span className="text-gray-800 font-medium">{value}</span>
+        const addedIds = currQuestions.filter(q => !prevQuestions.find(pq => pq.id === q.id)).map(q => q.id);
+        const removedQuestions = prevQuestions.filter(pq => !currQuestions.find(q => q.id === pq.id));
+        const modifiedIds = currQuestions
+          .filter(q => {
+            const prev = prevQuestions.find(pq => pq.id === q.id);
+            return prev && (prev.text !== q.text || JSON.stringify(prev.options) !== JSON.stringify(q.options));
+          })
+          .map(q => q.id);
+
+        return (
+          <div className="flex gap-6 items-start">
+            {/* Left: Survey content */}
+            <div className="flex-1 min-w-0 space-y-4">
+              {/* Diff view banner */}
+              {isResubmission ? (
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
+                    <GitCompare size={16} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-blue-800 mb-1">Resubmission — changes highlighted below</p>
+                      <p className="text-xs text-blue-600">
+                        {addedIds.length > 0 && <span className="mr-3"><span className="font-semibold">{addedIds.length} added</span></span>}
+                        {removedQuestions.length > 0 && <span className="mr-3"><span className="font-semibold">{removedQuestions.length} removed</span></span>}
+                        {modifiedIds.length > 0 && <span><span className="font-semibold">{modifiedIds.length} modified</span></span>}
+                        {addedIds.length === 0 && removedQuestions.length === 0 && modifiedIds.length === 0 && 'No structural changes to questions'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-red-50 border border-red-100">
+                    <XCircle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-red-700 mb-0.5">Previous rejection reason</p>
+                      <p className="text-xs text-red-600">{survey.rejectionReason}</p>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </Card>
+              ) : (
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
+                  <AlertTriangle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-700">
+                    This is a first submission — no previous version to compare against.
+                  </p>
+                </div>
+              )}
 
-          {/* Questions */}
-          <Card className="p-5">
-            <h2 className="font-semibold text-gray-900 mb-4 flex items-center justify-between">
-              <span>Survey Questions</span>
-              <Badge color="gray">{survey.questions.length} questions</Badge>
-            </h2>
-            <div className="space-y-3">
-              {survey.questions.map((q, i) => (
-                <QuestionPreview key={q.id} question={q} index={i} />
-              ))}
+              {/* Survey metadata */}
+              <Card className="p-5">
+                <h2 className="font-semibold text-gray-900 mb-3 text-sm">Survey Details</h2>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  {[
+                    { label: 'Created by', value: survey.createdBy },
+                    { label: 'Project', value: project?.name },
+                    { label: 'Wave', value: `Wave ${survey.wave}` },
+                    { label: 'Questions', value: survey.questions.length },
+                    { label: 'Experts targeted', value: survey.expertsTargeted },
+                    { label: 'Submitted', value: isResubmission ? '2026-03-10 16:42' : '2026-03-10 16:42' },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex flex-col gap-0.5">
+                      <span className="text-xs text-gray-400 font-medium">{label}</span>
+                      <span className="text-gray-800 font-medium">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* Questions with diff annotations */}
+              <Card className="p-5">
+                <h2 className="font-semibold text-gray-900 mb-4 flex items-center justify-between">
+                  <span>Survey Questions</span>
+                  <Badge color="gray">{survey.questions.length} questions</Badge>
+                </h2>
+
+                {/* Removed questions (only in diff mode) */}
+                {isResubmission && removedQuestions.map((q, i) => (
+                  <div key={q.id} className="mb-3 rounded-xl border border-red-200 bg-red-50 overflow-hidden opacity-80">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-red-100 border-b border-red-200">
+                      <Minus size={12} className="text-red-500" />
+                      <span className="text-xs font-semibold text-red-700">Removed question</span>
+                    </div>
+                    <div className="p-3 line-through text-gray-400">
+                      <p className="text-xs text-gray-400 font-medium mb-1">Previous Q{i + 1}</p>
+                      <p className="text-sm">{q.text}</p>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="space-y-3">
+                  {survey.questions.map((q, i) => {
+                    const isAdded = isResubmission && addedIds.includes(q.id);
+                    const isModified = isResubmission && modifiedIds.includes(q.id);
+                    const prevQ = prevQuestions.find(pq => pq.id === q.id);
+                    return (
+                      <div key={q.id} className={isAdded ? 'rounded-xl border border-green-200 overflow-hidden' : isModified ? 'rounded-xl border border-amber-200 overflow-hidden' : ''}>
+                        {isAdded && (
+                          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border-b border-green-200">
+                            <Plus size={12} className="text-green-600" />
+                            <span className="text-xs font-semibold text-green-700">New question added</span>
+                          </div>
+                        )}
+                        {isModified && (
+                          <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border-b border-amber-200">
+                            <Edit3 size={12} className="text-amber-600" />
+                            <span className="text-xs font-semibold text-amber-700">Question modified</span>
+                          </div>
+                        )}
+                        {isModified && prevQ && (
+                          <div className="px-3 py-2 bg-red-50 border-b border-amber-100 text-xs text-gray-500 line-through">
+                            Previous: {prevQ.text}
+                          </div>
+                        )}
+                        <QuestionPreview key={q.id} question={q} index={i} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
             </div>
-          </Card>
-        </div>
 
         {/* Right: Review panel */}
         <div className="w-80 flex-shrink-0 space-y-4 sticky top-6">
@@ -244,6 +323,8 @@ export default function ApprovalReview() {
           </Card>
         </div>
       </div>
+    );
+  })()}
     </div>
   );
 }
