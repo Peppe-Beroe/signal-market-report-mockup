@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, Lock } from 'lucide-react';
 import { SURVEYS } from '../../data/mockData';
 
 const DEMO_SURVEY = SURVEYS[0];
@@ -29,6 +29,11 @@ export default function ExpertSurvey() {
   const submittedKey = `survey_submitted_${token}`;
   const alreadySubmitted = localStorage.getItem(submittedKey);
   const submittedAt = localStorage.getItem(`${submittedKey}_at`);
+
+  // P1-F-45: check if survey close date has passed
+  const isSurveyClosed = DEMO_SURVEY.closeDate
+    ? new Date() > new Date(DEMO_SURVEY.closeDate)
+    : false;
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -85,6 +90,23 @@ export default function ExpertSurvey() {
   };
 
   const isLast = currentIndex === questions.length - 1;
+
+  if (isSurveyClosed) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-5 py-12">
+        <div className="max-w-md w-full text-center">
+          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <Lock size={28} className="text-gray-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">This survey is closed</h1>
+          <p className="text-sm text-gray-500 mb-6">
+            The deadline for this survey has passed and responses are no longer being accepted.
+          </p>
+          <p className="text-xs text-gray-400">If you believe this is an error, please contact the research team.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (alreadySubmitted) {
     return (
