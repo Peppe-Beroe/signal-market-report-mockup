@@ -69,7 +69,7 @@ export default function Sidebar() {
     { to: '/projects', icon: FolderKanban, label: 'Projects', badge: activeProjectCount },
     { to: '/experts', icon: Users, label: 'Experts' },
     { to: '/people', icon: UserCheck, label: 'People' },
-    ...(isAdminOrAbove ? [{ to: '/settings', icon: Settings, label: 'Settings' }] : []),
+    { to: '/settings', icon: Settings, label: 'Settings' },
     ...(isSuperAdmin ? [{ to: '/audit', icon: ClipboardList, label: 'Audit Log' }] : []),
   ];
 

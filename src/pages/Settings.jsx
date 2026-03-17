@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Users, Bell, Sliders, Link2, Save, CheckCircle, Clock, Globe, List, Mail, Plus, X, Edit2, Trash2 } from 'lucide-react';
+import { User, Users, Bell, Sliders, Link2, Save, CheckCircle, Clock, Globe, List, Mail, Plus, X, Edit2, Trash2, Info } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { USERS } from '../data/mockData';
 import Card from '../components/ui/Card';
@@ -132,21 +132,25 @@ Beroe Research Team`;
 export default function Settings() {
   const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs } = useApp();
   const isSuperAdmin = currentUser.role === 'Super Admin';
+  const isAdmin = currentUser.role === 'Admin';
+  const isStandardUser = currentUser.role === 'Researcher' || currentUser.role === 'Standard User';
+  const canEdit = !isStandardUser; // Admins and SAs can edit org-level settings
 
   const [profile, setProfile] = useState({ name: currentUser.name, email: currentUser.email });
-  const NOTIFICATION_EVENTS = [
+  const ALL_NOTIFICATION_EVENTS = [
     { key: 'survey_approved', label: 'Survey approved' },
     { key: 'survey_rejected', label: 'Survey rejected' },
     { key: 'proposal_approved', label: 'Proposal approved' },
     { key: 'proposal_rejected', label: 'Proposal rejected' },
     { key: 'proposal_auto_cancelled', label: 'Proposal auto-cancelled' },
-    { key: 'new_proposal_received', label: 'New proposal received' },
+    { key: 'new_proposal_received', label: 'New proposal received', adminOnly: true },
     { key: 'invite_approved', label: 'Invite approved' },
     { key: 'invite_rejected', label: 'Invite rejected' },
     { key: 'response_rate_alert', label: 'Response rate threshold alert' },
     { key: 'expert_change_resolved', label: 'Expert change request resolved' },
     { key: 'wave_closed', label: 'Wave closed' },
   ];
+  const NOTIFICATION_EVENTS = ALL_NOTIFICATION_EVENTS.filter(e => !e.adminOnly || !isStandardUser);
   const [surveyDefaults, setSurveyDefaults] = useState({
     requireApproval: true,
     autoCloseEnabled: false,
@@ -216,43 +220,68 @@ export default function Settings() {
     <div className="p-6 max-w-4xl mx-auto fade-in space-y-6">
       <div className="mb-2">
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-500 mt-1">Platform configuration and administration</p>
+        <p className="text-sm text-gray-500 mt-1">{isStandardUser ? 'Your profile and personal preferences' : 'Platform configuration and administration'}</p>
       </div>
 
       {/* My Profile */}
       <Card className="p-6">
         <SectionHeader icon={User} title="My Profile" description="Your account details and display name" />
-        <div className="grid grid-cols-2 gap-4 mb-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Display name</label>
-            <input
-              type="text"
-              value={profile.name}
-              onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
-            <input
-              type="email"
-              value={profile.email}
-              onChange={e => setProfile(p => ({ ...p, email: e.target.value }))}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors"
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Platform role:</span>
-            <Badge color={ROLE_COLORS[currentUser.role] || 'gray'} size="sm">{currentUser.role}</Badge>
-          </div>
-          <Button size="sm" onClick={saveProfile}><Save size={14} /> Save Profile</Button>
-        </div>
+        {isStandardUser ? (
+          <>
+            <div className="grid grid-cols-2 gap-4 mb-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Display name</label>
+                <div className="w-full border border-gray-100 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-700">{profile.name}</div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
+                <div className="w-full border border-gray-100 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-700">{profile.email}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-sm text-gray-500">Platform role:</span>
+              <Badge color={ROLE_COLORS[currentUser.role] || 'gray'} size="sm">{currentUser.role}</Badge>
+            </div>
+            <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-blue-50 border border-blue-100">
+              <Info size={14} className="text-blue-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-blue-700">Need to update your profile details? Reach out to your platform administrator to request a change.</p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-4 mb-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Display name</label>
+                <input
+                  type="text"
+                  value={profile.name}
+                  onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
+                <input
+                  type="email"
+                  value={profile.email}
+                  onChange={e => setProfile(p => ({ ...p, email: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">Platform role:</span>
+                <Badge color={ROLE_COLORS[currentUser.role] || 'gray'} size="sm">{currentUser.role}</Badge>
+              </div>
+              <Button size="sm" onClick={saveProfile}><Save size={14} /> Save Profile</Button>
+            </div>
+          </>
+        )}
       </Card>
 
-      {/* User Management */}
-      <Card className="p-6">
+      {/* User Management — hidden for Standard Users */}
+      {!isStandardUser && <Card className="p-6">
         <div className="flex items-start justify-between mb-5">
           <SectionHeader icon={Users} title="User Management" description="Manage platform access and roles" />
           {isSuperAdmin && (
@@ -337,7 +366,7 @@ export default function Settings() {
             </tbody>
           </table>
         </div>
-      </Card>
+      </Card>}
 
       {/* Org Timezone */}
       <Card className="p-6">
@@ -533,8 +562,8 @@ export default function Settings() {
         <Button size="sm" onClick={saveDefaults}><Save size={14} /> Save Defaults</Button>
       </Card>
 
-      {/* Integrations */}
-      <Card className="p-6">
+      {/* Integrations — hidden for Standard Users */}
+      {!isStandardUser && <Card className="p-6">
         <SectionHeader icon={Link2} title="Integrations" description="External systems connected to this platform" />
         <div className="space-y-3">
           <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50">
@@ -568,7 +597,7 @@ export default function Settings() {
             <div className="flex items-center gap-1.5 text-xs text-green-600 font-medium"><CheckCircle size={12} /> Connected</div>
           </div>
         </div>
-      </Card>
+      </Card>}
 
       {showInviteModal && (
         <InviteUserModal onClose={() => setShowInviteModal(false)} addToast={addToast} />
