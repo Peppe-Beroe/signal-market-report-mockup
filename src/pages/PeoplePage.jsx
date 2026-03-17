@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, ChevronDown, X, MoreVertical, UserCheck,
   ChevronLeft, ChevronRight, Users, FileText, PlusCircle,
-  AlertTriangle
+  AlertTriangle, UserPlus, Send
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
@@ -83,11 +83,7 @@ function ProfileDrawer({ user, onClose, onProposeAccess }) {
             {user.projects.length === 0 ? (
               <div className="text-center py-6 border border-dashed border-gray-200 rounded-xl">
                 <Users size={24} className="text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500 mb-3">Not assigned to any projects yet</p>
-                <Button size="sm" onClick={() => onProposeAccess(user)}>
-                  <PlusCircle size={14} />
-                  Propose project access
-                </Button>
+                <p className="text-sm text-gray-500">Not assigned to any projects yet</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -107,6 +103,14 @@ function ProfileDrawer({ user, onClose, onProposeAccess }) {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Footer action */}
+        <div className="px-5 py-4 border-t border-gray-100">
+          <Button className="w-full" size="sm" onClick={() => onProposeAccess(user)}>
+            <PlusCircle size={14} />
+            Propose project access
+          </Button>
         </div>
       </div>
     </>
@@ -246,6 +250,169 @@ function ProposeAccessModal({ targetUser, projects, currentUser, onConfirm, onCl
   );
 }
 
+// ─── Invite User Modal (Super Admin — direct invite) ────────────────────────
+
+function InviteUserModal({ onClose, addToast }) {
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', role: 'Standard User' });
+  const [errors, setErrors] = useState({});
+
+  const validate = () => {
+    const errs = {};
+    if (!form.firstName.trim()) errs.firstName = 'Required';
+    if (!form.lastName.trim()) errs.lastName = 'Required';
+    if (!form.email.trim()) errs.email = 'Required';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Invalid email';
+    return errs;
+  };
+
+  const handleSubmit = () => {
+    const errs = validate();
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    addToast(`Invitation sent to ${form.email}`);
+    onClose();
+  };
+
+  const field = (key, label, type = 'text', placeholder = '') => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label} <span className="text-red-400">*</span></label>
+      <input
+        type={type}
+        value={form[key]}
+        placeholder={placeholder}
+        onChange={e => { setForm(f => ({ ...f, [key]: e.target.value })); setErrors(er => ({ ...er, [key]: '' })); }}
+        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors ${errors[key] ? 'border-red-300' : 'border-gray-200 focus:border-purple-400'}`}
+      />
+      {errors[key] && <p className="text-xs text-red-500 mt-1">{errors[key]}</p>}
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <UserPlus size={18} style={{ color: '#4A00F8' }} />
+            <h2 className="font-semibold text-gray-900">Invite user</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"><X size={16} className="text-gray-500" /></button>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            {field('firstName', 'First name', 'text', 'Jane')}
+            {field('lastName', 'Last name', 'text', 'Smith')}
+          </div>
+          {field('email', 'Email address', 'email', 'jane@beroe.com')}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
+            <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none">
+              <option value="Standard User">Standard User</option>
+              <option value="Admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex gap-2 px-6 py-4 border-t border-gray-100">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button className="flex-1" onClick={handleSubmit}><Send size={14} /> Send invitation</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Platform Invite Request Modal (Admin + Standard User — routed to SA) ────
+
+function PlatformInviteRequestModal({ onClose, onConfirm }) {
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', requestedRole: 'Standard User', justification: '' });
+  const [errors, setErrors] = useState({});
+
+  const validate = () => {
+    const errs = {};
+    if (!form.firstName.trim()) errs.firstName = 'Required';
+    if (!form.lastName.trim()) errs.lastName = 'Required';
+    if (!form.email.trim()) errs.email = 'Required';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Invalid email';
+    if (!form.justification.trim()) errs.justification = 'Required';
+    return errs;
+  };
+
+  const handleSubmit = () => {
+    const errs = validate();
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    onConfirm({
+      type: 'platform_invite',
+      inviteFirstName: form.firstName.trim(),
+      inviteLastName: form.lastName.trim(),
+      inviteEmail: form.email.trim(),
+      requestedRole: form.requestedRole,
+      justification: form.justification.trim(),
+    });
+  };
+
+  const field = (key, label, type = 'text', placeholder = '') => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label} <span className="text-red-400">*</span></label>
+      <input
+        type={type}
+        value={form[key]}
+        placeholder={placeholder}
+        onChange={e => { setForm(f => ({ ...f, [key]: e.target.value })); setErrors(er => ({ ...er, [key]: '' })); }}
+        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors ${errors[key] ? 'border-red-300' : 'border-gray-200 focus:border-purple-400'}`}
+      />
+      {errors[key] && <p className="text-xs text-red-500 mt-1">{errors[key]}</p>}
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <UserPlus size={18} style={{ color: '#4A00F8' }} />
+            <h2 className="font-semibold text-gray-900">Request team invite</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"><X size={16} className="text-gray-500" /></button>
+        </div>
+        <div className="px-6 py-4">
+          <p className="text-xs text-gray-500 mb-4 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg">
+            Your request will be sent to a Super Admin for approval. You'll be notified when it's reviewed.
+          </p>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              {field('firstName', 'First name', 'text', 'Jane')}
+              {field('lastName', 'Last name', 'text', 'Smith')}
+            </div>
+            {field('email', 'Email address', 'email', 'jane@beroe.com')}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Requested role</label>
+              <select value={form.requestedRole} onChange={e => setForm(f => ({ ...f, requestedRole: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none">
+                <option value="Standard User">Standard User</option>
+                <option value="Admin">Admin</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Justification <span className="text-red-400">*</span></label>
+              <textarea
+                value={form.justification}
+                onChange={e => { setForm(f => ({ ...f, justification: e.target.value })); setErrors(er => ({ ...er, justification: '' })); }}
+                rows={3}
+                placeholder="Why does this person need access to the platform?"
+                className={`w-full border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none transition-colors ${errors.justification ? 'border-red-300' : 'border-gray-200 focus:border-purple-400'}`}
+              />
+              {errors.justification && <p className="text-xs text-red-500 mt-1">{errors.justification}</p>}
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2 px-6 py-4 border-t border-gray-100">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button className="flex-1" onClick={handleSubmit}><Send size={14} /> Submit request</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Kebab menu ─────────────────────────────────────────────────────────────
 
 function KebabMenu({ user, isSuperAdmin, isAdmin, onViewProfile, onChangeRole, onDeactivate, onProposeAccess, totalSuperAdmins }) {
@@ -270,14 +437,12 @@ function KebabMenu({ user, isSuperAdmin, isAdmin, onViewProfile, onChangeRole, o
             >
               View profile
             </button>
-            {!isSuperAdmin && (
-              <button
-                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                onClick={() => { setOpen(false); onProposeAccess(); }}
-              >
-                Propose project access
-              </button>
-            )}
+            <button
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              onClick={() => { setOpen(false); onProposeAccess(); }}
+            >
+              Propose project access
+            </button>
             {isSuperAdmin && (
               <>
                 <button
@@ -555,9 +720,13 @@ export default function PeoplePage() {
   const navigate = useNavigate();
 
   const isSuperAdmin = currentUser.role === 'Super Admin';
+  const isAdmin = currentUser.role === 'Admin';
+  const isStandardUser = currentUser.role === 'Researcher' || currentUser.role === 'Standard User';
   const totalSuperAdmins = internalUsers.filter(u => u.role === 'Super Admin').length;
 
   const [activeTab, setActiveTab] = useState('users');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showInviteRequestModal, setShowInviteRequestModal] = useState(false);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [showDeactivated, setShowDeactivated] = useState(false);
@@ -625,12 +794,29 @@ export default function PeoplePage() {
     setProposeTarget(null);
   };
 
+  const handleConfirmInviteRequest = (data) => {
+    createProposal(data);
+    setShowInviteRequestModal(false);
+  };
+
   return (
     <div className="p-6 max-w-6xl mx-auto fade-in">
       {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">People</h1>
-        <p className="text-sm text-gray-500 mt-1">Internal team members</p>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">People</h1>
+          <p className="text-sm text-gray-500 mt-1">Internal team members</p>
+        </div>
+        {isSuperAdmin && (
+          <Button onClick={() => setShowInviteModal(true)}>
+            <UserPlus size={15} /> Invite user
+          </Button>
+        )}
+        {(isAdmin || isStandardUser) && (
+          <Button variant="secondary" onClick={() => setShowInviteRequestModal(true)}>
+            <UserPlus size={15} /> Request team invite
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -855,6 +1041,18 @@ export default function PeoplePage() {
           currentUser={currentUser}
           onConfirm={handleConfirmProposal}
           onClose={() => setProposeTarget(null)}
+        />
+      )}
+      {showInviteModal && (
+        <InviteUserModal
+          onClose={() => setShowInviteModal(false)}
+          addToast={addToast}
+        />
+      )}
+      {showInviteRequestModal && (
+        <PlatformInviteRequestModal
+          onClose={() => setShowInviteRequestModal(false)}
+          onConfirm={handleConfirmInviteRequest}
         />
       )}
     </div>

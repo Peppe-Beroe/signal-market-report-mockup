@@ -340,7 +340,11 @@ export function AppProvider({ children }) {
       'user',
       `Proposed role: ${data.proposedRole || data.requestedRole} on ${data.projectName || '—'}`
     );
-    addToast('Proposal submitted — a Project Owner will review it');
+    addToast(
+      data.type === 'platform_invite'
+        ? 'Invite request submitted — a Super Admin will review it'
+        : 'Proposal submitted — a Project Owner will review it'
+    );
   };
 
   const deactivateUser = (userId) => {
