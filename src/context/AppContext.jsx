@@ -347,6 +347,17 @@ export function AppProvider({ children }) {
     );
   };
 
+  const addUserToProject = (userId, projectId, projectName, role) => {
+    const user = internalUsers.find(u => u.id === userId);
+    setInternalUsers(prev => prev.map(u => {
+      if (u.id !== userId) return u;
+      if (u.projects.some(p => p.id === projectId)) return u;
+      return { ...u, projects: [...u.projects, { id: projectId, name: projectName, projectRole: role }] };
+    }));
+    addAuditEvent('Project member added', user ? `${user.firstName} ${user.lastName}` : userId, 'user', `Added to "${projectName}" as ${role}`);
+    addToast(`User added to "${projectName}" as ${role}`);
+  };
+
   const deactivateUser = (userId) => {
     const user = internalUsers.find(u => u.id === userId);
     setInternalUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'Deactivated' } : u));
@@ -405,7 +416,7 @@ export function AppProvider({ children }) {
       approveSurvey, rejectSurvey, launchSurvey, launchSurveyWithConfig,
       cloneSurvey, saveTemplate,
       submitChangeRequest, resolveChangeRequest,
-      createProposal,
+      createProposal, addUserToProject,
       deactivateUser, updateUserRole,
       attachReport, shareReport,
       toggleExclusion, updateAnnotation, transferToDataHub,

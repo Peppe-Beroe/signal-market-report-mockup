@@ -34,7 +34,7 @@ function getInitials(firstName, lastName) {
 
 // ─── Profile Drawer ─────────────────────────────────────────────────────────
 
-function ProfileDrawer({ user, onClose, onProposeAccess }) {
+function ProfileDrawer({ user, onClose, onProposeAccess, onAddToProject, isSuperAdmin }) {
   if (!user) return null;
   return (
     <>
@@ -107,10 +107,17 @@ function ProfileDrawer({ user, onClose, onProposeAccess }) {
 
         {/* Footer action */}
         <div className="px-5 py-4 border-t border-gray-100">
-          <Button className="w-full" size="sm" onClick={() => onProposeAccess(user)}>
-            <PlusCircle size={14} />
-            Propose project access
-          </Button>
+          {isSuperAdmin ? (
+            <Button className="w-full" size="sm" onClick={() => onAddToProject(user)}>
+              <PlusCircle size={14} />
+              Add to project
+            </Button>
+          ) : (
+            <Button className="w-full" size="sm" onClick={() => onProposeAccess(user)}>
+              <PlusCircle size={14} />
+              Propose project access
+            </Button>
+          )}
         </div>
       </div>
     </>
@@ -413,9 +420,114 @@ function PlatformInviteRequestModal({ onClose, onConfirm }) {
   );
 }
 
+// ─── Add to Project Modal (Super Admin — direct action) ──────────────────────
+
+function AddToProjectModal({ targetUser, projects, onConfirm, onClose }) {
+  const [projectId, setProjectId] = useState('');
+  const [role, setRole] = useState('Editor');
+  const [error, setError] = useState('');
+
+  const activeProjects = projects.filter(p => !p.archived);
+  const isStandardUserTarget = targetUser.role === 'Standard User';
+  const selectedProject = activeProjects.find(p => p.id === projectId);
+
+  const handleSubmit = () => {
+    if (!projectId) { setError('Please select a project.'); return; }
+    onConfirm({ projectId, projectName: selectedProject?.name || '', role });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900">Add to project</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            <X size={16} className="text-gray-500" />
+          </button>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          {/* Target user */}
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+              style={{ backgroundColor: '#4A00F8' }}
+            >
+              {targetUser.firstName[0]}{targetUser.lastName[0]}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-800">{targetUser.firstName} {targetUser.lastName}</p>
+              <p className="text-xs text-gray-400">{targetUser.email} · {targetUser.role}</p>
+            </div>
+          </div>
+
+          {/* Project picker */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Project</label>
+            <select
+              value={projectId}
+              onChange={e => { setProjectId(e.target.value); setError(''); }}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none transition-colors"
+            >
+              <option value="">Select a project…</option>
+              {activeProjects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Role radio group */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+            <div className="space-y-2">
+              {['Owner', 'Editor', 'Viewer'].map(r => {
+                const disabled = r === 'Owner' && isStandardUserTarget;
+                return (
+                  <label
+                    key={r}
+                    className={`flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer ${
+                      disabled ? 'opacity-40 cursor-not-allowed bg-gray-50 border-gray-100' :
+                      role === r ? 'border-purple-300 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="add-role"
+                      value={r}
+                      checked={role === r}
+                      disabled={disabled}
+                      onChange={() => !disabled && setRole(r)}
+                      className="mt-0.5 accent-purple-600"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{r}</p>
+                      {disabled && (
+                        <p className="text-xs text-gray-400 mt-0.5">Owner requires Admin org role</p>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 text-xs text-red-600">
+              <AlertTriangle size={13} /> {error}
+            </div>
+          )}
+        </div>
+        <div className="flex justify-between px-6 py-4 border-t border-gray-100">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSubmit}>Add to project</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Kebab menu ─────────────────────────────────────────────────────────────
 
-function KebabMenu({ user, isSuperAdmin, isAdmin, onViewProfile, onChangeRole, onDeactivate, onProposeAccess, totalSuperAdmins }) {
+function KebabMenu({ user, isSuperAdmin, isAdmin, onViewProfile, onChangeRole, onDeactivate, onProposeAccess, onAddToProject, totalSuperAdmins }) {
   const [open, setOpen] = useState(false);
   const isLastSA = user.role === 'Super Admin' && totalSuperAdmins <= 1;
 
@@ -437,12 +549,21 @@ function KebabMenu({ user, isSuperAdmin, isAdmin, onViewProfile, onChangeRole, o
             >
               View profile
             </button>
-            <button
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-              onClick={() => { setOpen(false); onProposeAccess(); }}
-            >
-              Propose project access
-            </button>
+            {isSuperAdmin ? (
+              <button
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                onClick={() => { setOpen(false); onAddToProject(); }}
+              >
+                Add to project
+              </button>
+            ) : (
+              <button
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                onClick={() => { setOpen(false); onProposeAccess(); }}
+              >
+                Propose project access
+              </button>
+            )}
             {isSuperAdmin && (
               <>
                 <button
@@ -716,7 +837,7 @@ function ChangeRoleModal({ user, internalUsers, projects, onConfirm, onClose }) 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function PeoplePage() {
-  const { currentUser, internalUsers, projects, proposals, addToast, createProposal, deactivateUser, updateUserRole } = useApp();
+  const { currentUser, internalUsers, projects, proposals, addToast, createProposal, addUserToProject, deactivateUser, updateUserRole } = useApp();
   const navigate = useNavigate();
 
   const isSuperAdmin = currentUser.role === 'Super Admin';
@@ -736,6 +857,7 @@ export default function PeoplePage() {
   const [deactivateTarget, setDeactivateTarget] = useState(null);
   const [changeRoleTarget, setChangeRoleTarget] = useState(null);
   const [proposeTarget, setProposeTarget] = useState(null);
+  const [addTarget, setAddTarget] = useState(null);
 
   const roleOptions = ['All', 'Super Admin', 'Admin', 'Standard User'];
 
@@ -792,6 +914,16 @@ export default function PeoplePage() {
   const handleConfirmProposal = (data) => {
     createProposal(data);
     setProposeTarget(null);
+  };
+
+  const handleAddToProject = (user) => {
+    setAddTarget(user);
+  };
+
+  const handleConfirmAddToProject = ({ projectId, projectName, role }) => {
+    addUserToProject(addTarget.id, projectId, projectName, role);
+    setAddTarget(null);
+    if (selectedUser?.id === addTarget.id) setSelectedUser(null);
   };
 
   const handleConfirmInviteRequest = (data) => {
@@ -950,6 +1082,7 @@ export default function PeoplePage() {
                           onChangeRole={() => handleChangeRole(user)}
                           onDeactivate={() => handleDeactivate(user)}
                           onProposeAccess={() => handleProposeAccess(user)}
+                          onAddToProject={() => handleAddToProject(user)}
                         />
                       </td>
                     </tr>
@@ -1006,6 +1139,8 @@ export default function PeoplePage() {
           user={selectedUser}
           onClose={() => setSelectedUser(null)}
           onProposeAccess={handleProposeAccess}
+          onAddToProject={handleAddToProject}
+          isSuperAdmin={isSuperAdmin}
         />
       )}
 
@@ -1041,6 +1176,14 @@ export default function PeoplePage() {
           currentUser={currentUser}
           onConfirm={handleConfirmProposal}
           onClose={() => setProposeTarget(null)}
+        />
+      )}
+      {addTarget && (
+        <AddToProjectModal
+          targetUser={addTarget}
+          projects={projects}
+          onConfirm={handleConfirmAddToProject}
+          onClose={() => setAddTarget(null)}
         />
       )}
       {showInviteModal && (
