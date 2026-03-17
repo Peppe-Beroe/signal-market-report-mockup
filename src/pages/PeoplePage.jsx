@@ -241,10 +241,175 @@ function MyRequestsTab({ proposals, currentUser, navigate }) {
   );
 }
 
+// ─── Deactivate Wizard ──────────────────────────────────────────────────────
+
+function DeactivateWizard({ user, internalUsers, projects, onConfirm, onClose }) {
+  const violations = (user.projects || []).filter(p => {
+    if (p.projectRole !== 'Owner') return false;
+    const otherOwners = internalUsers.filter(u =>
+      u.id !== user.id &&
+      u.status === 'Active' &&
+      u.projects.some(up => up.id === p.id && up.projectRole === 'Owner')
+    );
+    return otherOwners.length === 0;
+  });
+
+  const [step, setStep] = useState(violations.length > 0 ? 1 : 3);
+  const [assignments, setAssignments] = useState({});
+
+  const activeAdmins = internalUsers.filter(u =>
+    u.id !== user.id &&
+    u.status === 'Active' &&
+    (u.role === 'Admin' || u.role === 'Super Admin')
+  );
+
+  const handleConfirm = () => {
+    onConfirm(assignments);
+  };
+
+  if (violations.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-2">Deactivate user?</h2>
+          <p className="text-sm text-gray-500 mb-5">
+            {user.firstName} {user.lastName} will lose access to the platform immediately.
+          </p>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button onClick={handleConfirm} className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600">Deactivate</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6">
+        {step === 1 && (
+          <>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Ownership reassignment required</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {user.firstName} {user.lastName} is the sole Owner of {violations.length} active project{violations.length > 1 ? 's' : ''}. You must reassign ownership before deactivating.
+            </p>
+            <div className="space-y-2 mb-5">
+              {violations.map(p => (
+                <div key={p.id} className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-100 text-sm text-amber-800">
+                  <span className="font-medium">{p.name}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button onClick={() => setStep(2)} className="flex-1 px-4 py-2 rounded-lg text-white text-sm font-medium" style={{backgroundColor:'#4A00F8'}}>Reassign Ownership</button>
+            </div>
+          </>
+        )}
+        {step === 2 && (
+          <>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Reassign project ownership</h2>
+            <p className="text-sm text-gray-500 mb-4">Select a new Owner for each project:</p>
+            <div className="space-y-3 mb-5">
+              {violations.map(p => (
+                <div key={p.id} className="p-3 rounded-xl border border-gray-200">
+                  <p className="text-sm font-medium text-gray-800 mb-2">{p.name}</p>
+                  <select
+                    value={assignments[p.id] || ''}
+                    onChange={e => setAssignments(prev => ({...prev, [p.id]: e.target.value}))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:border-purple-400 focus:outline-none"
+                  >
+                    <option value="">Select new owner…</option>
+                    {activeAdmins.map(u => (
+                      <option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.role})</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setStep(1)} className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Back</button>
+              <button
+                onClick={() => setStep(3)}
+                disabled={violations.some(p => !assignments[p.id])}
+                className="flex-1 px-4 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-40"
+                style={{backgroundColor:'#4A00F8'}}
+              >Continue</button>
+            </div>
+          </>
+        )}
+        {step === 3 && (
+          <>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Confirm deactivation</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {violations.length > 0 ? `Ownership will be transferred and ${user.firstName} ${user.lastName} will be deactivated.` : `${user.firstName} ${user.lastName} will lose access immediately.`}
+            </p>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button onClick={handleConfirm} className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600">Confirm Deactivation</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ChangeRoleModal({ user, internalUsers, projects, onConfirm, onClose }) {
+  const [newRole, setNewRole] = useState(user.role);
+
+  const wouldViolate = (targetRole) => {
+    if (targetRole === 'Super Admin' || targetRole === 'Admin') return false;
+    if (user.role !== 'Admin' && user.role !== 'Super Admin') return false;
+    return (user.projects || []).some(p => {
+      if (p.projectRole !== 'Owner') return false;
+      const otherOwners = internalUsers.filter(u =>
+        u.id !== user.id &&
+        u.status === 'Active' &&
+        (u.role === 'Admin' || u.role === 'Super Admin') &&
+        u.projects.some(up => up.id === p.id && up.projectRole === 'Owner')
+      );
+      return otherOwners.length === 0;
+    });
+  };
+
+  const hasViolation = wouldViolate(newRole);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">Change org role</h2>
+        <p className="text-sm text-gray-500 mb-1">{user.firstName} {user.lastName}</p>
+        <select
+          value={newRole}
+          onChange={e => setNewRole(e.target.value)}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none mb-3"
+        >
+          {['Standard User', 'Admin', 'Super Admin'].map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        {hasViolation && (
+          <div className="p-3 rounded-xl bg-red-50 border border-red-100 mb-3">
+            <p className="text-xs text-red-700">Cannot downgrade: {user.firstName} is the sole project Owner on one or more active projects. Reassign ownership first.</p>
+          </div>
+        )}
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button
+            onClick={() => onConfirm(newRole)}
+            disabled={hasViolation || newRole === user.role}
+            className="flex-1 px-4 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-40"
+            style={{backgroundColor:'#4A00F8'}}
+          >Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function PeoplePage() {
-  const { currentUser, internalUsers, proposals, addToast } = useApp();
+  const { currentUser, internalUsers, projects, proposals, addToast, deactivateUser, updateUserRole } = useApp();
   const navigate = useNavigate();
 
   const isSuperAdmin = currentUser.role === 'Super Admin';
@@ -257,6 +422,8 @@ export default function PeoplePage() {
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [deactivateTarget, setDeactivateTarget] = useState(null);
+  const [changeRoleTarget, setChangeRoleTarget] = useState(null);
 
   const roleOptions = ['All', 'Super Admin', 'Admin', 'Standard User'];
 
@@ -289,11 +456,21 @@ export default function PeoplePage() {
   };
 
   const handleChangeRole = (user) => {
-    addToast(`Role change flow for ${user.firstName} ${user.lastName} — coming soon`, 'info');
+    setChangeRoleTarget(user);
   };
 
   const handleDeactivate = (user) => {
-    addToast(`Deactivation confirmation for ${user.firstName} ${user.lastName} — coming soon`, 'warning');
+    setDeactivateTarget(user);
+  };
+
+  const handleConfirmDeactivate = (assignments) => {
+    deactivateUser(deactivateTarget.id);
+    setDeactivateTarget(null);
+  };
+
+  const handleConfirmRoleChange = (newRole) => {
+    updateUserRole(changeRoleTarget.id, newRole);
+    setChangeRoleTarget(null);
   };
 
   const handleProposeAccess = (user) => {
@@ -398,9 +575,9 @@ export default function PeoplePage() {
                 <tbody>
                   {paginated.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center">
-                        <UserCheck size={28} className="text-gray-300 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500">No users match your filters</p>
+                      <td colSpan={5} className="text-center py-12">
+                        <Users size={32} className="text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500">No users match your search</p>
                       </td>
                     </tr>
                   )}
@@ -504,6 +681,25 @@ export default function PeoplePage() {
           to   { transform: translateX(0);    opacity: 1; }
         }
       `}</style>
+
+      {deactivateTarget && (
+        <DeactivateWizard
+          user={deactivateTarget}
+          internalUsers={internalUsers}
+          projects={projects}
+          onConfirm={handleConfirmDeactivate}
+          onClose={() => setDeactivateTarget(null)}
+        />
+      )}
+      {changeRoleTarget && (
+        <ChangeRoleModal
+          user={changeRoleTarget}
+          internalUsers={internalUsers}
+          projects={projects}
+          onConfirm={handleConfirmRoleChange}
+          onClose={() => setChangeRoleTarget(null)}
+        />
+      )}
     </div>
   );
 }

@@ -172,7 +172,7 @@ function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange }
             </div>
           </div>
         </td>
-        <td className="px-4 py-3 text-sm text-gray-600">{response.submittedAt}</td>
+        <td className="px-4 py-3 text-sm text-gray-600">{response.submittedAt}{response.submittedAt ? ` (${orgTimezone})` : ''}</td>
         <td className="px-4 py-3">
           {response.excluded
             ? <Badge color="red" size="xs">Excluded</Badge>
@@ -415,7 +415,7 @@ function AttachReportSection({ addToast, responsesReceived }) {
 export default function SurveyResults() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, toggleExclusion, updateAnnotation, addToast } = useApp();
+  const { surveys, projects, toggleExclusion, updateAnnotation, addToast, orgTimezone } = useApp();
   const [activeTab, setActiveTab] = useState('responses');
   const [emailCollapsed, setEmailCollapsed] = useState(false);
   const [responseFilter, setResponseFilter] = useState('all');
@@ -434,7 +434,34 @@ export default function SurveyResults() {
 
   const tabs = ['Responses', 'Summary', 'Distribution'];
 
-  const handleExportCSV = () => addToast('Results exported to CSV');
+  const handleExportCSV = () => {
+    const headers = ['Expert', 'Company', 'Submitted At', 'Status', 'Annotation', ...survey.questions.map(q => q.text)];
+    const rows = survey.responses.map(r => [
+      r.expertName,
+      r.company || '',
+      r.submittedAt || '',
+      r.excluded ? 'Excluded' : 'Submitted',
+      r.annotation || '',
+      ...survey.questions.map(q => {
+        const ans = r.answers[q.id];
+        if (Array.isArray(ans)) return ans.join('; ');
+        return ans != null ? String(ans) : '';
+      }),
+    ]);
+    const csv = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${survey.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-results.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    addToast('Results exported to CSV');
+  };
   const handleCopySurveyLink = () => addToast('Survey link copied');
   const handleSendReminder = () => addToast(`Reminder sent to ${nonResponding} non-responding experts`);
 
@@ -520,7 +547,7 @@ export default function SurveyResults() {
           ) : (
             <>
               <p className="text-2xl font-bold text-gray-900">{survey.closeDate || '—'}</p>
-              <p className="text-xs text-gray-400 mt-2">Closed</p>
+              <p className="text-xs text-gray-400 mt-2">Closed <span className="font-medium">{orgTimezone}</span></p>
             </>
           )}
         </Card>

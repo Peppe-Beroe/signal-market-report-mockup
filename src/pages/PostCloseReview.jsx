@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, CheckCircle, AlertTriangle, X, ChevronDown, ChevronUp, Edit2, Eye, EyeOff } from 'lucide-react';
+import { Clock, CheckCircle, AlertTriangle, X, ChevronDown, ChevronUp, Edit2, Eye, EyeOff, Paperclip, Share2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
+import { AttachReportSection } from '../components/AttachReportSection';
 
 function BarChart({ data }) {
   const max = Math.max(...Object.values(data), 1);
@@ -83,7 +84,7 @@ function ResponseRow({ response, survey }) {
 export default function PostCloseReview() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, transferToDataHub } = useApp();
+  const { surveys, projects, transferToDataHub, attachReport, shareReport, addToast } = useApp();
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [autoTransferCancelled, setAutoTransferCancelled] = useState(false);
 
@@ -139,6 +140,20 @@ export default function PostCloseReview() {
               <strong>Wave 2 results ready for transfer</strong> — {survey.responsesReceived}/{survey.expertsTargeted} responses collected ({survey.responseRate}% response rate). All responses included.
             </p>
           </div>
+
+          {/* Attach report section */}
+          {survey.status !== 'Transferred' && (
+            <div className="mb-5">
+              <AttachReportSection
+                surveyId={surveyId}
+                attachReport={attachReport}
+                shareReport={shareReport}
+                addToast={addToast}
+                responsesReceived={survey.responsesReceived}
+                survey={survey}
+              />
+            </div>
+          )}
 
           {/* Response table */}
           <Card className="mb-5">

@@ -63,7 +63,7 @@ const MERGE_TAGS = ['expert_name', 'survey_name', 'survey_link', 'close_date'];
 export default function WaveSetup() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, experts, currentUser, launchSurveyWithConfig, addToast } = useApp();
+  const { surveys, projects, experts, currentUser, launchSurveyWithConfig, addToast, orgTimezone } = useApp();
 
   const survey = surveys.find(s => s.id === surveyId);
   const project = projects.find(p => p.id === projectId);
@@ -216,7 +216,7 @@ export default function WaveSetup() {
         <div className="grid grid-cols-2 gap-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Send date & time <span className="text-gray-400 font-normal">(IST)</span>
+              Send date & time <span className="text-gray-400 font-normal">({orgTimezone})</span>
             </label>
             <input
               type="datetime-local"
@@ -228,7 +228,7 @@ export default function WaveSetup() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Close date & time <span className="text-gray-400 font-normal">(IST)</span>
+              Close date & time <span className="text-gray-400 font-normal">({orgTimezone})</span>
             </label>
             <input
               type="datetime-local"

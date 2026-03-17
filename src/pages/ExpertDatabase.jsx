@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Mail, Building2, Tag, X, Upload, FileText, Check, AlertTriangle, ChevronRight, Bell, Clock, CheckCircle2 } from 'lucide-react';
+import { Search, Plus, Mail, Building2, Tag, X, Upload, FileText, Check, AlertTriangle, ChevronRight, Bell, Clock, CheckCircle2, Users } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -100,7 +100,7 @@ function RequestChangeModal({ onClose, onSubmit }) {
   );
 }
 
-function CSVImportModal({ onClose, onImport, addToast }) {
+function CSVImportModal({ onClose, onImport, addToast, createExpert }) {
   const [step, setStep] = useState(1);
   const [fileName, setFileName] = useState('');
 
@@ -240,8 +240,17 @@ function CSVImportModal({ onClose, onImport, addToast }) {
             </p>
             <div className="flex justify-between">
               <Button variant="secondary" onClick={() => setStep(2)}>Back</Button>
-              <Button onClick={() => { onImport(); onClose(); }}>
-                <Upload size={14} /> Import 3 experts
+              <Button onClick={() => {
+                const validRows = MOCK_PREFLIGHT.filter(r => r.status === 'ok');
+                validRows.forEach(row => {
+                  createExpert({ name: row.name, email: row.email, company: row.company, title: row.title, expertise: '', tags: '' });
+                });
+                const newCount = validRows.length;
+                const skipCount = MOCK_PREFLIGHT.filter(r => r.status !== 'ok').length;
+                addToast(`Import complete: ${newCount} added, ${skipCount} skipped`);
+                onClose();
+              }}>
+                <Upload size={14} /> Import {MOCK_PREFLIGHT.filter(r => r.status === 'ok').length} experts
               </Button>
             </div>
           </div>
@@ -393,64 +402,76 @@ export default function ExpertDatabase() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filtered.map(expert => (
-                <tr
-                  key={expert.id}
-                  className="hover:bg-purple-50/40 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/experts/${expert.id}`)}
-                >
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                        style={{ backgroundColor: expert.status === 'Opted-out' ? '#9CA3AF' : '#4A00F8' }}
-                      >
-                        {expert.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-800 hover:text-purple-700 transition-colors">{expert.name}</p>
-                        <div className="flex items-center gap-1 text-xs text-gray-400">
-                          <Mail size={10} />
-                          {expert.email}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center gap-1.5 text-sm text-gray-700">
-                      <Building2 size={13} className="text-gray-400" />
-                      <div>
-                        <p className="font-medium">{expert.company}</p>
-                        <p className="text-xs text-gray-400">{expert.title}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {expert.expertise.map(e => (
-                        <Badge key={e} color="purple" size="xs">{e}</Badge>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {expert.tags.map(t => (
-                        <span key={t} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded flex items-center gap-1">
-                          <Tag size={9} />
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className="text-sm font-semibold text-gray-800">{expert.waves}</span>
-                    <span className="text-xs text-gray-400 ml-1">wave{expert.waves !== 1 ? 's' : ''}</span>
-                  </td>
-                  <td className="px-4 py-4">
-                    <StatusBadge status={expert.status} size="xs" />
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-12">
+                    <Users size={32} className="text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500 mb-3">No experts match your search</p>
+                    {isSuperAdmin && (
+                      <Button size="sm" onClick={() => setShowImportModal(true)}>Import experts</Button>
+                    )}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filtered.map(expert => (
+                  <tr
+                    key={expert.id}
+                    className="hover:bg-purple-50/40 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/experts/${expert.id}`)}
+                  >
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                          style={{ backgroundColor: expert.status === 'Opted-out' ? '#9CA3AF' : '#4A00F8' }}
+                        >
+                          {expert.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800 hover:text-purple-700 transition-colors">{expert.name}</p>
+                          <div className="flex items-center gap-1 text-xs text-gray-400">
+                            <Mail size={10} />
+                            {expert.email}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-1.5 text-sm text-gray-700">
+                        <Building2 size={13} className="text-gray-400" />
+                        <div>
+                          <p className="font-medium">{expert.company}</p>
+                          <p className="text-xs text-gray-400">{expert.title}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {expert.expertise.map(e => (
+                          <Badge key={e} color="purple" size="xs">{e}</Badge>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {expert.tags.map(t => (
+                          <span key={t} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded flex items-center gap-1">
+                            <Tag size={9} />
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="text-sm font-semibold text-gray-800">{expert.waves}</span>
+                      <span className="text-xs text-gray-400 ml-1">wave{expert.waves !== 1 ? 's' : ''}</span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <StatusBadge status={expert.status} size="xs" />
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -597,6 +618,7 @@ export default function ExpertDatabase() {
           onClose={() => setShowImportModal(false)}
           onImport={handleImportComplete}
           addToast={addToast}
+          createExpert={createExpert}
         />
       )}
     </div>

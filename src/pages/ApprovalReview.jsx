@@ -69,10 +69,17 @@ function QuestionPreview({ question, index }) {
 export default function ApprovalReview() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, approveSurvey, rejectSurvey } = useApp();
+  const { surveys, projects, approveSurvey, rejectSurvey, internalUsers, currentUser } = useApp();
 
   const survey = surveys.find(s => s.id === surveyId);
   const project = projects.find(p => p.id === projectId);
+
+  const projectOwners = internalUsers.filter(u =>
+    u.status === 'Active' &&
+    u.projects.some(p => p.id === projectId && p.projectRole === 'Owner')
+  );
+  const currentUserIsOwner = internalUsers.find(u => u.email === currentUser.email)
+    ?.projects.some(p => p.id === projectId && p.projectRole === 'Owner') ?? true;
 
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -105,6 +112,30 @@ export default function ApprovalReview() {
         </div>
         <StatusBadge status={survey.status} />
       </div>
+
+      {/* Approval routing */}
+      <Card className="p-4 mb-5">
+        <div className="flex items-start gap-3">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-gray-800 mb-1">Approval authority</p>
+            {projectOwners.length > 0 ? (
+              <p className="text-sm text-gray-600">
+                This survey requires approval from:{' '}
+                <span className="font-semibold text-gray-800">
+                  {projectOwners.map(u => `${u.firstName} ${u.lastName}`).join(', ')}
+                </span>
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500">No Project Owners configured for this project.</p>
+            )}
+          </div>
+          {!currentUserIsOwner && (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-lg flex-shrink-0">
+              <span>View only</span>
+            </div>
+          )}
+        </div>
+      </Card>
 
       {/* Diff computation */}
       {(() => {

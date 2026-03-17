@@ -37,7 +37,7 @@ const TARGET_TYPE_COLORS = {
 const PAGE_SIZE = 10;
 
 export default function AuditLog() {
-  const { auditEvents, addToast, currentUser } = useApp();
+  const { auditEvents, addToast, currentUser, orgTimezone } = useApp();
 
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -173,7 +173,7 @@ export default function AuditLog() {
                 pageItems.map(ev => (
                   <tr key={ev.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3.5">
-                      <span className="text-xs font-mono text-gray-500">{ev.timestamp}</span>
+                      <span className="text-xs font-mono text-gray-500">{ev.timestamp} ({orgTimezone})</span>
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2">

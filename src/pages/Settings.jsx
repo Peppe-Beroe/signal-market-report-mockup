@@ -130,25 +130,30 @@ Thank you,
 Beroe Research Team`;
 
 export default function Settings() {
-  const { currentUser, addToast } = useApp();
+  const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs } = useApp();
   const isSuperAdmin = currentUser.role === 'Super Admin';
 
   const [profile, setProfile] = useState({ name: currentUser.name, email: currentUser.email });
-  const [notifications, setNotifications] = useState({
-    surveySubmitted: true,
-    approvalRequired: true,
-    surveyLaunched: true,
-    responseMilestone: true,
-    bounceAlert: true,
-    autoTransfer: false,
-  });
+  const NOTIFICATION_EVENTS = [
+    { key: 'survey_approved', label: 'Survey approved' },
+    { key: 'survey_rejected', label: 'Survey rejected' },
+    { key: 'proposal_approved', label: 'Proposal approved' },
+    { key: 'proposal_rejected', label: 'Proposal rejected' },
+    { key: 'proposal_auto_cancelled', label: 'Proposal auto-cancelled' },
+    { key: 'new_proposal_received', label: 'New proposal received' },
+    { key: 'invite_approved', label: 'Invite approved' },
+    { key: 'invite_rejected', label: 'Invite rejected' },
+    { key: 'response_rate_alert', label: 'Response rate threshold alert' },
+    { key: 'expert_change_resolved', label: 'Expert change request resolved' },
+    { key: 'wave_closed', label: 'Wave closed' },
+  ];
   const [surveyDefaults, setSurveyDefaults] = useState({
     requireApproval: true,
     autoCloseEnabled: false,
     defaultCloseDays: 14,
     autoTransferDays: 7,
   });
-  const [timezone, setTimezone] = useState('IST');
+  // orgTimezone is wired to AppContext; local alias removed
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [addingCategory, setAddingCategory] = useState(false);
@@ -164,7 +169,7 @@ export default function Settings() {
 
   const saveProfile = () => addToast('Profile updated successfully');
   const saveDefaults = () => addToast('Survey defaults saved');
-  const saveTimezone = () => addToast(`Timezone updated to ${timezone}`);
+  const saveTimezone = () => addToast(`Timezone updated to ${orgTimezone}`);
   const saveDefaultEmail = () => addToast('Default email template saved');
 
   const handleDeactivateUser = (userId) => {
@@ -339,8 +344,8 @@ export default function Settings() {
         <SectionHeader icon={Globe} title="Organisation Timezone" description="Default timezone for survey schedules and reports" />
         <div className="flex items-center gap-3">
           <select
-            value={timezone}
-            onChange={e => setTimezone(e.target.value)}
+            value={orgTimezone}
+            onChange={e => setOrgTimezone(e.target.value)}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none flex-1 max-w-sm"
           >
             {TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
@@ -448,13 +453,53 @@ export default function Settings() {
 
       {/* Notifications */}
       <Card className="p-6">
-        <SectionHeader icon={Bell} title="Notifications" description="Choose which events trigger email alerts for you" />
-        <div className="space-y-0">
-          <Toggle checked={notifications.approvalRequired} onChange={v => setNotifications(n => ({ ...n, approvalRequired: v }))} label="Survey submitted for approval" description="Notify admins when a researcher submits a survey" />
-          <Toggle checked={notifications.surveyLaunched} onChange={v => setNotifications(n => ({ ...n, surveyLaunched: v }))} label="Survey launched" description="Notify team when a survey goes live" />
-          <Toggle checked={notifications.responseMilestone} onChange={v => setNotifications(n => ({ ...n, responseMilestone: v }))} label="Response milestones" description="Alert at 25%, 50%, 75% response rate" />
-          <Toggle checked={notifications.bounceAlert} onChange={v => setNotifications(n => ({ ...n, bounceAlert: v }))} label="Email bounce alerts" description="Immediate alert when an expert email bounces" />
-          <Toggle checked={notifications.autoTransfer} onChange={v => setNotifications(n => ({ ...n, autoTransfer: v }))} label="Auto-transfer reminder" description="Reminder before scheduled DataHub transfer" />
+        <SectionHeader icon={Bell} title="Notifications" description="Choose which events trigger alerts for you" />
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Event</th>
+                <th className="text-center py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">Email</th>
+                <th className="text-center py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider w-32">In-platform</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {NOTIFICATION_EVENTS.map(({ key, label }) => {
+                const prefs = notificationPrefs?.[key] || { email: false, inPlatform: false };
+                const toggle = (channel) => setNotificationPrefs(prev => ({
+                  ...prev,
+                  [key]: { ...prefs, [channel]: !prefs[channel] },
+                }));
+                return (
+                  <tr key={key} className="hover:bg-gray-50 transition-colors">
+                    <td className="py-3 px-3 text-sm text-gray-700">{label}</td>
+                    <td className="py-3 px-3 text-center">
+                      <button
+                        onClick={() => toggle('email')}
+                        className={`relative inline-flex w-9 h-5 rounded-full transition-colors ${prefs.email ? '' : 'bg-gray-200'}`}
+                        style={prefs.email ? { backgroundColor: '#4A00F8' } : {}}
+                        role="switch"
+                        aria-checked={prefs.email}
+                      >
+                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${prefs.email ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                      </button>
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      <button
+                        onClick={() => toggle('inPlatform')}
+                        className={`relative inline-flex w-9 h-5 rounded-full transition-colors ${prefs.inPlatform ? '' : 'bg-gray-200'}`}
+                        style={prefs.inPlatform ? { backgroundColor: '#4A00F8' } : {}}
+                        role="switch"
+                        aria-checked={prefs.inPlatform}
+                      >
+                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${prefs.inPlatform ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </Card>
 

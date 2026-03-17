@@ -12,8 +12,17 @@ export function AppProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [changeRequests, setChangeRequests] = useState([]);
-  const [internalUsers] = useState(INTERNAL_USERS);
+  const [internalUsers, setInternalUsers] = useState(INTERNAL_USERS);
+  const [orgTimezone, setOrgTimezone] = useState('IST');
   const [proposals] = useState(PROPOSALS);
+  const [notificationPrefs, setNotificationPrefs] = useState(() => {
+    const events = [
+      'survey_approved', 'survey_rejected', 'proposal_approved', 'proposal_rejected',
+      'proposal_auto_cancelled', 'new_proposal_received', 'invite_approved', 'invite_rejected',
+      'response_rate_alert', 'expert_change_resolved', 'wave_closed',
+    ];
+    return Object.fromEntries(events.map(e => [e, { email: true, inPlatform: true }]));
+  });
   const [notifications, setNotifications] = useState(NOTIFICATIONS);
 
   const markNotificationRead = (id) =>
@@ -312,6 +321,40 @@ export function AppProvider({ children }) {
     addToast('Request marked as resolved');
   };
 
+  const deactivateUser = (userId) => {
+    const user = internalUsers.find(u => u.id === userId);
+    setInternalUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'Deactivated' } : u));
+    addAuditEvent('User deactivated', user ? `${user.firstName} ${user.lastName}` : userId, 'user', 'User account deactivated');
+    addToast('User deactivated', 'warning');
+  };
+
+  const updateUserRole = (userId, newRole) => {
+    const user = internalUsers.find(u => u.id === userId);
+    setInternalUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+    addAuditEvent('User role changed', user ? `${user.firstName} ${user.lastName}` : userId, 'user', `Role changed to ${newRole}`);
+    addToast('User role updated');
+  };
+
+  const attachReport = (surveyId, fileName) => {
+    setSurveys(prev => prev.map(s =>
+      s.id === surveyId
+        ? { ...s, attachedReport: { fileName, attachedAt: new Date().toISOString(), attachedBy: currentUser.name } }
+        : s
+    ));
+    addAuditEvent('Report attached', fileName, 'survey', 'Market intelligence report attached to survey');
+    addToast('Report attached successfully');
+  };
+
+  const shareReport = (surveyId, count) => {
+    setSurveys(prev => prev.map(s =>
+      s.id === surveyId
+        ? { ...s, reportSharedAt: new Date().toISOString(), reportDownloads: {} }
+        : s
+    ));
+    addAuditEvent('Report shared', `${count} experts`, 'survey', 'Report link shared with responding experts');
+    addToast(`Report shared with ${count} experts`);
+  };
+
   const transferToDataHub = (surveyId) => {
     const survey = surveys.find(s => s.id === surveyId);
     setSurveys(prev => prev.map(s =>
@@ -336,7 +379,11 @@ export function AppProvider({ children }) {
       approveSurvey, rejectSurvey, launchSurvey, launchSurveyWithConfig,
       cloneSurvey, saveTemplate,
       submitChangeRequest, resolveChangeRequest,
+      deactivateUser, updateUserRole,
+      attachReport, shareReport,
       toggleExclusion, updateAnnotation, transferToDataHub,
+      orgTimezone, setOrgTimezone,
+      notificationPrefs, setNotificationPrefs,
       toasts, addToast, removeToast,
     }}>
       {children}

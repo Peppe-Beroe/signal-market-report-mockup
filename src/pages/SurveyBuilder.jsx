@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Save,
@@ -655,6 +655,17 @@ export default function SurveyBuilder({ mode = 'create' }) {
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const dragIndexRef = useRef(null);
   const autoSaveTimerRef = useRef(null);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
 
   const triggerAutoSave = () => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
