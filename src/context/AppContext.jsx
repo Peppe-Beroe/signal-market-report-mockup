@@ -392,6 +392,15 @@ export function AppProvider({ children }) {
     addToast(`Report shared with ${count} experts`);
   };
 
+  const closeSurvey = (surveyId) => {
+    const survey = surveys.find(s => s.id === surveyId);
+    setSurveys(prev => prev.map(s =>
+      s.id === surveyId ? { ...s, status: 'Review' } : s
+    ));
+    addAuditEvent('Survey closed', survey?.name || surveyId, 'survey', 'Survey manually closed — entered Review state');
+    addToast('Survey closed — now in Review');
+  };
+
   const transferToDataHub = (surveyId) => {
     const survey = surveys.find(s => s.id === surveyId);
     setSurveys(prev => prev.map(s =>
@@ -413,7 +422,7 @@ export function AppProvider({ children }) {
       createProject, createExpert, updateExpert, deactivateExpert,
       archiveProject, unarchiveProject, archiveSurvey, unarchiveSurvey,
       createSurvey, updateSurvey, deleteSurvey,
-      approveSurvey, rejectSurvey, launchSurvey, launchSurveyWithConfig,
+      approveSurvey, rejectSurvey, launchSurvey, launchSurveyWithConfig, closeSurvey,
       cloneSurvey, saveTemplate,
       submitChangeRequest, resolveChangeRequest,
       createProposal, addUserToProject,

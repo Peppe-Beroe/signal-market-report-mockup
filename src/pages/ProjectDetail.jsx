@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Play, BarChart2, Eye, ExternalLink, Users, Calendar, ChevronRight, Mail, Shield, UserCheck, Archive, ArchiveRestore } from 'lucide-react';
+import { Plus, Edit2, Trash2, Play, BarChart2, Eye, ExternalLink, Users, Calendar, ChevronRight, Mail, Shield, UserCheck, Archive, ArchiveRestore, StopCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { USERS } from '../data/mockData';
 import Card from '../components/ui/Card';
@@ -23,7 +23,7 @@ const MOCK_TEAM = [
 export default function ProjectDetail() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { projects, surveys, currentUser, deleteSurvey, archiveSurvey, unarchiveSurvey } = useApp();
+  const { projects, surveys, currentUser, deleteSurvey, archiveSurvey, unarchiveSurvey, closeSurvey } = useApp();
   const [activeTab, setActiveTab] = useState('surveys');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showArchivedSurveys, setShowArchivedSurveys] = useState(false);
@@ -109,6 +109,13 @@ export default function ProjectDetail() {
             <ExternalLink size={12} />
           </Button>
         );
+        if (isAdminOrAbove) {
+          actions.push(
+            <Button key="close" size="xs" variant="ghost" onClick={() => closeSurvey(survey.id)} title="Close survey and enter Review" className="text-amber-500 hover:text-amber-700">
+              <StopCircle size={12} /> Close
+            </Button>
+          );
+        }
         break;
       case 'Review':
         actions.push(
