@@ -14,7 +14,7 @@ export function AppProvider({ children }) {
   const [changeRequests, setChangeRequests] = useState([]);
   const [internalUsers, setInternalUsers] = useState(INTERNAL_USERS);
   const [orgTimezone, setOrgTimezone] = useState('IST');
-  const [proposals] = useState(PROPOSALS);
+  const [proposals, setProposals] = useState(PROPOSALS);
   const [notificationPrefs, setNotificationPrefs] = useState(() => {
     const events = [
       'survey_approved', 'survey_rejected', 'proposal_approved', 'proposal_rejected',
@@ -321,6 +321,28 @@ export function AppProvider({ children }) {
     addToast('Request marked as resolved');
   };
 
+  const createProposal = (data) => {
+    const id = `pr${Date.now()}`;
+    const today = new Date().toISOString().split('T')[0];
+    const newProposal = {
+      id,
+      version: 1,
+      submittedDate: today,
+      submittedBy: currentUser.id,
+      submittedByName: currentUser.name,
+      status: 'Pending',
+      ...data,
+    };
+    setProposals(prev => [newProposal, ...prev]);
+    addAuditEvent(
+      'Membership change proposal submitted',
+      data.targetUserName || data.inviteEmail,
+      'user',
+      `Proposed role: ${data.proposedRole || data.requestedRole} on ${data.projectName || '—'}`
+    );
+    addToast('Proposal submitted — a Project Owner will review it');
+  };
+
   const deactivateUser = (userId) => {
     const user = internalUsers.find(u => u.id === userId);
     setInternalUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'Deactivated' } : u));
@@ -379,6 +401,7 @@ export function AppProvider({ children }) {
       approveSurvey, rejectSurvey, launchSurvey, launchSurveyWithConfig,
       cloneSurvey, saveTemplate,
       submitChangeRequest, resolveChangeRequest,
+      createProposal,
       deactivateUser, updateUserRole,
       attachReport, shareReport,
       toggleExclusion, updateAnnotation, transferToDataHub,
