@@ -25,6 +25,11 @@ function AutoSaveToast({ visible }) {
 export default function ExpertSurvey() {
   const navigate = useNavigate();
   const { token } = useParams();
+
+  const submittedKey = `survey_submitted_${token}`;
+  const alreadySubmitted = localStorage.getItem(submittedKey);
+  const submittedAt = localStorage.getItem(`${submittedKey}_at`);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [autoSave, setAutoSave] = useState(false);
@@ -73,10 +78,31 @@ export default function ExpertSurvey() {
   };
 
   const handleSubmit = () => {
+    const now = new Date().toLocaleString();
+    localStorage.setItem(submittedKey, 'true');
+    localStorage.setItem(`${submittedKey}_at`, now);
     navigate(`/survey/${token}/thank-you`);
   };
 
   const isLast = currentIndex === questions.length - 1;
+
+  if (alreadySubmitted) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-5 py-12">
+        <div className="max-w-md w-full text-center">
+          <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+            <Check size={28} className="text-green-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Already submitted</h1>
+          <p className="text-sm text-gray-500 mb-6">
+            You have already submitted your response to this survey.
+            {submittedAt && ` Submitted on ${submittedAt}.`}
+          </p>
+          <p className="text-xs text-gray-400">Your answers have been recorded. Thank you for your participation.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">

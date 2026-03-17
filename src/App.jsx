@@ -18,6 +18,7 @@ import PeoplePage from './pages/PeoplePage';
 import NotificationsPage from './pages/NotificationsPage';
 import ExpertSurvey from './pages/expert/ExpertSurvey';
 import ExpertThankYou from './pages/expert/ExpertThankYou';
+import ExpertOptOut from './pages/expert/ExpertOptOut';
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/survey/:token/thank-you" element={<ExpertThankYou />} />
+          <Route path="/survey/:token/opt-out" element={<ExpertOptOut />} />
           <Route path="/survey/:token" element={<ExpertSurvey />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />

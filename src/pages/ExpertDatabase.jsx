@@ -188,18 +188,57 @@ function CSVImportModal({ onClose, onImport, addToast, createExpert }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {MOCK_PREFLIGHT.map(row => (
+                  {MOCK_PREFLIGHT.map(row => {
+                    const formulaFields = ['name', 'email', 'company', 'title'].filter(
+                      f => row[f] && /^[=+\-@]/.test(String(row[f]))
+                    );
+                    return (
                     <tr key={row.row} className={row.status === 'error' ? 'bg-red-50' : 'bg-green-50/30'}>
                       <td className="px-3 py-2.5 text-xs text-gray-500">{row.row}</td>
-                      <td className="px-3 py-2.5 text-sm text-gray-800">{row.name}</td>
-                      <td className="px-3 py-2.5 text-xs text-gray-600">{row.email}</td>
-                      <td className="px-3 py-2.5 text-sm text-gray-600">{row.company}</td>
-                      <td className="px-3 py-2.5 text-sm text-gray-600">{row.title}</td>
+                      <td className="px-3 py-2.5 text-sm text-gray-800">
+                        <span>{row.name}</span>
+                        {/^[=+\-@]/.test(String(row.name || '')) && (
+                          <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded">
+                            <AlertTriangle size={10} /> Formula
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-gray-600">
+                        <span>{row.email}</span>
+                        {/^[=+\-@]/.test(String(row.email || '')) && (
+                          <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded">
+                            <AlertTriangle size={10} /> Formula
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm text-gray-600">
+                        <span>{row.company}</span>
+                        {/^[=+\-@]/.test(String(row.company || '')) && (
+                          <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded">
+                            <AlertTriangle size={10} /> Formula
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-sm text-gray-600">
+                        <span>{row.title}</span>
+                        {/^[=+\-@]/.test(String(row.title || '')) && (
+                          <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded">
+                            <AlertTriangle size={10} /> Formula
+                          </span>
+                        )}
+                      </td>
                       <td className="px-3 py-2.5">
                         {row.status === 'ok' ? (
-                          <span className="flex items-center gap-1 text-xs font-medium text-green-600">
-                            <Check size={12} /> Valid
-                          </span>
+                          <div className="space-y-1">
+                            <span className="flex items-center gap-1 text-xs font-medium text-green-600">
+                              <Check size={12} /> Valid
+                            </span>
+                            {formulaFields.length > 0 && (
+                              <span className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                <AlertTriangle size={10} /> Possible formula injection
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="flex items-center gap-1 text-xs font-medium text-red-600">
                             <AlertTriangle size={12} /> {row.error}
@@ -207,7 +246,8 @@ function CSVImportModal({ onClose, onImport, addToast, createExpert }) {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
