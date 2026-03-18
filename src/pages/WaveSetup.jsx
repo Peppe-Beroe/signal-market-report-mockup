@@ -63,10 +63,14 @@ const MERGE_TAGS = ['expert_name', 'survey_name', 'survey_link', 'close_date'];
 export default function WaveSetup() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, experts, currentUser, launchSurveyWithConfig, addToast, orgTimezone } = useApp();
+  const { surveys, projects, experts, currentUser, launchSurveyWithConfig, saveWaveSetup, addToast, orgTimezone } = useApp();
 
   const survey = surveys.find(s => s.id === surveyId);
   const project = projects.find(p => p.id === projectId);
+
+  // In the new flow, WaveSetup is accessed from Submitted state.
+  // If the survey already has a saved waveConfig, pre-populate from it.
+  const existingConfig = survey?.waveConfig;
 
   // Section 1 — Schedule
   const today = new Date();
@@ -74,13 +78,17 @@ export default function WaveSetup() {
   const closeDefault = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
   const closeDefaultStr = closeDefault.toISOString().slice(0, 16);
 
-  const [sendDate, setSendDate] = useState(todayStr);
-  const [closeDate, setCloseDate] = useState(closeDefaultStr);
+  const [sendDate, setSendDate] = useState(existingConfig?.sendDate || todayStr);
+  const [closeDate, setCloseDate] = useState(existingConfig?.closeDate || closeDefaultStr);
   const [dateError, setDateError] = useState('');
 
   // Section 2 — Expert Target List
   const activeExperts = experts.filter(e => e.status === 'Active');
-  const [selectedExperts, setSelectedExperts] = useState(new Set(activeExperts.map(e => e.id)));
+  const [selectedExperts, setSelectedExperts] = useState(
+    existingConfig?.selectedExperts
+      ? new Set(existingConfig.selectedExperts.map(e => e.id))
+      : new Set(activeExperts.map(e => e.id))
+  );
   const [expertSearch, setExpertSearch] = useState('');
   const [tagFilter, setTagFilter] = useState('');
 
@@ -105,9 +113,9 @@ export default function WaveSetup() {
   const deselectAll = () => setSelectedExperts(new Set());
 
   // Section 3 — Email Template
-  const [emailSubject, setEmailSubject] = useState(`You're invited: ${survey?.name || 'Survey'}`);
-  const [senderName, setSenderName] = useState('Beroe Research Team');
-  const [emailBody, setEmailBody] = useState(DEFAULT_EMAIL_BODY);
+  const [emailSubject, setEmailSubject] = useState(existingConfig?.emailSubject || `You're invited: ${survey?.name || 'Survey'}`);
+  const [senderName, setSenderName] = useState(existingConfig?.senderName || 'Beroe Research Team');
+  const [emailBody, setEmailBody] = useState(existingConfig?.emailBody || DEFAULT_EMAIL_BODY);
   const bodyRef = useRef(null);
 
   const insertMergeTag = (tag) => {
@@ -170,11 +178,13 @@ export default function WaveSetup() {
     return errs;
   };
 
-  const handleLaunch = () => {
+  const isSubmittedState = survey?.status === 'Submitted';
+
+  const handleSaveOrLaunch = () => {
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
-      addToast('Please fix validation errors before launching', 'warning');
+      addToast(`Please fix validation errors before ${isSubmittedState ? 'saving' : 'launching'}`, 'warning');
       return;
     }
     const config = {
@@ -187,7 +197,11 @@ export default function WaveSetup() {
       reminders: reminders.map(r => r.datetime).filter(Boolean),
       responseRateAlert: alertEnabled ? { threshold: alertThreshold, daysRemaining: alertDaysRemaining } : null,
     };
-    launchSurveyWithConfig(surveyId, config);
+    if (isSubmittedState) {
+      saveWaveSetup(surveyId, config);
+    } else {
+      launchSurveyWithConfig(surveyId, config);
+    }
     navigate(`/projects/${projectId}`);
   };
 
@@ -206,7 +220,11 @@ export default function WaveSetup() {
             <span className="text-gray-800 font-medium">{survey.name}</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Wave Setup</h1>
-          <p className="text-sm text-gray-500 mt-1">Configure before launching — all settings are applied when you click Launch</p>
+          <p className="text-sm text-gray-500 mt-1">
+            {isSubmittedState
+              ? 'Configure the wave before approval — settings are reviewed by the approver before the survey launches'
+              : 'Configure before launching — all settings are applied when you click Launch'}
+          </p>
         </div>
         <StatusBadge status={survey.status} />
       </div>
@@ -481,10 +499,10 @@ export default function WaveSetup() {
         </Button>
         <div className="flex items-center gap-3">
           <p className="text-xs text-gray-400">
-            {selectedExperts.size} expert{selectedExperts.size !== 1 ? 's' : ''} will receive invitations
+            {selectedExperts.size} expert{selectedExperts.size !== 1 ? 's' : ''} {isSubmittedState ? 'in target list' : 'will receive invitations'}
           </p>
-          <Button size="lg" onClick={handleLaunch}>
-            <Send size={16} /> Launch Survey
+          <Button size="lg" onClick={handleSaveOrLaunch}>
+            <Send size={16} /> {isSubmittedState ? 'Save Wave Setup' : 'Launch Survey'}
           </Button>
         </div>
       </div>

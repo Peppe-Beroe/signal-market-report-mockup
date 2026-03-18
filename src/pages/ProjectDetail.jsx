@@ -23,7 +23,7 @@ const MOCK_TEAM = [
 export default function ProjectDetail() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { projects, surveys, currentUser, deleteSurvey, archiveSurvey, unarchiveSurvey, closeSurvey } = useApp();
+  const { projects, surveys, currentUser, deleteSurvey, archiveSurvey, unarchiveSurvey, closeSurvey, launchSurveyWithConfig, addToast } = useApp();
   const [activeTab, setActiveTab] = useState('surveys');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showArchivedSurveys, setShowArchivedSurveys] = useState(false);
@@ -81,6 +81,17 @@ export default function ProjectDetail() {
         }
         break;
       case 'Submitted':
+        actions.push(
+          <Button
+            key="wave"
+            size="xs"
+            variant={survey.waveConfig ? 'secondary' : 'primary'}
+            onClick={() => navigate(`/projects/${projectId}/surveys/${survey.id}/wave-setup`)}
+            title={survey.waveConfig ? 'Edit wave setup' : 'Configure wave setup before approval'}
+          >
+            <Calendar size={12} /> {survey.waveConfig ? 'Edit Wave' : 'Set Up Wave'}
+          </Button>
+        );
         if (isAdminOrAbove) {
           actions.push(
             <Button key="review" size="xs" onClick={() => navigate(`/projects/${projectId}/surveys/${survey.id}/approve`)}>
@@ -94,7 +105,18 @@ export default function ProjectDetail() {
       case 'Approved':
         if (isAdminOrAbove) {
           actions.push(
-            <Button key="launch" size="xs" variant="success" onClick={() => navigate(`/projects/${projectId}/surveys/${survey.id}/wave-setup`)}>
+            <Button
+              key="launch"
+              size="xs"
+              variant="success"
+              onClick={() => {
+                if (survey.waveConfig) {
+                  launchSurveyWithConfig(survey.id, survey.waveConfig);
+                } else {
+                  addToast('Wave setup is missing — cannot launch', 'warning');
+                }
+              }}
+            >
               <Play size={12} /> Launch
             </Button>
           );

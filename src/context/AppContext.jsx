@@ -171,10 +171,20 @@ export function AppProvider({ children }) {
   const rejectSurvey = (surveyId, reason) => {
     const survey = surveys.find(s => s.id === surveyId);
     setSurveys(prev => prev.map(s =>
-      s.id === surveyId ? { ...s, status: 'Draft', rejectionReason: reason } : s
+      s.id === surveyId ? { ...s, status: 'Submitted', rejectionReason: reason } : s
     ));
-    addAuditEvent('Survey rejected', survey?.name || surveyId, 'survey', `Returned to draft: ${reason}`);
-    addToast('Survey returned to draft with feedback', 'warning');
+    addAuditEvent('Survey rejected', survey?.name || surveyId, 'survey', `Returned to Submitted: ${reason}`);
+    addToast('Survey returned to Submitted with feedback — wave setup preserved', 'warning');
+  };
+
+  const saveWaveSetup = (surveyId, config) => {
+    const survey = surveys.find(s => s.id === surveyId);
+    setSurveys(prev => prev.map(s =>
+      s.id === surveyId ? { ...s, waveConfig: config } : s
+    ));
+    addAuditEvent('Wave setup configured', survey?.name || surveyId, 'survey',
+      `Send: ${config.sendDate ? config.sendDate.split('T')[0] : '—'} · Close: ${config.closeDate ? config.closeDate.split('T')[0] : '—'} · Experts: ${config.selectedExperts?.length || 0}`);
+    addToast('Wave setup saved — survey ready for approval');
   };
 
   const launchSurvey = (surveyId) => {
@@ -422,7 +432,7 @@ export function AppProvider({ children }) {
       createProject, createExpert, updateExpert, deactivateExpert,
       archiveProject, unarchiveProject, archiveSurvey, unarchiveSurvey,
       createSurvey, updateSurvey, deleteSurvey,
-      approveSurvey, rejectSurvey, launchSurvey, launchSurveyWithConfig, closeSurvey,
+      approveSurvey, rejectSurvey, saveWaveSetup, launchSurvey, launchSurveyWithConfig, closeSurvey,
       cloneSurvey, saveTemplate,
       submitChangeRequest, resolveChangeRequest,
       createProposal, addUserToProject,

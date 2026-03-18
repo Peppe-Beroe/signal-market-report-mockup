@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, AlertTriangle, Check, List, CheckSquare, Star, AlignLeft, Info, GitCompare, Plus, Minus, Edit3 } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Check, List, CheckSquare, Star, AlignLeft, Info, GitCompare, Plus, Minus, Edit3, Calendar, Users, Mail } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -84,6 +84,12 @@ export default function ApprovalReview() {
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [approved, setApproved] = useState(false);
+
+  const waveSetupComplete = Boolean(
+    survey?.waveConfig?.sendDate &&
+    survey?.waveConfig?.closeDate &&
+    survey?.waveConfig?.selectedExperts?.length
+  );
 
   if (!survey) return (
     <div className="p-6 text-center">
@@ -259,6 +265,95 @@ export default function ApprovalReview() {
                   })}
                 </div>
               </Card>
+
+              {/* Wave Settings section */}
+              {survey.waveConfig ? (
+                <Card className="p-5">
+                  <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Calendar size={15} className="text-gray-400" />
+                    Wave Settings
+                  </h2>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      {[
+                        { label: 'Send date', value: survey.waveConfig.sendDate ? new Date(survey.waveConfig.sendDate).toLocaleString() : '—' },
+                        { label: 'Close date', value: survey.waveConfig.closeDate ? new Date(survey.waveConfig.closeDate).toLocaleString() : '—' },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="flex flex-col gap-0.5">
+                          <span className="text-xs text-gray-400 font-medium">{label}</span>
+                          <span className="text-gray-800 font-medium">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="border-t border-gray-50 pt-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Users size={13} className="text-gray-400" />
+                        <span className="text-xs font-semibold text-gray-600">Expert Target List</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="font-semibold" style={{ color: '#4A00F8' }}>
+                          {survey.waveConfig.selectedExperts?.length || 0}
+                        </span>
+                        <span className="text-gray-500">experts selected</span>
+                        {survey.waveConfig.selectedExperts?.some(e => e.status === 'Opted-out') && (
+                          <span className="text-xs text-amber-600 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">
+                            includes opted-out (will be suppressed at send)
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                        {(survey.waveConfig.selectedExperts || []).slice(0, 8).map(e => (
+                          <span key={e.id} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{e.name}</span>
+                        ))}
+                        {(survey.waveConfig.selectedExperts || []).length > 8 && (
+                          <span className="text-xs text-gray-400">+{survey.waveConfig.selectedExperts.length - 8} more</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="border-t border-gray-50 pt-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Mail size={13} className="text-gray-400" />
+                        <span className="text-xs font-semibold text-gray-600">Email Template</span>
+                      </div>
+                      <div className="text-sm space-y-1">
+                        <div className="flex gap-2">
+                          <span className="text-xs text-gray-400 w-16 flex-shrink-0">Subject</span>
+                          <span className="text-gray-700 text-xs">{survey.waveConfig.emailSubject || '—'}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <span className="text-xs text-gray-400 w-16 flex-shrink-0">Sender</span>
+                          <span className="text-gray-700 text-xs">{survey.waveConfig.senderName || '—'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {survey.waveConfig.reminders?.length > 0 && (
+                      <div className="border-t border-gray-50 pt-3">
+                        <span className="text-xs font-semibold text-gray-600">Reminders ({survey.waveConfig.reminders.length})</span>
+                        <div className="mt-1.5 space-y-1">
+                          {survey.waveConfig.reminders.map((r, i) => (
+                            <span key={i} className="block text-xs text-gray-500">Reminder {i + 1}: {new Date(r).toLocaleString()}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              ) : (
+                <Card className="p-5 border-amber-200 bg-amber-50">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-amber-800">Wave setup not configured</p>
+                      <p className="text-xs text-amber-600 mt-1">
+                        The submitter must configure wave setup (scheduling, expert list, email template) before this survey can be approved. Approval is blocked until wave setup is complete.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              )}
             </div>
 
         {/* Right: Review panel */}
@@ -269,7 +364,7 @@ export default function ApprovalReview() {
             {approved ? (
               <div className="text-center py-4">
                 <CheckCircle size={36} className="text-green-500 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-green-700">Survey Approved!</p>
+                <p className="text-sm font-semibold text-green-700">Survey + Wave Approved!</p>
                 <p className="text-xs text-gray-400 mt-1">Redirecting to project...</p>
               </div>
             ) : (
@@ -278,12 +373,17 @@ export default function ApprovalReview() {
                   <div className="space-y-3">
                     <button
                       onClick={handleApprove}
-                      className="w-full py-2.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-sm"
+                      disabled={!waveSetupComplete || !currentUserIsOwner}
+                      className="w-full py-2.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
                       style={{ backgroundColor: '#10B981' }}
+                      title={!waveSetupComplete ? 'Wave setup must be completed before approving' : ''}
                     >
                       <CheckCircle size={16} />
-                      Approve Survey
+                      Approve Survey + Wave
                     </button>
+                    {!waveSetupComplete && (
+                      <p className="text-xs text-amber-600 text-center">Wave setup required before approval</p>
+                    )}
                     <button
                       onClick={() => setRejectMode(true)}
                       className="w-full py-2.5 rounded-xl text-red-600 font-semibold text-sm border-2 border-red-200 flex items-center justify-center gap-2 hover:bg-red-50 transition-colors"
@@ -322,24 +422,21 @@ export default function ApprovalReview() {
           <Card className="p-5">
             <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
               <Info size={14} className="text-gray-400" />
-              Survey Checklist
+              Approval Checklist
             </h3>
             <div className="space-y-2">
               {[
                 { label: `Has questions (${survey.questions.length})`, ok: survey.questions.length > 0 },
-                { label: 'All required fields set', ok: survey.questions.every(q => q.text) },
-                { label: 'Expert panel not yet assigned', ok: true, neutral: true },
-                { label: 'Send date not yet configured', ok: true, neutral: true },
-              ].map(({ label, ok, neutral }) => (
+                { label: 'All questions have text', ok: survey.questions.every(q => q.text) },
+                { label: `Wave setup configured`, ok: Boolean(survey.waveConfig) },
+                { label: `Expert list set (${survey.waveConfig?.selectedExperts?.length || 0} experts)`, ok: Boolean(survey.waveConfig?.selectedExperts?.length) },
+                { label: 'Send & close dates set', ok: Boolean(survey.waveConfig?.sendDate && survey.waveConfig?.closeDate) },
+              ].map(({ label, ok }) => (
                 <div key={label} className="flex items-center gap-2 text-xs text-gray-600">
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${ok ? (neutral ? 'bg-gray-100' : 'bg-green-100') : 'bg-red-100'}`}>
-                    {ok ? (
-                      neutral
-                        ? <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                        : <Check size={10} className="text-green-600" />
-                    ) : (
-                      <XCircle size={10} className="text-red-500" />
-                    )}
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${ok ? 'bg-green-100' : 'bg-red-100'}`}>
+                    {ok
+                      ? <Check size={10} className="text-green-600" />
+                      : <XCircle size={10} className="text-red-500" />}
                   </div>
                   {label}
                 </div>
