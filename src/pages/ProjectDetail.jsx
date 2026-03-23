@@ -131,6 +131,13 @@ export default function ProjectDetail() {
           );
         }
         break;
+      case 'Closed':
+        actions.push(
+          <Button key="enter-review" size="xs" onClick={() => { closeSurvey(survey.id); navigate(`/projects/${projectId}/surveys/${survey.id}/review`); }}>
+            <Eye size={12} /> Enter Review
+          </Button>
+        );
+        break;
       case 'Review':
         actions.push(
           <Button key="review" size="xs" onClick={() => navigate(`/projects/${projectId}/surveys/${survey.id}/review`)}>

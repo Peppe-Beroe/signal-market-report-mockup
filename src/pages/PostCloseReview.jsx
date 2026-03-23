@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, CheckCircle, AlertTriangle, X, ChevronDown, ChevronUp, Edit2, Eye, EyeOff, Paperclip, Share2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -84,20 +83,12 @@ function ResponseRow({ response, survey }) {
 export default function PostCloseReview() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, transferToDataHub, attachReport, shareReport, addToast } = useApp();
-  const [showTransferModal, setShowTransferModal] = useState(false);
-  const [autoTransferCancelled, setAutoTransferCancelled] = useState(false);
+  const { surveys, projects, attachReport, shareReport, addToast } = useApp();
 
   const survey = surveys.find(s => s.id === surveyId);
   const project = projects.find(p => p.id === projectId);
 
   if (!survey) return <div className="p-6 text-center text-gray-500">Survey not found.</div>;
-
-  const handleTransfer = () => {
-    transferToDataHub(surveyId);
-    setShowTransferModal(false);
-    setTimeout(() => navigate(`/projects/${projectId}`), 1500);
-  };
 
   const q1Data = {};
   survey.questions[0]?.options?.forEach(o => q1Data[o] = 0);
@@ -220,19 +211,6 @@ export default function PostCloseReview() {
             Review Window
           </h2>
 
-          {!autoTransferCancelled ? (
-            <div className="p-3 rounded-xl bg-amber-50 border border-amber-100 mb-4">
-              <p className="text-xs text-gray-500 mb-1">Auto-transfer scheduled</p>
-              <p className="text-lg font-bold text-amber-600">4 days remaining</p>
-              <p className="text-xs text-gray-400 mt-0.5">Transfers on {survey.autoTransferDate}</p>
-            </div>
-          ) : (
-            <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 mb-4">
-              <p className="text-xs text-gray-500">Auto-transfer cancelled</p>
-              <p className="text-xs text-gray-400 mt-0.5">Transfer manually when ready</p>
-            </div>
-          )}
-
           <div className="space-y-2 mb-4">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-500">Responses</span>
@@ -244,7 +222,7 @@ export default function PostCloseReview() {
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-500">Excluded</span>
-              <span className="font-semibold text-gray-800">0</span>
+              <span className="font-semibold text-gray-800">{survey.responses.filter(r => r.excluded).length}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-500">Wave</span>
@@ -252,43 +230,20 @@ export default function PostCloseReview() {
             </div>
           </div>
 
-          {survey.status !== 'Transferred' ? (
-            <>
-              <button
-                onClick={() => setShowTransferModal(true)}
-                className="w-full py-2.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-opacity shadow-sm mb-2"
-                style={{ backgroundColor: '#4A00F8' }}
-              >
-                Transfer to DataHub now
-              </button>
-              {!autoTransferCancelled && (
-                <button
-                  onClick={() => setAutoTransferCancelled(true)}
-                  className="w-full text-xs text-gray-400 hover:text-gray-600 transition-colors py-1"
-                >
-                  Cancel auto-transfer
-                </button>
-              )}
-            </>
-          ) : (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 border border-green-200">
-              <CheckCircle size={15} className="text-green-600" />
-              <div>
-                <p className="text-xs font-semibold text-green-700">Transferred</p>
-                <p className="text-xs text-green-600">Dataset in DataHub</p>
-              </div>
-            </div>
-          )}
+          <div className="p-3 rounded-xl bg-purple-50 border border-purple-100">
+            <p className="text-xs font-semibold text-purple-700 mb-0.5">Phase 1 — Review is terminal</p>
+            <p className="text-xs text-purple-600">DataHub transfer will be available in Phase 2.</p>
+          </div>
         </div>
 
         <div className="p-5">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Transfer Checklist</h3>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Review Checklist</h3>
           <div className="space-y-2">
             {[
               { label: 'Wave closed', ok: true },
-              { label: 'Responses verified', ok: true },
-              { label: '0 responses excluded', ok: true },
-              { label: 'Summary reviewed', ok: true },
+              { label: 'Responses verified', ok: survey.responses.length > 0 },
+              { label: 'Outliers reviewed', ok: true },
+              { label: 'Annotations complete', ok: true },
             ].map(({ label, ok }) => (
               <div key={label} className="flex items-center gap-2 text-xs text-gray-600">
                 <div className={`w-4 h-4 rounded-full flex items-center justify-center ${ok ? 'bg-green-100' : 'bg-gray-100'}`}>
@@ -303,43 +258,6 @@ export default function PostCloseReview() {
           </div>
         </div>
       </div>
-
-      {/* Transfer confirmation modal */}
-      {showTransferModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="fade-in bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-2">Transfer to DataHub</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              You are about to transfer <strong>"{survey.name}"</strong> to DataHub.
-              This action cannot be undone.
-            </p>
-            <div className="bg-green-50 border border-green-100 rounded-xl p-3 mb-5 space-y-1">
-              <div className="flex items-center gap-2 text-xs text-gray-600">
-                <CheckCircle size={12} className="text-green-500" />
-                {survey.responsesReceived} responses ready
-              </div>
-              <div className="flex items-center gap-2 text-xs text-gray-600">
-                <CheckCircle size={12} className="text-green-500" />
-                0 exclusions
-              </div>
-              <div className="flex items-center gap-2 text-xs text-gray-600">
-                <CheckCircle size={12} className="text-green-500" />
-                Wave 2 complete
-              </div>
-            </div>
-            <div className="flex gap-3 justify-end">
-              <Button variant="secondary" onClick={() => setShowTransferModal(false)}>Cancel</Button>
-              <button
-                onClick={handleTransfer}
-                className="px-4 py-2 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-opacity shadow-sm"
-                style={{ backgroundColor: '#4A00F8' }}
-              >
-                Confirm Transfer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
