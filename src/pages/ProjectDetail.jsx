@@ -88,7 +88,12 @@ export default function ProjectDetail() {
             </Button>
           );
         } else {
-          actions.push(<span key="pending" className="text-xs text-amber-600 font-medium">Awaiting approval</span>);
+          actions.push(
+            <span key="pending" className="text-xs text-amber-600 font-medium">Awaiting approval</span>,
+            <Button key="view" size="xs" variant="secondary" onClick={() => navigate(`/projects/${projectId}/surveys/${survey.id}/approve`)}>
+              <Eye size={12} /> View
+            </Button>
+          );
         }
         break;
       case 'Approved':
