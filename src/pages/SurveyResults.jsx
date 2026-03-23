@@ -143,7 +143,7 @@ function QuestionSummaryCard({ question, responses, excluded }) {
   );
 }
 
-function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, orgTimezone }) {
+function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, orgTimezone, canExclude }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [annotation, setAnnotation] = useState(response.annotation || '');
@@ -207,16 +207,18 @@ function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, 
         </td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => onToggleExclusion(response.expertId)}
-              className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg border transition-colors ${
-                response.excluded
-                  ? 'border-green-200 text-green-600 hover:bg-green-50'
-                  : 'border-red-200 text-red-500 hover:bg-red-50'
-              }`}
-            >
-              {response.excluded ? <><Eye size={11} /> Include</> : <><EyeOff size={11} /> Exclude</>}
-            </button>
+            {canExclude && (
+              <button
+                onClick={() => onToggleExclusion(response.expertId)}
+                className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg border transition-colors ${
+                  response.excluded
+                    ? 'border-green-200 text-green-600 hover:bg-green-50'
+                    : 'border-red-200 text-red-500 hover:bg-red-50'
+                }`}
+              >
+                {response.excluded ? <><Eye size={11} /> Include</> : <><EyeOff size={11} /> Exclude</>}
+              </button>
+            )}
             <button
               onClick={() => setExpanded(!expanded)}
               className="text-gray-400 hover:text-gray-600 p-1"
@@ -415,7 +417,7 @@ function AttachReportSection({ addToast, responsesReceived }) {
 export default function SurveyResults() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, toggleExclusion, updateAnnotation, addToast, orgTimezone } = useApp();
+  const { currentUser, surveys, projects, toggleExclusion, updateAnnotation, addToast, orgTimezone } = useApp();
   const [activeTab, setActiveTab] = useState('responses');
   const [emailCollapsed, setEmailCollapsed] = useState(false);
   const [responseFilter, setResponseFilter] = useState('all');
@@ -430,6 +432,7 @@ export default function SurveyResults() {
   const pendingExperts = survey.emailStatus.filter(e => !survey.responses.find(r => r.expertId === e.expertId));
   const bouncedCount = survey.emailStatus.filter(e => e.status === 'bounced').length;
   const isRunning = survey.status === 'Running';
+  const canExclude = ['Super Admin', 'Admin'].includes(currentUser.role) && ['Running', 'Review'].includes(survey.status);
   const nonResponding = survey.emailStatus.filter(e => !survey.responses.find(r => r.expertId === e.expertId)).length;
 
   const tabs = ['Responses', 'Summary', 'Distribution'];
@@ -698,6 +701,7 @@ export default function SurveyResults() {
                             onToggleExclusion={(expertId) => toggleExclusion(surveyId, expertId)}
                             onAnnotationChange={(expertId, ann) => updateAnnotation(surveyId, expertId, ann)}
                             orgTimezone={orgTimezone}
+                            canExclude={canExclude}
                           />
                         ))}
                         {sortedEmails.map(e => (
