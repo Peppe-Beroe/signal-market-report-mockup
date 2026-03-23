@@ -143,7 +143,7 @@ function QuestionSummaryCard({ question, responses, excluded }) {
   );
 }
 
-function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange }) {
+function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, orgTimezone }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [annotation, setAnnotation] = useState(response.annotation || '');
@@ -697,6 +697,7 @@ export default function SurveyResults() {
                             survey={survey}
                             onToggleExclusion={(expertId) => toggleExclusion(surveyId, expertId)}
                             onAnnotationChange={(expertId, ann) => updateAnnotation(surveyId, expertId, ann)}
+                            orgTimezone={orgTimezone}
                           />
                         ))}
                         {sortedEmails.map(e => (
