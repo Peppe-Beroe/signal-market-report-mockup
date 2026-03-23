@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, AlertTriangle, Check, List, CheckSquare, Star, AlignLeft, Info, GitCompare, Plus, Minus, Edit3, Calendar, Users, Mail } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Check, List, CheckSquare, Star, AlignLeft, Info, GitCompare, Plus, Minus, Edit3, Calendar, Users, Mail, Bell } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -84,6 +84,7 @@ export default function ApprovalReview() {
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [approved, setApproved] = useState(false);
+  const [activeTab, setActiveTab] = useState('content');
 
   if (!survey) return (
     <div className="p-6 text-center">
@@ -102,6 +103,25 @@ export default function ApprovalReview() {
     rejectSurvey(surveyId, rejectReason);
     navigate(`/projects/${projectId}`);
   };
+
+  // Diff computation
+  const isResubmission = Boolean(survey.rejectionReason);
+  const prevQuestions = survey.previousSnapshot?.questions || [];
+  const currQuestions = survey.questions;
+  const addedIds = currQuestions.filter(q => !prevQuestions.find(pq => pq.id === q.id)).map(q => q.id);
+  const removedQuestions = prevQuestions.filter(pq => !currQuestions.find(q => q.id === pq.id));
+  const modifiedIds = currQuestions
+    .filter(q => {
+      const prev = prevQuestions.find(pq => pq.id === q.id);
+      return prev && (prev.text !== q.text || JSON.stringify(prev.options) !== JSON.stringify(q.options));
+    })
+    .map(q => q.id);
+
+  const tabs = [
+    { id: 'content', label: 'Survey Content' },
+    { id: 'wave', label: 'Wave Settings' },
+    { id: 'experts', label: 'Expert List' },
+  ];
 
   return (
     <div className="p-6 max-w-6xl mx-auto fade-in">
@@ -137,25 +157,29 @@ export default function ApprovalReview() {
         </div>
       </Card>
 
-      {/* Diff computation */}
-      {(() => {
-        const isResubmission = Boolean(survey.rejectionReason);
-        const prevQuestions = survey.previousSnapshot?.questions || [];
-        const currQuestions = survey.questions;
+      <div className="flex gap-6 items-start">
+        {/* Left: tabbed review content */}
+        <div className="flex-1 min-w-0">
+          {/* Tab bar */}
+          <div className="flex border-b border-gray-200 mb-4">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-purple-600 text-purple-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-        const addedIds = currQuestions.filter(q => !prevQuestions.find(pq => pq.id === q.id)).map(q => q.id);
-        const removedQuestions = prevQuestions.filter(pq => !currQuestions.find(q => q.id === pq.id));
-        const modifiedIds = currQuestions
-          .filter(q => {
-            const prev = prevQuestions.find(pq => pq.id === q.id);
-            return prev && (prev.text !== q.text || JSON.stringify(prev.options) !== JSON.stringify(q.options));
-          })
-          .map(q => q.id);
-
-        return (
-          <div className="flex gap-6 items-start">
-            {/* Left: Survey content */}
-            <div className="flex-1 min-w-0 space-y-4">
+          {/* Tab: Survey Content */}
+          {activeTab === 'content' && (
+            <div className="space-y-4">
               {/* Diff view banner */}
               {isResubmission ? (
                 <div className="space-y-3">
@@ -198,7 +222,7 @@ export default function ApprovalReview() {
                     { label: 'Wave', value: `Wave ${survey.wave}` },
                     { label: 'Questions', value: survey.questions.length },
                     { label: 'Experts targeted', value: survey.expertsTargeted },
-                    { label: 'Submitted', value: isResubmission ? '2026-03-10 16:42' : '2026-03-10 16:42' },
+                    { label: 'Submitted', value: '2026-03-10 16:42' },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex flex-col gap-0.5">
                       <span className="text-xs text-gray-400 font-medium">{label}</span>
@@ -215,7 +239,6 @@ export default function ApprovalReview() {
                   <Badge color="gray">{survey.questions.length} questions</Badge>
                 </h2>
 
-                {/* Removed questions (only in diff mode) */}
                 {isResubmission && removedQuestions.map((q, i) => (
                   <div key={q.id} className="mb-3 rounded-xl border border-red-200 bg-red-50 overflow-hidden opacity-80">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-red-100 border-b border-red-200">
@@ -259,81 +282,80 @@ export default function ApprovalReview() {
                   })}
                 </div>
               </Card>
+            </div>
+          )}
 
-              {/* Wave Settings section */}
+          {/* Tab: Wave Settings */}
+          {activeTab === 'wave' && (
+            <div className="space-y-4">
               {survey.waveConfig ? (
                 <Card className="p-5">
                   <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <Calendar size={15} className="text-gray-400" />
-                    Wave Settings
+                    Wave Schedule
                   </h2>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      {[
-                        { label: 'Send date', value: survey.waveConfig.sendDate ? new Date(survey.waveConfig.sendDate).toLocaleString() : '—' },
-                        { label: 'Close date', value: survey.waveConfig.closeDate ? new Date(survey.waveConfig.closeDate).toLocaleString() : '—' },
-                      ].map(({ label, value }) => (
-                        <div key={label} className="flex flex-col gap-0.5">
-                          <span className="text-xs text-gray-400 font-medium">{label}</span>
-                          <span className="text-gray-800 font-medium">{value}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="border-t border-gray-50 pt-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Users size={13} className="text-gray-400" />
-                        <span className="text-xs font-semibold text-gray-600">Expert Target List</span>
+                  <div className="grid grid-cols-2 gap-3 text-sm mb-5">
+                    {[
+                      { label: 'Send date', value: survey.waveConfig.sendDate ? new Date(survey.waveConfig.sendDate).toLocaleDateString() : '—' },
+                      { label: 'Close date', value: survey.waveConfig.closeDate ? new Date(survey.waveConfig.closeDate).toLocaleDateString() : '—' },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex flex-col gap-0.5">
+                        <span className="text-xs text-gray-400 font-medium">{label}</span>
+                        <span className="text-gray-800 font-medium">{value}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="font-semibold" style={{ color: '#4A00F8' }}>
-                          {survey.waveConfig.selectedExperts?.length || 0}
-                        </span>
-                        <span className="text-gray-500">experts selected</span>
-                        {survey.waveConfig.selectedExperts?.some(e => e.status === 'Opted-out') && (
-                          <span className="text-xs text-amber-600 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">
-                            includes opted-out (will be suppressed at send)
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-                        {(survey.waveConfig.selectedExperts || []).slice(0, 8).map(e => (
-                          <span key={e.id} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{e.name}</span>
-                        ))}
-                        {(survey.waveConfig.selectedExperts || []).length > 8 && (
-                          <span className="text-xs text-gray-400">+{survey.waveConfig.selectedExperts.length - 8} more</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="border-t border-gray-50 pt-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Mail size={13} className="text-gray-400" />
-                        <span className="text-xs font-semibold text-gray-600">Email Template</span>
-                      </div>
-                      <div className="text-sm space-y-1">
-                        <div className="flex gap-2">
-                          <span className="text-xs text-gray-400 w-16 flex-shrink-0">Subject</span>
-                          <span className="text-gray-700 text-xs">{survey.waveConfig.emailSubject || '—'}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <span className="text-xs text-gray-400 w-16 flex-shrink-0">Sender</span>
-                          <span className="text-gray-700 text-xs">{survey.waveConfig.senderName || '—'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {survey.waveConfig.reminders?.length > 0 && (
-                      <div className="border-t border-gray-50 pt-3">
-                        <span className="text-xs font-semibold text-gray-600">Reminders ({survey.waveConfig.reminders.length})</span>
-                        <div className="mt-1.5 space-y-1">
-                          {survey.waveConfig.reminders.map((r, i) => (
-                            <span key={i} className="block text-xs text-gray-500">Reminder {i + 1}: {new Date(r).toLocaleString()}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    ))}
                   </div>
+
+                  <div className="border-t border-gray-100 pt-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Mail size={14} className="text-gray-400" />
+                      <span className="text-sm font-semibold text-gray-700">Email Template</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex gap-3">
+                        <span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">Subject</span>
+                        <span className="text-gray-700 text-xs">{survey.waveConfig.emailSubject || '—'}</span>
+                      </div>
+                      <div className="flex gap-3">
+                        <span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">Sender</span>
+                        <span className="text-gray-700 text-xs">{survey.waveConfig.senderName || '—'}</span>
+                      </div>
+                      {survey.waveConfig.emailBody && (
+                        <div className="mt-2">
+                          <span className="text-xs text-gray-400 block mb-1">Body preview</span>
+                          <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs text-gray-600 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                            {survey.waveConfig.emailBody}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {survey.waveConfig.reminders?.length > 0 && (
+                    <div className="border-t border-gray-100 pt-4 mt-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Bell size={14} className="text-gray-400" />
+                        <span className="text-sm font-semibold text-gray-700">Reminders ({survey.waveConfig.reminders.length})</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {survey.waveConfig.reminders.map((r, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+                            <Bell size={11} className="text-gray-400 flex-shrink-0" />
+                            Reminder {i + 1}: {new Date(r).toLocaleDateString()}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {survey.waveConfig.alertEnabled && (
+                    <div className="border-t border-gray-100 pt-4 mt-4">
+                      <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                        <AlertTriangle size={12} className="flex-shrink-0" />
+                        Response rate alert: below {survey.waveConfig.alertThreshold}% with {survey.waveConfig.alertDaysRemaining} days remaining
+                      </div>
+                    </div>
+                  )}
                 </Card>
               ) : (
                 <Card className="p-5 border-gray-200 bg-gray-50">
@@ -342,13 +364,63 @@ export default function ApprovalReview() {
                     <div>
                       <p className="text-sm font-semibold text-gray-700">No wave settings configured</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        Wave settings (scheduling, expert list, email template) should be configured in the Draft before submission. If missing, the survey can still be approved and wave settings added before launch.
+                        Wave settings (scheduling, email template, reminders) should be configured in Draft before submission.
                       </p>
                     </div>
                   </div>
                 </Card>
               )}
             </div>
+          )}
+
+          {/* Tab: Expert List */}
+          {activeTab === 'experts' && (
+            <div className="space-y-4">
+              {survey.waveConfig?.selectedExperts?.length > 0 ? (
+                <Card className="p-5">
+                  <h2 className="font-semibold text-gray-900 mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Users size={15} className="text-gray-400" />
+                      <span>Expert Target List</span>
+                    </div>
+                    <Badge color="gray">{survey.waveConfig.selectedExperts.length} experts</Badge>
+                  </h2>
+                  {survey.waveConfig.selectedExperts.some(e => e.status === 'Opted-out') && (
+                    <p className="text-xs text-amber-600 mb-3">Includes opted-out expert(s) — will be suppressed at send time.</p>
+                  )}
+                  <div className="divide-y divide-gray-50">
+                    {survey.waveConfig.selectedExperts.map(e => (
+                      <div key={e.id} className="flex items-center gap-3 py-2.5">
+                        <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center text-xs font-semibold text-purple-700 flex-shrink-0">
+                          {e.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800">{e.name}</p>
+                          <p className="text-xs text-gray-400">{e.company} · {e.email}</p>
+                        </div>
+                        {e.status === 'Opted-out' && (
+                          <span className="text-xs bg-amber-50 text-amber-600 border border-amber-100 px-1.5 py-0.5 rounded flex-shrink-0">Opted-out</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ) : (
+                <Card className="p-5 border-gray-200 bg-gray-50">
+                  <div className="flex items-start gap-3">
+                    <Info size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700">No experts configured</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        The expert list should be configured in Draft before submission.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Right: Review panel */}
         <div className="w-80 flex-shrink-0 space-y-4 sticky top-6">
@@ -418,7 +490,7 @@ export default function ApprovalReview() {
               {[
                 { label: `Has questions (${survey.questions.length})`, ok: survey.questions.length > 0 },
                 { label: 'All questions have text', ok: survey.questions.every(q => q.text) },
-                { label: `Wave setup configured`, ok: Boolean(survey.waveConfig) },
+                { label: 'Wave setup configured', ok: Boolean(survey.waveConfig) },
                 { label: `Expert list set (${survey.waveConfig?.selectedExperts?.length || 0} experts)`, ok: Boolean(survey.waveConfig?.selectedExperts?.length) },
                 { label: 'Send & close dates set', ok: Boolean(survey.waveConfig?.sendDate && survey.waveConfig?.closeDate) },
               ].map(({ label, ok }) => (
@@ -441,8 +513,6 @@ export default function ApprovalReview() {
           </Card>
         </div>
       </div>
-    );
-  })()}
     </div>
   );
 }
