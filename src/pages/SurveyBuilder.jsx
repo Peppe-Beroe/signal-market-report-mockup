@@ -5,7 +5,7 @@ import {
   Send, Eye, EyeOff, X, Check, Smartphone, Monitor,
   AlignLeft, List, CheckSquare, Star, Type, AlignJustify,
   BarChart2, Calendar, Hash, Copy, BookTemplate, ChevronUp as Up, ChevronDown as Down,
-  Mail, Bell, AlertTriangle, Search, Tag, Users
+  Mail, Bell, AlertTriangle, Search, Tag, Users, Edit3, GitCompare, XCircle
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Button from '../components/ui/Button';
@@ -650,7 +650,7 @@ function UseTemplateModal({ templates, onUse, onClose }) {
 export default function SurveyBuilder({ mode = 'create' }) {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, experts, templates, orgTimezone, addToast, createSurvey, updateSurvey, cloneSurvey, saveTemplate } = useApp();
+  const { surveys, projects, experts, templates, orgTimezone, addToast, createSurvey, updateSurvey, cloneSurvey, saveTemplate, resolveAmendments } = useApp();
 
   const project = projects.find(p => p.id === projectId);
   const existingSurvey = surveys.find(s => s.id === surveyId);
@@ -679,6 +679,14 @@ export default function SurveyBuilder({ mode = 'create' }) {
 
   // Tab navigation
   const [activeTab, setActiveTab] = useState('questions');
+
+  // Amendment resolution state (for surveys returned with tracked changes)
+  const pendingEditorAmendments = (existingSurvey?.amendments || []).filter(a => a.status === 'pending');
+  const hasPendingAmendments = pendingEditorAmendments.length > 0;
+  const [amendResolutions, setAmendResolutions] = useState({});
+  const [amendRejectReasons, setAmendRejectReasons] = useState({});
+  const [amendOverrideValues, setAmendOverrideValues] = useState({});
+  const [showAmendPanel, setShowAmendPanel] = useState(true);
 
   // Wave Settings state — initialized from existing config (supports rejected→Draft round-trip)
   const today = new Date();
@@ -824,6 +832,16 @@ export default function SurveyBuilder({ mode = 'create' }) {
   const confirmSubmit = () => {
     setShowConfirmModal(false);
     const waveConfig = buildWaveConfig();
+    // Resolve any pending amendments before resubmitting
+    if (hasPendingAmendments && Object.keys(amendResolutions).length > 0) {
+      const resolutions = Object.entries(amendResolutions).map(([id, decision]) => ({
+        id,
+        decision,
+        reason: decision === 'rejected' ? (amendRejectReasons[id] || '') : undefined,
+        counterValue: decision === 'overridden' ? (amendOverrideValues[id] || '') : undefined,
+      }));
+      resolveAmendments(surveyId, resolutions);
+    }
     if (mode === 'edit' && surveyId) {
       updateSurvey({ surveyId, name: surveyName, questions, status: 'Submitted', waveConfig });
     } else {
@@ -980,6 +998,94 @@ export default function SurveyBuilder({ mode = 'create' }) {
           </button>
         ))}
       </div>
+
+      {/* Amendment review panel — shown when PO sent back tracked changes */}
+      {hasPendingAmendments && showAmendPanel && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-amber-800 flex items-center gap-2">
+              <GitCompare size={15} className="text-amber-600" />
+              Project Owner proposed {pendingEditorAmendments.length} amendment{pendingEditorAmendments.length !== 1 ? 's' : ''} — review each one
+            </p>
+            <button onClick={() => setShowAmendPanel(false)} className="text-amber-400 hover:text-amber-600">
+              <XCircle size={16} />
+            </button>
+          </div>
+          <div className="space-y-3">
+            {pendingEditorAmendments.map(a => {
+              const res = amendResolutions[a.id];
+              const typeColors = { question_edit: 'amber', question_add: 'green', question_remove: 'red', expert_add: 'green', expert_remove: 'red', wave_setting: 'blue' };
+              const typeLabels = { question_edit: 'Question edited', question_add: 'Question added', question_remove: 'Question removed', expert_add: 'Expert added', expert_remove: 'Expert removed', wave_setting: 'Wave setting' };
+              const renderVal = (val) => {
+                if (!val && val !== 0) return <span className="italic text-gray-400">(none)</span>;
+                if (typeof val === 'object' && val.text) return <span>{val.text}</span>;
+                if (typeof val === 'object' && val.name) return <span>{val.name} · {val.company}</span>;
+                return <span>{String(val)}</span>;
+              };
+              return (
+                <div key={a.id} className="bg-white rounded-xl border border-amber-200 overflow-hidden">
+                  <div className="px-4 py-2 bg-amber-100 border-b border-amber-200 flex items-center gap-2">
+                    <Edit3 size={12} className="text-amber-600" />
+                    <span className="text-xs font-semibold text-amber-800">{typeLabels[a.type] || a.type}: {a.label}</span>
+                    <span className="text-xs text-amber-500 ml-auto">Cycle {a.cycle} · by {a.proposedBy}</span>
+                  </div>
+                  {(a.before !== null || a.after !== null) && (
+                    <div className="px-4 py-2 grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-gray-400 font-semibold mb-1">Before</p>
+                        <p className="text-xs text-gray-600">{renderVal(a.before)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-purple-500 font-semibold mb-1">PO proposed</p>
+                        <p className="text-xs text-gray-800">{renderVal(a.after)}</p>
+                      </div>
+                    </div>
+                  )}
+                  {a.note && <p className="px-4 pb-2 text-xs text-gray-500 italic">Note: {a.note}</p>}
+                  {res ? (
+                    <div className="px-4 pb-3">
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 border border-gray-200">
+                        <Check size={12} className="text-gray-500" />
+                        <span className="text-xs text-gray-600">
+                          {res === 'accepted' ? 'Accepted — will apply this change' : res === 'rejected' ? 'Rejected — must give reason' : 'Override — you will set your own value'}
+                        </span>
+                        <button onClick={() => setAmendResolutions(p => { const n={...p}; delete n[a.id]; return n; })} className="ml-auto text-xs text-gray-400 hover:text-gray-600">Undo</button>
+                      </div>
+                      {res === 'rejected' && (
+                        <input
+                          value={amendRejectReasons[a.id] || ''}
+                          onChange={e => setAmendRejectReasons(p => ({ ...p, [a.id]: e.target.value }))}
+                          placeholder="Reason for rejection (required)..."
+                          className="w-full mt-2 border border-red-200 rounded-lg px-2 py-1.5 text-xs focus:border-red-400 focus:outline-none"
+                        />
+                      )}
+                      {res === 'overridden' && (
+                        <input
+                          value={amendOverrideValues[a.id] || ''}
+                          onChange={e => setAmendOverrideValues(p => ({ ...p, [a.id]: e.target.value }))}
+                          placeholder="Your counter-value..."
+                          className="w-full mt-2 border border-amber-200 rounded-lg px-2 py-1.5 text-xs focus:border-amber-400 focus:outline-none"
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="px-4 pb-3 flex gap-2">
+                      <button onClick={() => setAmendResolutions(p => ({ ...p, [a.id]: 'accepted' }))} className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-green-700 border border-green-200 hover:bg-green-50">Accept</button>
+                      <button onClick={() => setAmendResolutions(p => ({ ...p, [a.id]: 'rejected' }))} className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-red-600 border border-red-200 hover:bg-red-50">Reject</button>
+                      <button onClick={() => setAmendResolutions(p => ({ ...p, [a.id]: 'overridden' }))} className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-amber-700 border border-amber-200 hover:bg-amber-50">Override</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {Object.keys(amendResolutions).length > 0 && (
+            <p className="text-xs text-amber-600 mt-3 font-medium">
+              {Object.keys(amendResolutions).length}/{pendingEditorAmendments.length} resolved — resolutions will be submitted with your next resubmission.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Questions tab — dual-panel */}
       {activeTab === 'questions' && <div className="flex-1 flex overflow-hidden">

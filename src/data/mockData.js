@@ -51,6 +51,7 @@ export const SURVEYS = [
       { expertId: 'e2', expertName: 'Anna Kowalski', company: 'EuroMfg', submittedAt: '2026-03-07 14:35', answers: { q1: 'Stay flat (±5%)', q2: 'Europe', q3: 3, q4: ['Geopolitical risk', 'Currency fluctuations'], q5: 'EU demand softness and geopolitical uncertainty around eastern Europe.' }, excluded: false, annotation: 'Outlook more conservative than panel average' },
       { expertId: 'e3', expertName: 'Raj Patel', company: 'Tata Steel', submittedAt: '2026-03-08 11:20', answers: { q1: 'Increase >10%', q2: 'Asia-Pacific', q3: 4, q4: ['Raw material availability', 'Demand shifts'], q5: 'India infrastructure spend driving significant demand. Iron ore tightness is a real concern.' }, excluded: true, annotation: 'Outlier — APAC-specific view, not representative of global panel' },
     ],
+    amendments: [],
     archived: false,
     reminders: [{ sent: '2026-03-12', type: 'Reminder 1' }],
     waveConfig: {
@@ -120,6 +121,7 @@ export const SURVEYS = [
         { id: 'e5', name: 'Carlos Mendez', email: 'c.mendez@ternium.com', company: 'Ternium', status: 'Active' },
       ],
     },
+    amendments: [],
     archived: false,
   },
   {
@@ -144,6 +146,7 @@ export const SURVEYS = [
     ],
     reminders: [],
     emailStatus: [],
+    amendments: [],
     archived: false,
   },
   {
@@ -160,6 +163,7 @@ export const SURVEYS = [
     responses: [],
     reminders: [],
     emailStatus: [],
+    amendments: [],
     archived: false,
   },
   {
@@ -201,6 +205,7 @@ export const SURVEYS = [
       { expertId: 'e5', expertName: 'Carlos Mendez', status: 'delivered', lastEvent: '2026-03-10' },
       { expertId: 'e6', expertName: 'Linda Park', status: 'opted_out', lastEvent: '2026-03-10' },
     ],
+    amendments: [],
     archived: false,
   },
   {
@@ -233,6 +238,7 @@ export const SURVEYS = [
     responses: [],
     reminders: [],
     emailStatus: [],
+    amendments: [],
     archived: false,
   },
   {
@@ -269,6 +275,7 @@ export const SURVEYS = [
         { id: 'e5', name: 'Carlos Mendez', email: 'c.mendez@ternium.com', company: 'Ternium', status: 'Active' },
       ],
     },
+    amendments: [],
     archived: false,
   },
   {
@@ -310,6 +317,7 @@ export const SURVEYS = [
         { id: 'e5', name: 'Carlos Mendez', email: 'c.mendez@ternium.com', company: 'Ternium', status: 'Active' },
       ],
     },
+    amendments: [],
     archived: false,
   },
   {
@@ -349,6 +357,7 @@ export const SURVEYS = [
         { id: 'e4', name: 'Sophie Dubois', email: 's.dubois@arcelormittal.com', company: 'ArcelorMittal', status: 'Active' },
       ],
     },
+    amendments: [],
     archived: true,
   },
 ];

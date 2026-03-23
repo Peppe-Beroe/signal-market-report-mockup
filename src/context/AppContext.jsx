@@ -413,6 +413,95 @@ export function AppProvider({ children }) {
     addToast('Survey closed — now in Review');
   };
 
+  const proposeAmendments = (surveyId, amendments, sendBack) => {
+    const survey = surveys.find(s => s.id === surveyId);
+    const existingCycle = (survey?.amendments || []).reduce((max, a) => Math.max(max, a.cycle || 0), 0);
+    const cycle = existingCycle + 1;
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const stamped = amendments.map((a, i) => ({
+      ...a,
+      id: `amend_${Date.now()}_${i}`,
+      cycle,
+      proposedBy: currentUser.name,
+      proposedAt: ts,
+      status: sendBack ? 'pending' : 'settled',
+      resolution: sendBack ? null : { decision: 'accepted', by: currentUser.name, at: ts },
+      poResponse: null,
+    }));
+    setSurveys(prev => prev.map(s => {
+      if (s.id !== surveyId) return s;
+      return {
+        ...s,
+        status: sendBack ? 'Draft' : 'Approved',
+        amendments: [...(s.amendments || []), ...stamped],
+        ...(sendBack ? {} : { approvedBy: currentUser.name }),
+      };
+    }));
+    if (sendBack) {
+      addAuditEvent('Survey returned with amendments', survey?.name || surveyId, 'survey', `Cycle ${cycle}: ${amendments.length} change(s) proposed by ${currentUser.name}`);
+      addToast(`Survey returned to editor with ${amendments.length} proposed change(s)`);
+    } else {
+      addAuditEvent('Survey approved with amendments', survey?.name || surveyId, 'survey', `Approved by ${currentUser.name} with ${amendments.length} direct change(s)`);
+      addToast('Survey approved with amendments');
+    }
+  };
+
+  const resolveAmendments = (surveyId, resolutions) => {
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    setSurveys(prev => prev.map(s => {
+      if (s.id !== surveyId) return s;
+      return {
+        ...s,
+        amendments: (s.amendments || []).map(a => {
+          const res = resolutions.find(r => r.id === a.id);
+          if (!res || a.status !== 'pending') return a;
+          return {
+            ...a,
+            status: res.decision === 'accepted' ? 'settled' : res.decision,
+            resolution: {
+              by: currentUser.name,
+              at: ts,
+              decision: res.decision,
+              reason: res.reason || '',
+              counterValue: res.counterValue,
+            },
+          };
+        }),
+      };
+    }));
+    addAuditEvent('Amendments reviewed', '', 'survey', `${resolutions.length} amendment(s) reviewed by ${currentUser.name}`);
+  };
+
+  const respondToEditorFeedback = (surveyId, poResponses) => {
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'00')}:${String(now.getMinutes()).padStart(2,'00')}`;
+    setSurveys(prev => prev.map(s => {
+      if (s.id !== surveyId) return s;
+      return {
+        ...s,
+        amendments: (s.amendments || []).map(a => {
+          const res = poResponses.find(r => r.id === a.id);
+          if (!res) return a;
+          if (res.decision === 'accept_rejection' || res.decision === 'accept_override') {
+            return { ...a, status: 'settled', poResponse: { decision: res.decision, at: ts } };
+          }
+          // repropose — reset to pending with updated value/note
+          return {
+            ...a,
+            status: 'pending',
+            after: res.newAfter !== undefined ? res.newAfter : a.after,
+            note: res.note || a.note,
+            resolution: null,
+            poResponse: { decision: 'repropose', at: ts, note: res.note || '' },
+          };
+        }),
+      };
+    }));
+    addToast('Responses recorded');
+  };
+
   const transferToDataHub = (surveyId) => {
     const survey = surveys.find(s => s.id === surveyId);
     setSurveys(prev => prev.map(s =>
@@ -441,6 +530,7 @@ export function AppProvider({ children }) {
       deactivateUser, updateUserRole,
       attachReport, shareReport,
       toggleExclusion, updateAnnotation, transferToDataHub,
+      proposeAmendments, resolveAmendments, respondToEditorFeedback,
       orgTimezone, setOrgTimezone,
       notificationPrefs, setNotificationPrefs,
       toasts, addToast, removeToast,
