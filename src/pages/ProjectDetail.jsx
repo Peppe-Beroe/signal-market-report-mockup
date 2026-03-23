@@ -81,17 +81,6 @@ export default function ProjectDetail() {
         }
         break;
       case 'Submitted':
-        actions.push(
-          <Button
-            key="wave"
-            size="xs"
-            variant={survey.waveConfig ? 'secondary' : 'primary'}
-            onClick={() => navigate(`/projects/${projectId}/surveys/${survey.id}/wave-setup`)}
-            title={survey.waveConfig ? 'Edit wave setup' : 'Configure wave setup before approval'}
-          >
-            <Calendar size={12} /> {survey.waveConfig ? 'Edit Wave' : 'Set Up Wave'}
-          </Button>
-        );
         if (isAdminOrAbove) {
           actions.push(
             <Button key="review" size="xs" onClick={() => navigate(`/projects/${projectId}/surveys/${survey.id}/approve`)}>

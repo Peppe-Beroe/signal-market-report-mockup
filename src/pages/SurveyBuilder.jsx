@@ -4,12 +4,32 @@ import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Save,
   Send, Eye, EyeOff, X, Check, Smartphone, Monitor,
   AlignLeft, List, CheckSquare, Star, Type, AlignJustify,
-  BarChart2, Calendar, Hash, Copy, BookTemplate, ChevronUp as Up, ChevronDown as Down
+  BarChart2, Calendar, Hash, Copy, BookTemplate, ChevronUp as Up, ChevronDown as Down,
+  Mail, Bell, AlertTriangle, Search, Tag, Users
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
+
+const DEFAULT_EMAIL_BODY = `Dear {{expert_name}},
+
+We are conducting a research survey as part of the Beroe Signal intelligence programme and would value your expert perspective.
+
+Survey: {{survey_name}}
+Close date: {{close_date}}
+
+Please click the link below to participate (estimated time: 5–8 minutes):
+{{survey_link}}
+
+Your responses are completely confidential and will only be used in aggregate for research purposes.
+
+Thank you for your continued support.
+
+Best regards,
+Beroe Research Team`;
+
+const MERGE_TAGS = ['expert_name', 'survey_name', 'survey_link', 'close_date'];
 
 const QUESTION_TYPES = [
   { value: 'single_choice', label: 'Single Choice', icon: List, description: 'One answer from options' },
@@ -630,10 +650,11 @@ function UseTemplateModal({ templates, onUse, onClose }) {
 export default function SurveyBuilder({ mode = 'create' }) {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, templates, addToast, createSurvey, updateSurvey, cloneSurvey, saveTemplate } = useApp();
+  const { surveys, projects, experts, templates, orgTimezone, addToast, createSurvey, updateSurvey, cloneSurvey, saveTemplate } = useApp();
 
   const project = projects.find(p => p.id === projectId);
   const existingSurvey = surveys.find(s => s.id === surveyId);
+  const existingWaveConfig = mode === 'edit' ? existingSurvey?.waveConfig : null;
 
   const [surveyName, setSurveyName] = useState(
     mode === 'edit' && existingSurvey ? existingSurvey.name : ''
@@ -655,6 +676,90 @@ export default function SurveyBuilder({ mode = 'create' }) {
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const dragIndexRef = useRef(null);
   const autoSaveTimerRef = useRef(null);
+
+  // Tab navigation
+  const [activeTab, setActiveTab] = useState('questions');
+
+  // Wave Settings state — initialized from existing config (supports rejected→Draft round-trip)
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 16);
+  const closeDefaultStr = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
+  const [sendDate, setSendDate] = useState(existingWaveConfig?.sendDate || todayStr);
+  const [closeDate, setCloseDate] = useState(existingWaveConfig?.closeDate || closeDefaultStr);
+  const [emailSubject, setEmailSubject] = useState(existingWaveConfig?.emailSubject || `You're invited: ${existingSurvey?.name || 'Survey'}`);
+  const [senderName, setSenderName] = useState(existingWaveConfig?.senderName || 'Beroe Research Team');
+  const [emailBody, setEmailBody] = useState(existingWaveConfig?.emailBody || DEFAULT_EMAIL_BODY);
+  const [reminders, setReminders] = useState(
+    existingWaveConfig?.reminders?.map((dt, i) => ({ id: i, datetime: dt, error: '' })) || []
+  );
+  const [alertEnabled, setAlertEnabled] = useState(Boolean(existingWaveConfig?.responseRateAlert));
+  const [alertThreshold, setAlertThreshold] = useState(existingWaveConfig?.responseRateAlert?.threshold || 50);
+  const [alertDaysRemaining, setAlertDaysRemaining] = useState(existingWaveConfig?.responseRateAlert?.daysRemaining || 7);
+  const [waveErrors, setWaveErrors] = useState({});
+
+  // Expert List state
+  const [selectedExperts, setSelectedExperts] = useState(() =>
+    existingWaveConfig?.selectedExperts
+      ? new Set(existingWaveConfig.selectedExperts.map(e => e.id))
+      : new Set(experts.filter(e => e.status !== 'Opted-out').map(e => e.id))
+  );
+  const [expertSearch, setExpertSearch] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
+  const bodyRef = useRef(null);
+
+  const allTags = [...new Set(experts.flatMap(e => e.tags || []))];
+  const filteredExperts = experts.filter(e => {
+    const matchSearch = !expertSearch ||
+      e.name.toLowerCase().includes(expertSearch.toLowerCase()) ||
+      e.company.toLowerCase().includes(expertSearch.toLowerCase());
+    const matchTag = !tagFilter || (e.tags || []).includes(tagFilter);
+    return matchSearch && matchTag;
+  });
+
+  const buildWaveConfig = () => ({
+    sendDate,
+    closeDate,
+    selectedExperts: experts.filter(e => selectedExperts.has(e.id)),
+    emailSubject,
+    senderName,
+    emailBody,
+    reminders: reminders.map(r => r.datetime).filter(Boolean),
+    responseRateAlert: alertEnabled ? { threshold: alertThreshold, daysRemaining: alertDaysRemaining } : null,
+  });
+
+  const insertMergeTag = (tag) => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const merged = `{{${tag}}}`;
+    const newBody = emailBody.slice(0, start) + merged + emailBody.slice(end);
+    setEmailBody(newBody);
+    setTimeout(() => { el.focus(); el.setSelectionRange(start + merged.length, start + merged.length); }, 0);
+  };
+
+  const addReminder = () => {
+    if (reminders.length >= 3) return;
+    setReminders(prev => [...prev, { id: Date.now(), datetime: '', error: '' }]);
+  };
+  const removeReminder = (id) => setReminders(prev => prev.filter(r => r.id !== id));
+  const updateReminder = (id, datetime) => {
+    setReminders(prev => prev.map(r => {
+      if (r.id !== id) return r;
+      const error = closeDate && datetime && datetime >= closeDate ? 'Reminder must be before the close date' : '';
+      return { ...r, datetime, error };
+    }));
+  };
+
+  const toggleExpert = (id) => {
+    setSelectedExperts(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const selectAllExperts = () => setSelectedExperts(new Set(experts.filter(e => e.status !== 'Opted-out').map(e => e.id)));
+  const deselectAllExperts = () => setSelectedExperts(new Set());
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -700,10 +805,11 @@ export default function SurveyBuilder({ mode = 'create' }) {
 
   const handleSaveDraft = () => {
     if (!surveyName.trim()) { addToast('Please enter a survey name first.', 'warning'); return; }
+    const waveConfig = buildWaveConfig();
     if (mode === 'edit' && surveyId) {
-      updateSurvey({ surveyId, name: surveyName, questions });
+      updateSurvey({ surveyId, name: surveyName, questions, waveConfig });
     } else {
-      const saved = createSurvey({ projectId, name: surveyName, questions, status: 'Draft' });
+      const saved = createSurvey({ projectId, name: surveyName, questions, status: 'Draft', waveConfig });
       navigate(`/projects/${projectId}/surveys/${saved.id}/builder`, { replace: true });
     }
     setIsDirty(false);
@@ -717,10 +823,11 @@ export default function SurveyBuilder({ mode = 'create' }) {
 
   const confirmSubmit = () => {
     setShowConfirmModal(false);
+    const waveConfig = buildWaveConfig();
     if (mode === 'edit' && surveyId) {
-      updateSurvey({ surveyId, name: surveyName, questions, status: 'Submitted' });
+      updateSurvey({ surveyId, name: surveyName, questions, status: 'Submitted', waveConfig });
     } else {
-      createSurvey({ projectId, name: surveyName, questions, status: 'Submitted' });
+      createSurvey({ projectId, name: surveyName, questions, status: 'Submitted', waveConfig });
     }
     setIsDirty(false);
     navigate(`/projects/${projectId}`);
@@ -852,8 +959,30 @@ export default function SurveyBuilder({ mode = 'create' }) {
         </div>
       </div>
 
-      {/* Main dual-panel */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* Tab bar */}
+      <div className="bg-white border-b border-gray-100 px-6 flex items-center gap-1 flex-shrink-0">
+        {[
+          { id: 'questions', label: 'Questions', count: questions.length },
+          { id: 'wave', label: 'Wave Settings' },
+          { id: 'experts', label: `Expert List (${selectedExperts.size})` },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.id
+                ? 'border-purple-600 text-purple-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+            style={activeTab === tab.id ? { borderBottomColor: '#4A00F8', color: '#4A00F8' } : {}}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Questions tab — dual-panel */}
+      {activeTab === 'questions' && <div className="flex-1 flex overflow-hidden">
         {/* Left: Editor */}
         <div className="flex-1 overflow-y-auto p-6" style={{ minWidth: 0 }}>
           {/* Survey name */}
@@ -966,7 +1095,235 @@ export default function SurveyBuilder({ mode = 'create' }) {
             </div>
           </div>
         </div>
-      </div>
+      </div>}
+
+      {/* Wave Settings tab */}
+      {activeTab === 'wave' && (
+        <div className="flex-1 overflow-y-auto p-6 max-w-3xl mx-auto w-full">
+          {/* Schedule */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Calendar size={15} className="text-gray-400" />
+              <h2 className="text-sm font-semibold text-gray-900">Schedule</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Send date & time <span className="text-gray-400 font-normal">({orgTimezone})</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={sendDate}
+                  onChange={e => { setSendDate(e.target.value); setWaveErrors(er => ({ ...er, sendDate: '', closeDate: '' })); triggerAutoSave(); }}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors ${waveErrors.sendDate ? 'border-red-300' : 'border-gray-200 focus:border-purple-400'}`}
+                />
+                {waveErrors.sendDate && <p className="text-xs text-red-500 mt-1">{waveErrors.sendDate}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Close date & time <span className="text-gray-400 font-normal">({orgTimezone})</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={closeDate}
+                  onChange={e => { setCloseDate(e.target.value); setWaveErrors(er => ({ ...er, closeDate: '' })); triggerAutoSave(); }}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors ${waveErrors.closeDate ? 'border-red-300' : 'border-gray-200 focus:border-purple-400'}`}
+                />
+                {waveErrors.closeDate && <p className="text-xs text-red-500 mt-1">{waveErrors.closeDate}</p>}
+              </div>
+            </div>
+            {sendDate && closeDate && (
+              <p className="text-xs text-gray-400 mt-3 flex items-center gap-1">
+                <Check size={12} className="text-green-500" />
+                Survey window: {new Date(sendDate).toLocaleDateString()} — {new Date(closeDate).toLocaleDateString()}
+                {' '}({Math.round((new Date(closeDate) - new Date(sendDate)) / (24*60*60*1000))} days)
+              </p>
+            )}
+          </div>
+
+          {/* Email Template */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Mail size={15} className="text-gray-400" />
+              <h2 className="text-sm font-semibold text-gray-900">Email Template</h2>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Sender display name</label>
+                  <input type="text" value={senderName} onChange={e => { setSenderName(e.target.value); triggerAutoSave(); }}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Subject line</label>
+                  <input type="text" value={emailSubject} onChange={e => { setEmailSubject(e.target.value); triggerAutoSave(); }}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-medium text-gray-700">Email body</label>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-400">Insert merge tag:</span>
+                    {MERGE_TAGS.map(t => (
+                      <button key={t} onClick={() => insertMergeTag(t)}
+                        className="px-2 py-0.5 rounded text-xs font-mono border border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors">
+                        {`{{${t}}}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <textarea ref={bodyRef} value={emailBody} onChange={e => { setEmailBody(e.target.value); triggerAutoSave(); }}
+                  rows={9} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono resize-none focus:border-purple-400 focus:outline-none bg-gray-50 focus:bg-white" />
+              </div>
+              <div className="flex justify-end">
+                <button onClick={() => addToast('Test email sent to your inbox')}
+                  className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
+                  <Send size={13} /> Send me a test email
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Reminders */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Bell size={15} className="text-gray-400" />
+              <h2 className="text-sm font-semibold text-gray-900">Reminders</h2>
+            </div>
+            <div className="space-y-3 mb-4">
+              {reminders.length === 0 && (
+                <p className="text-sm text-gray-400 italic">No reminders configured. Add up to 3 reminder emails.</p>
+              )}
+              {reminders.map((reminder, idx) => (
+                <div key={reminder.id} className="flex items-start gap-3">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Reminder {idx + 1}</label>
+                    <div className="flex items-center gap-2">
+                      <input type="datetime-local" value={reminder.datetime}
+                        onChange={e => updateReminder(reminder.id, e.target.value)}
+                        className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none ${reminder.error ? 'border-red-300' : 'border-gray-200 focus:border-purple-400'}`} />
+                      <button onClick={() => removeReminder(reminder.id)} className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    {reminder.error && <p className="text-xs text-red-500 mt-1">{reminder.error}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button onClick={addReminder} disabled={reminders.length >= 3}
+              className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+              <Plus size={14} /> Add reminder{reminders.length >= 3 && <span className="text-gray-400 ml-1">(max 3)</span>}
+            </button>
+          </div>
+
+          {/* Response Rate Alert */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={15} className="text-gray-400" />
+                <h2 className="text-sm font-semibold text-gray-900">Response Rate Alert</h2>
+              </div>
+              <button onClick={() => setAlertEnabled(!alertEnabled)}
+                className="relative w-10 h-6 rounded-full transition-colors flex-shrink-0"
+                style={{ backgroundColor: alertEnabled ? '#4A00F8' : '#D1D5DB' }}
+                role="switch" aria-checked={alertEnabled}>
+                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${alertEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            {alertEnabled && (
+              <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600 flex-shrink-0">Alert me if response rate is below</span>
+                  <input type="number" min={1} max={100} value={alertThreshold}
+                    onChange={e => setAlertThreshold(Number(e.target.value))}
+                    className="w-16 border border-purple-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:border-purple-400" />
+                  <span className="text-sm text-gray-600">%</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600 flex-shrink-0">...with</span>
+                  <input type="number" min={1} max={30} value={alertDaysRemaining}
+                    onChange={e => setAlertDaysRemaining(Number(e.target.value))}
+                    className="w-16 border border-purple-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:border-purple-400" />
+                  <span className="text-sm text-gray-600">days remaining before close</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Expert List tab */}
+      {activeTab === 'experts' && (
+        <div className="flex-1 overflow-y-auto p-6 max-w-3xl mx-auto w-full">
+          <div className="bg-white border border-gray-200 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Users size={15} className="text-gray-400" />
+              <h2 className="text-sm font-semibold text-gray-900">Expert Target List</h2>
+            </div>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input type="text" placeholder="Search by name or company..."
+                  value={expertSearch} onChange={e => setExpertSearch(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:border-purple-400 focus:outline-none" />
+              </div>
+              <select value={tagFilter} onChange={e => setTagFilter(e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none">
+                <option value="">All tags</option>
+                {allTags.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <button onClick={selectAllExperts}
+                className="px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                Select all
+              </button>
+              <button onClick={deselectAllExperts}
+                className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
+                Deselect all
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-gray-600">
+                <span className="font-semibold" style={{ color: '#4A00F8' }}>{selectedExperts.size}</span> of {experts.length} experts selected
+              </span>
+            </div>
+
+            <div className="border border-gray-100 rounded-xl overflow-hidden">
+              {filteredExperts.map((expert, idx) => {
+                const isOptedOut = expert.status === 'Opted-out';
+                const isSelected = selectedExperts.has(expert.id);
+                return (
+                  <div key={expert.id}
+                    className={`flex items-center gap-3 px-4 py-3 ${idx > 0 ? 'border-t border-gray-50' : ''} ${isOptedOut ? 'bg-gray-50 opacity-60' : 'hover:bg-purple-50/40'} transition-colors`}>
+                    <input type="checkbox" checked={isSelected} disabled={isOptedOut}
+                      onChange={() => !isOptedOut && toggleExpert(expert.id)}
+                      className="w-4 h-4 rounded accent-purple-600 cursor-pointer disabled:cursor-not-allowed" />
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                      style={{ backgroundColor: isOptedOut ? '#9CA3AF' : '#4A00F8' }}>
+                      {expert.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-gray-800">{expert.name}</p>
+                        {isOptedOut && <span className="text-xs text-red-500 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded">Opted-out</span>}
+                      </div>
+                      <p className="text-xs text-gray-400">{expert.title} · {expert.company}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-1 justify-end max-w-xs">
+                      {(expert.expertise || []).slice(0, 2).map(ex => (
+                        <span key={ex} className="text-xs bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded">{ex}</span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirm submission modal */}
       {showConfirmModal && (
@@ -977,7 +1334,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
               You are about to submit <strong>"{surveyName}"</strong> for approval.
             </p>
             <p className="text-sm text-gray-500 mb-5">
-              The survey will be locked for editing until reviewed by an Admin.
+              The entire survey — questions, wave settings, and expert list — will be locked. The approver reviews everything as a single snapshot. If rejected, you return to Draft with full edit access.
             </p>
             <div className="bg-gray-50 rounded-xl p-3 mb-5 space-y-1">
               <div className="flex items-center gap-2 text-xs text-gray-600">
@@ -986,7 +1343,11 @@ export default function SurveyBuilder({ mode = 'create' }) {
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-600">
                 <Check size={12} className="text-green-500" />
-                {questions.filter(q => q.required).length} required field{questions.filter(q => q.required).length !== 1 ? 's' : ''} set
+                {selectedExperts.size} expert{selectedExperts.size !== 1 ? 's' : ''} in target list
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                {sendDate && closeDate ? <Check size={12} className="text-green-500" /> : <AlertTriangle size={12} className="text-amber-400" />}
+                {sendDate && closeDate ? `Scheduled ${new Date(sendDate).toLocaleDateString()} – ${new Date(closeDate).toLocaleDateString()}` : 'No send/close dates set'}
               </div>
             </div>
             <div className="flex gap-3 justify-end">

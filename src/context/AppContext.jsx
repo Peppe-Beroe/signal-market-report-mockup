@@ -104,7 +104,7 @@ export function AppProvider({ children }) {
     addToast('Expert deactivated', 'warning');
   };
 
-  const createSurvey = ({ projectId, name, questions, status = 'Draft' }) => {
+  const createSurvey = ({ projectId, name, questions, status = 'Draft', waveConfig = null }) => {
     const wave = surveys.filter(s => s.projectId === projectId).length + 1;
     const newSurvey = {
       id: `s${Date.now()}`,
@@ -123,6 +123,7 @@ export function AppProvider({ children }) {
       responses: [],
       reminders: [],
       emailStatus: [],
+      ...(waveConfig ? { waveConfig } : {}),
     };
     setSurveys(prev => [...prev, newSurvey]);
     addAuditEvent('Survey created', name, 'survey', `Draft survey created with ${questions.length} questions`);
@@ -130,7 +131,7 @@ export function AppProvider({ children }) {
     return newSurvey;
   };
 
-  const updateSurvey = ({ surveyId, name, questions, status }) => {
+  const updateSurvey = ({ surveyId, name, questions, status, waveConfig }) => {
     setSurveys(prev => prev.map(s => {
       if (s.id !== surveyId) return s;
       // If re-submitting after rejection, store the current questions as previousSnapshot
@@ -139,6 +140,7 @@ export function AppProvider({ children }) {
         ...s,
         name,
         questions,
+        ...(waveConfig !== undefined ? { waveConfig } : {}),
         ...(status ? { status } : {}),
         ...(isResubmit ? {
           previousSnapshot: { submittedAt: s.previousSnapshot?.submittedAt || null, questions: s.questions },
@@ -171,10 +173,10 @@ export function AppProvider({ children }) {
   const rejectSurvey = (surveyId, reason) => {
     const survey = surveys.find(s => s.id === surveyId);
     setSurveys(prev => prev.map(s =>
-      s.id === surveyId ? { ...s, status: 'Submitted', rejectionReason: reason } : s
+      s.id === surveyId ? { ...s, status: 'Draft', rejectionReason: reason } : s
     ));
-    addAuditEvent('Survey rejected', survey?.name || surveyId, 'survey', `Returned to Submitted: ${reason}`);
-    addToast('Survey returned to Submitted with feedback — wave setup preserved', 'warning');
+    addAuditEvent('Survey rejected', survey?.name || surveyId, 'survey', `Returned to Draft: ${reason}`);
+    addToast('Survey returned to Draft with feedback — all settings preserved', 'warning');
   };
 
   const saveWaveSetup = (surveyId, config) => {

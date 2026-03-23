@@ -85,12 +85,6 @@ export default function ApprovalReview() {
   const [rejectReason, setRejectReason] = useState('');
   const [approved, setApproved] = useState(false);
 
-  const waveSetupComplete = Boolean(
-    survey?.waveConfig?.sendDate &&
-    survey?.waveConfig?.closeDate &&
-    survey?.waveConfig?.selectedExperts?.length
-  );
-
   if (!survey) return (
     <div className="p-6 text-center">
       <p className="text-gray-500">Survey not found.</p>
@@ -342,13 +336,13 @@ export default function ApprovalReview() {
                   </div>
                 </Card>
               ) : (
-                <Card className="p-5 border-amber-200 bg-amber-50">
+                <Card className="p-5 border-gray-200 bg-gray-50">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                    <Info size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-amber-800">Wave setup not configured</p>
-                      <p className="text-xs text-amber-600 mt-1">
-                        The submitter must configure wave setup (scheduling, expert list, email template) before this survey can be approved. Approval is blocked until wave setup is complete.
+                      <p className="text-sm font-semibold text-gray-700">No wave settings configured</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Wave settings (scheduling, expert list, email template) should be configured in the Draft before submission. If missing, the survey can still be approved and wave settings added before launch.
                       </p>
                     </div>
                   </div>
@@ -373,17 +367,13 @@ export default function ApprovalReview() {
                   <div className="space-y-3">
                     <button
                       onClick={handleApprove}
-                      disabled={!waveSetupComplete || !currentUserIsOwner}
+                      disabled={!currentUserIsOwner}
                       className="w-full py-2.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
                       style={{ backgroundColor: '#10B981' }}
-                      title={!waveSetupComplete ? 'Wave setup must be completed before approving' : ''}
                     >
                       <CheckCircle size={16} />
                       Approve Survey + Wave
                     </button>
-                    {!waveSetupComplete && (
-                      <p className="text-xs text-amber-600 text-center">Wave setup required before approval</p>
-                    )}
                     <button
                       onClick={() => setRejectMode(true)}
                       className="w-full py-2.5 rounded-xl text-red-600 font-semibold text-sm border-2 border-red-200 flex items-center justify-center gap-2 hover:bg-red-50 transition-colors"
