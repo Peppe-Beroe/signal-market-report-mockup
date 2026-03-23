@@ -97,24 +97,22 @@ export default function ProjectDetail() {
         }
         break;
       case 'Approved':
-        if (isAdminOrAbove) {
-          actions.push(
-            <Button
-              key="launch"
-              size="xs"
-              variant="success"
-              onClick={() => {
-                if (survey.waveConfig) {
-                  launchSurveyWithConfig(survey.id, survey.waveConfig);
-                } else {
-                  addToast('Wave setup is missing — cannot launch', 'warning');
-                }
-              }}
-            >
-              <Play size={12} /> Launch
-            </Button>
-          );
-        }
+        actions.push(
+          <Button
+            key="launch"
+            size="xs"
+            variant="success"
+            onClick={() => {
+              if (survey.waveConfig) {
+                launchSurveyWithConfig(survey.id, survey.waveConfig);
+              } else {
+                addToast('Wave setup is missing — cannot launch', 'warning');
+              }
+            }}
+          >
+            <Play size={12} /> Launch
+          </Button>
+        );
         break;
       case 'Running':
         actions.push(
