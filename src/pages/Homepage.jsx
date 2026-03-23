@@ -366,6 +366,139 @@ export default function Homepage() {
     (mySurveys.filter(s => s.responsesReceived > 0).length || 1)
   );
 
+  const hasActionItems = myDrafts.length > 0 || rejectedSurveys.length > 0 || myClosingThisWeek.length > 0;
+
+  const actionColumn = (
+    <div className="space-y-4">
+      {/* My Drafts */}
+      {myDrafts.length > 0 && (
+        <Card className="p-5">
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <FileText size={15} className="text-gray-400" />
+            My Drafts
+          </h2>
+          <div className="space-y-2">
+            {myDrafts.map(s => {
+              const project = projects.find(p => p.id === s.projectId);
+              return (
+                <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-100">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{s.name}</p>
+                    <p className="text-xs text-gray-400">{project?.name}</p>
+                  </div>
+                  <Button variant="secondary" size="xs" onClick={() => navigate(`/projects/${s.projectId}/surveys/${s.id}/builder`)}>
+                    Edit
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* Rejected surveys */}
+      {rejectedSurveys.length > 0 && (
+        <Card className="p-5">
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <AlertCircle size={15} className="text-red-500" />
+            Rejected Surveys
+          </h2>
+          <div className="space-y-2">
+            {rejectedSurveys.map(s => (
+              <div key={s.id} className="p-3 rounded-lg bg-red-50 border border-red-100">
+                <p className="text-sm font-medium text-gray-800">{s.name}</p>
+                <p className="text-xs text-red-600 mt-0.5">Feedback: {s.rejectionReason}</p>
+                <div className="flex justify-end mt-2">
+                  <Button size="xs" variant="secondary" onClick={() => navigate(`/projects/${s.projectId}/surveys/${s.id}/builder`)}>
+                    Revise
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Upcoming deadlines */}
+      {myClosingThisWeek.length > 0 && (
+        <Card className="p-5">
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Clock size={15} className="text-amber-500" />
+            Upcoming Deadlines
+          </h2>
+          <div className="space-y-2">
+            {myClosingThisWeek.map(s => {
+              const daysLeft = Math.ceil((new Date(s.closeDate) - new Date()) / (1000*60*60*24));
+              return (
+                <div key={s.id} className="flex items-center justify-between p-3 rounded-lg bg-amber-50 border border-amber-100">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{s.name}</p>
+                    <p className="text-xs text-amber-600">{daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</p>
+                  </div>
+                  <Button variant="secondary" size="xs" onClick={() => navigate(`/projects/${s.projectId}/surveys/${s.id}/results`)}>
+                    View
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+
+  const surveysColumn = (
+    <div className="space-y-4">
+      <Card className="p-5">
+        <h2 className="font-semibold text-gray-900 mb-4">My Surveys</h2>
+        {mySurveys.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-4">No surveys yet</p>
+        ) : (
+          <div className="space-y-3">
+            {mySurveys.map(s => {
+              const project = projects.find(p => p.id === s.projectId);
+              return (
+                <div key={s.id} className="flex items-center gap-3 p-3 rounded-lg border border-gray-100">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{s.name}</p>
+                    <p className="text-xs text-gray-400">{project?.name}</p>
+                    {s.status === 'Submitted' && <p className="text-xs text-amber-600 mt-0.5">Awaiting approval</p>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={s.status} size="xs" />
+                    {s.status === 'Running' && (
+                      <Button variant="ghost" size="xs" onClick={() => navigate(`/projects/${s.projectId}/surveys/${s.id}/results`)}>
+                        <ArrowRight size={14} />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      {/* CTA */}
+      <Card
+        className="p-5 border-dashed border-2 border-purple-200 bg-purple-50 flex flex-col items-center justify-center text-center cursor-pointer hover:border-purple-400 hover:bg-purple-100 transition-all duration-150"
+        onClick={() => navigate('/projects/p1/surveys/new')}
+      >
+        <div className="p-3 rounded-full bg-white shadow-sm mb-3">
+          <PlusCircle size={24} style={{ color: '#4A00F8' }} />
+        </div>
+        <h3 className="font-semibold text-gray-800 mb-1">Start a new survey</h3>
+        <p className="text-sm text-gray-500">Design and launch your next wave</p>
+        <button
+          className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium shadow-sm hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: '#4A00F8' }}
+        >
+          New Survey
+        </button>
+      </Card>
+    </div>
+  );
+
   return (
     <div className="p-6 max-w-6xl mx-auto fade-in">
       <div className="mb-6">
@@ -379,130 +512,14 @@ export default function Homepage() {
         <KpiCard icon={TrendingUp} label="Avg Response Rate" value={`${avgResponseRate}%`} sub="Running surveys" color="#10B981" />
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <div className="space-y-4">
-          {/* My Drafts */}
-          {myDrafts.length > 0 && (
-            <Card className="p-5">
-              <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <FileText size={15} className="text-gray-400" />
-                My Drafts
-              </h2>
-              <div className="space-y-2">
-                {myDrafts.map(s => {
-                  const project = projects.find(p => p.id === s.projectId);
-                  return (
-                    <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-100">
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">{s.name}</p>
-                        <p className="text-xs text-gray-400">{project?.name}</p>
-                      </div>
-                      <Button variant="secondary" size="xs" onClick={() => navigate(`/projects/${s.projectId}/surveys/${s.id}/builder`)}>
-                        Edit
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-          )}
-
-          {/* Rejected surveys */}
-          {rejectedSurveys.length > 0 && (
-            <Card className="p-5">
-              <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <AlertCircle size={15} className="text-red-500" />
-                Rejected Surveys
-              </h2>
-              <div className="space-y-2">
-                {rejectedSurveys.map(s => (
-                  <div key={s.id} className="p-3 rounded-lg bg-red-50 border border-red-100">
-                    <p className="text-sm font-medium text-gray-800">{s.name}</p>
-                    <p className="text-xs text-red-600 mt-0.5">Feedback: {s.rejectionReason}</p>
-                    <div className="flex justify-end mt-2">
-                      <Button size="xs" variant="secondary" onClick={() => navigate(`/projects/${s.projectId}/surveys/${s.id}/builder`)}>
-                        Revise
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {/* Upcoming deadlines */}
-          {myClosingThisWeek.length > 0 && (
-            <Card className="p-5">
-              <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Clock size={15} className="text-amber-500" />
-                Upcoming Deadlines
-              </h2>
-              <div className="space-y-2">
-                {myClosingThisWeek.map(s => {
-                  const daysLeft = Math.ceil((new Date(s.closeDate) - new Date()) / (1000*60*60*24));
-                  return (
-                    <div key={s.id} className="flex items-center justify-between p-3 rounded-lg bg-amber-50 border border-amber-100">
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">{s.name}</p>
-                        <p className="text-xs text-amber-600">{daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</p>
-                      </div>
-                      <Button variant="secondary" size="xs" onClick={() => navigate(`/projects/${s.projectId}/surveys/${s.id}/results`)}>
-                        View
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-          )}
+      {hasActionItems ? (
+        <div className="grid grid-cols-2 gap-6">
+          {actionColumn}
+          {surveysColumn}
         </div>
-
-        <div className="space-y-4">
-          <Card className="p-5">
-            <h2 className="font-semibold text-gray-900 mb-4">My Surveys</h2>
-            <div className="space-y-3">
-              {mySurveys.map(s => {
-                const project = projects.find(p => p.id === s.projectId);
-                return (
-                  <div key={s.id} className="flex items-center gap-3 p-3 rounded-lg border border-gray-100">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{s.name}</p>
-                      <p className="text-xs text-gray-400">{project?.name}</p>
-                      {s.status === 'Submitted' && <p className="text-xs text-amber-600 mt-0.5">Awaiting approval</p>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={s.status} size="xs" />
-                      {s.status === 'Running' && (
-                        <Button variant="ghost" size="xs" onClick={() => navigate(`/projects/${s.projectId}/surveys/${s.id}/results`)}>
-                          <ArrowRight size={14} />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-
-          {/* CTA */}
-          <Card
-            className="p-5 border-dashed border-2 border-purple-200 bg-purple-50 flex flex-col items-center justify-center text-center cursor-pointer hover:border-purple-400 hover:bg-purple-100 transition-all duration-150"
-            onClick={() => navigate('/projects/p1/surveys/new')}
-          >
-            <div className="p-3 rounded-full bg-white shadow-sm mb-3">
-              <PlusCircle size={24} style={{ color: '#4A00F8' }} />
-            </div>
-            <h3 className="font-semibold text-gray-800 mb-1">Start a new survey</h3>
-            <p className="text-sm text-gray-500">Design and launch your next wave</p>
-            <button
-              className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium shadow-sm hover:opacity-90 transition-opacity"
-              style={{ backgroundColor: '#4A00F8' }}
-            >
-              New Survey
-            </button>
-          </Card>
-        </div>
-      </div>
+      ) : (
+        surveysColumn
+      )}
     </div>
   );
 }
