@@ -7,15 +7,20 @@ import StatusBadge from '../components/ui/StatusBadge';
 import Button from '../components/ui/Button';
 
 export default function ProjectsList() {
-  const { projects, surveys, currentUser, createProject, archiveProject, unarchiveProject } = useApp();
+  const { projects, surveys, currentUser, internalUsers, createProject, archiveProject, unarchiveProject } = useApp();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: '' });
+  const [form, setForm] = useState({ name: '', ownerName: '' });
   const [errors, setErrors] = useState({});
 
   const isAdminOrAbove = currentUser.role === 'Admin' || currentUser.role === 'Super Admin';
+  const isStandardUser = currentUser.role === 'Standard User' || currentUser.role === 'Researcher';
+  // Per P1-F-68: Standard Users must assign an Admin as Project Owner at creation time.
+  const adminUsers = internalUsers
+    ? internalUsers.filter(u => (u.role === 'Admin' || u.role === 'Super Admin') && u.status === 'Active')
+    : [];
 
   const filtered = projects.filter(p => {
     const matchArchive = showArchived ? p.archived : !p.archived;
@@ -28,17 +33,18 @@ export default function ProjectsList() {
   const handleCreate = () => {
     const errs = {};
     if (!form.name.trim()) errs.name = 'Project name is required';
+    if (isStandardUser && !form.ownerName) errs.ownerName = 'You must assign a Project Owner';
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     const project = createProject(form);
     setShowModal(false);
-    setForm({ name: '' });
+    setForm({ name: '', ownerName: '' });
     setErrors({});
     navigate(`/projects/${project.id}`);
   };
 
   const closeModal = () => {
     setShowModal(false);
-    setForm({ name: '' });
+    setForm({ name: '', ownerName: '' });
     setErrors({});
   };
 
@@ -167,6 +173,33 @@ export default function ProjectsList() {
                 />
                 {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
               </div>
+
+              {/* Per P1-F-68: Standard Users must assign an Admin as Project Owner */}
+              {isStandardUser && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Project Owner <span className="text-red-400">*</span>
+                  </label>
+                  <p className="text-xs text-gray-400 mb-2">You cannot own projects. Assign an Admin who will oversee this project.</p>
+                  {adminUsers.length === 0 ? (
+                    <p className="text-xs text-red-500">No active Admins available. Contact a Super Admin to create an Admin account first.</p>
+                  ) : (
+                    <select
+                      value={form.ownerName}
+                      onChange={e => { setForm(f => ({ ...f, ownerName: e.target.value })); setErrors(er => ({ ...er, ownerName: '' })); }}
+                      className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors ${errors.ownerName ? 'border-red-300 focus:border-red-400' : 'border-gray-200 focus:border-purple-400'}`}
+                    >
+                      <option value="">— Select a Project Owner —</option>
+                      {adminUsers.map(u => (
+                        <option key={u.id} value={`${u.firstName} ${u.lastName}`}>
+                          {u.firstName} {u.lastName} ({u.role})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {errors.ownerName && <p className="text-xs text-red-500 mt-1">{errors.ownerName}</p>}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2 mt-6">

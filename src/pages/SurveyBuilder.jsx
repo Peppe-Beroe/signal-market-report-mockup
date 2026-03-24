@@ -588,8 +588,9 @@ function UnsavedChangesModal({ onSave, onDiscard, onCancel }) {
   );
 }
 
-function SaveTemplateModal({ onSave, onClose }) {
+function SaveTemplateModal({ onSave, onClose, projectName }) {
   const [name, setName] = useState('');
+  const [visibility, setVisibility] = useState('private');
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="fade-in bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
@@ -606,37 +607,71 @@ function SaveTemplateModal({ onSave, onClose }) {
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none mb-4"
           autoFocus
         />
+        <div className="mb-5">
+          <p className="text-sm font-medium text-gray-700 mb-2">Visibility</p>
+          <div className="space-y-2">
+            <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 cursor-pointer hover:border-purple-300 transition-colors" style={visibility === 'private' ? { borderColor: '#4A00F8', backgroundColor: '#f5f3ff' } : {}}>
+              <input type="radio" name="visibility" value="private" checked={visibility === 'private'} onChange={() => setVisibility('private')} className="mt-0.5 accent-purple-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-800">Private — only me</p>
+                <p className="text-xs text-gray-400">Only you can see and use this template.</p>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 cursor-pointer hover:border-purple-300 transition-colors" style={visibility === 'project' ? { borderColor: '#4A00F8', backgroundColor: '#f5f3ff' } : {}}>
+              <input type="radio" name="visibility" value="project" checked={visibility === 'project'} onChange={() => setVisibility('project')} className="mt-0.5 accent-purple-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-800">Share with project</p>
+                <p className="text-xs text-gray-400">All editors of <span className="font-medium text-gray-600">{projectName || 'this project'}</span> can see and use this template.</p>
+              </div>
+            </label>
+          </div>
+        </div>
         <div className="flex gap-2 justify-end">
           <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-          <Button size="sm" disabled={!name.trim()} onClick={() => onSave(name)}>Save Template</Button>
+          <Button size="sm" disabled={!name.trim()} onClick={() => onSave(name, visibility)}>Save Template</Button>
         </div>
       </div>
     </div>
   );
 }
 
-function UseTemplateModal({ templates, onUse, onClose }) {
+function UseTemplateModal({ myTemplates, projectTemplates, onUse, onClose }) {
+  const hasAny = myTemplates.length > 0 || projectTemplates.length > 0;
+
+  const TemplateButton = ({ t }) => (
+    <button
+      key={t.id}
+      onClick={() => onUse(t)}
+      className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all"
+    >
+      <p className="text-sm font-semibold text-gray-800">{t.name}</p>
+      <p className="text-xs text-gray-400 mt-0.5">{t.questions.length} questions · {t.createdBy} · {t.createdAt}</p>
+    </button>
+  );
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="fade-in bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+      <div className="fade-in bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Use a Template</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
-        {templates.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">No templates saved yet. Save a survey as a template to use it here.</p>
+        {!hasAny ? (
+          <p className="text-sm text-gray-400 text-center py-6">No templates available yet. Save a survey as a template to use it here.</p>
         ) : (
-          <div className="space-y-2">
-            {templates.map(t => (
-              <button
-                key={t.id}
-                onClick={() => onUse(t)}
-                className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all"
-              >
-                <p className="text-sm font-semibold text-gray-800">{t.name}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{t.questions.length} questions · Created by {t.createdBy} on {t.createdAt}</p>
-              </button>
-            ))}
+          <div className="overflow-y-auto flex-1 space-y-5">
+            {myTemplates.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">My Templates</p>
+                <div className="space-y-2">{myTemplates.map(t => <TemplateButton key={t.id} t={t} />)}</div>
+              </div>
+            )}
+            {projectTemplates.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Project Templates</p>
+                <div className="space-y-2">{projectTemplates.map(t => <TemplateButton key={t.id} t={t} />)}</div>
+              </div>
+            )}
           </div>
         )}
         <div className="flex justify-end mt-4">
@@ -650,7 +685,9 @@ function UseTemplateModal({ templates, onUse, onClose }) {
 export default function SurveyBuilder({ mode = 'create' }) {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, experts, templates, categories, orgTimezone, addToast, createSurvey, updateSurvey, cloneSurvey, saveTemplate, resolveAmendments } = useApp();
+  const { currentUser, surveys, projects, experts, templates, categories, orgTimezone, addToast, createSurvey, updateSurvey, cloneSurvey, saveTemplate, resolveAmendments } = useApp();
+  const myTemplates = templates.filter(t => t.ownerId === currentUser.id);
+  const projectTemplates = templates.filter(t => t.visibility === 'project' && t.projectId === projectId && t.ownerId !== currentUser.id);
 
   const project = projects.find(p => p.id === projectId);
   const existingSurvey = surveys.find(s => s.id === surveyId);
@@ -863,8 +900,8 @@ export default function SurveyBuilder({ mode = 'create' }) {
     if (cloned) navigate(`/projects/${projectId}/surveys/${cloned.id}/builder`);
   };
 
-  const handleSaveTemplate = (name) => {
-    saveTemplate(name, questions);
+  const handleSaveTemplate = (name, visibility) => {
+    saveTemplate(name, questions, visibility, projectId);
     setShowSaveTemplateModal(false);
   };
 
@@ -956,12 +993,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
           {isDirty && !autoSaveToast && (
             <span className="text-xs text-amber-500 font-medium">Unsaved changes</span>
           )}
-          {mode === 'create' && templates.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => setShowUseTemplateModal(true)}>
-              <BookTemplate size={14} /> Use template
-            </Button>
-          )}
-          {mode === 'create' && templates.length === 0 && (
+          {mode === 'create' && (
             <Button variant="ghost" size="sm" onClick={() => setShowUseTemplateModal(true)}>
               <BookTemplate size={14} /> Use template
             </Button>
@@ -1497,13 +1529,15 @@ export default function SurveyBuilder({ mode = 'create' }) {
         <SaveTemplateModal
           onSave={handleSaveTemplate}
           onClose={() => setShowSaveTemplateModal(false)}
+          projectName={project?.name}
         />
       )}
 
       {/* Use template modal */}
       {showUseTemplateModal && (
         <UseTemplateModal
-          templates={templates}
+          myTemplates={myTemplates}
+          projectTemplates={projectTemplates}
           onUse={handleUseTemplate}
           onClose={() => setShowUseTemplateModal(false)}
         />

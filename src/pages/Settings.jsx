@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Bell, Sliders, Save, CheckCircle, Globe, List, Mail, Plus, X, Edit2, Info } from 'lucide-react';
+import { User, Bell, Sliders, Save, CheckCircle, Globe, List, Mail, Plus, X, Edit2, Info, BookTemplate, Trash2, Lock, Users, Eye } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -64,7 +64,7 @@ Thank you,
 Beroe Research Team`;
 
 export default function Settings() {
-  const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs, categories, setCategories } = useApp();
+  const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs, categories, setCategories, templates, deleteTemplate, renameTemplate, projects } = useApp();
   const isSuperAdmin = currentUser.role === 'Super Admin';
   const isStandardUser = currentUser.role === 'Researcher' || currentUser.role === 'Standard User';
   const profileReadOnly = !isSuperAdmin; // Admin and Standard User see read-only profile
@@ -98,6 +98,18 @@ export default function Settings() {
   const [renameValue, setRenameValue] = useState('');
   const [defaultEmailSubject, setDefaultEmailSubject] = useState(`You're invited: {{survey_name}}`);
   const [defaultEmailBody, setDefaultEmailBody] = useState(DEFAULT_EMAIL_BODY);
+
+  // Template management state
+  const [renamingTplId, setRenamingTplId] = useState(null);
+  const [renameTplValue, setRenameTplValue] = useState('');
+  const [expandedTplId, setExpandedTplId] = useState(null);
+
+  const myTemplates = templates.filter(t => t.ownerId === currentUser.id);
+  const allTemplates = templates; // Super Admin view
+
+  const startRenameTpl = (tpl) => { setRenamingTplId(tpl.id); setRenameTplValue(tpl.name); };
+  const saveRenameTpl = (id) => { renameTemplate(id, renameTplValue); setRenamingTplId(null); };
+  const getProjectName = (projectId) => projects.find(p => p.id === projectId)?.name || projectId;
 
   const saveProfile = () => addToast('Profile updated successfully');
   const saveDefaults = () => addToast('Survey defaults saved');
@@ -354,6 +366,156 @@ export default function Settings() {
           <Button size="sm" onClick={saveDefaultEmail}><Save size={14} /> Save Template</Button>
         </div>
       </Card>
+
+      {/* My Templates — all users */}
+      <Card className="p-6">
+        <SectionHeader icon={BookTemplate} title="My Templates" description="Survey question templates you have created" />
+        {myTemplates.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-4">No templates yet. Save a survey as a template from the survey builder to see it here.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Visibility</th>
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Project</th>
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Questions</th>
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
+                  <th className="py-2 px-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {myTemplates.map(tpl => (
+                  <>
+                    <tr key={tpl.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-3 px-3">
+                        {renamingTplId === tpl.id ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={renameTplValue}
+                              onChange={e => setRenameTplValue(e.target.value)}
+                              onKeyDown={e => e.key === 'Enter' && saveRenameTpl(tpl.id)}
+                              className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:border-purple-400 focus:outline-none"
+                              autoFocus
+                            />
+                            <button onClick={() => saveRenameTpl(tpl.id)} className="text-green-500 p-1"><CheckCircle size={13} /></button>
+                            <button onClick={() => setRenamingTplId(null)} className="text-gray-400 p-1"><X size={13} /></button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setExpandedTplId(expandedTplId === tpl.id ? null : tpl.id)} className="text-sm font-medium text-gray-800 hover:text-purple-700 text-left">{tpl.name}</button>
+                        )}
+                      </td>
+                      <td className="py-3 px-3">
+                        {tpl.visibility === 'project' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"><Users size={10} /> Project</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><Lock size={10} /> Private</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-sm text-gray-500">{tpl.visibility === 'project' && tpl.projectId ? getProjectName(tpl.projectId) : '—'}</td>
+                      <td className="py-3 px-3 text-sm text-gray-500">{tpl.questions?.length ?? 0}</td>
+                      <td className="py-3 px-3 text-sm text-gray-400">{tpl.createdAt}</td>
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-1 justify-end">
+                          <Button variant="ghost" size="xs" onClick={() => startRenameTpl(tpl)}><Edit2 size={11} /> Rename</Button>
+                          <Button variant="ghost" size="xs" className="text-red-400 hover:text-red-600" onClick={() => deleteTemplate(tpl.id)}><Trash2 size={11} /> Delete</Button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedTplId === tpl.id && (
+                      <tr key={`${tpl.id}-expanded`}>
+                        <td colSpan={6} className="px-3 pb-3">
+                          <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Questions</p>
+                            {(tpl.questions || []).map((q, i) => (
+                              <div key={q.id} className="flex items-start gap-2 text-sm text-gray-700">
+                                <span className="text-gray-400 w-5 flex-shrink-0">{i + 1}.</span>
+                                <span>{q.text || q.label || 'Untitled question'}</span>
+                                <span className="ml-auto text-xs text-gray-400">{q.type}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* All Templates — Super Admin only */}
+      {isSuperAdmin && (
+        <Card className="p-6">
+          <SectionHeader icon={Eye} title="All Templates" description="Org-wide view of all templates created by any user" />
+          {allTemplates.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">No templates have been created in the organisation yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Owner</th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Visibility</th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Project</th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Questions</th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
+                    <th className="py-2 px-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {allTemplates.map(tpl => (
+                    <>
+                      <tr key={tpl.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="py-3 px-3">
+                          <button onClick={() => setExpandedTplId(expandedTplId === `sa-${tpl.id}` ? null : `sa-${tpl.id}`)} className="text-sm font-medium text-gray-800 hover:text-purple-700 text-left">{tpl.name}</button>
+                        </td>
+                        <td className="py-3 px-3 text-sm text-gray-600">{tpl.createdBy}</td>
+                        <td className="py-3 px-3">
+                          {tpl.visibility === 'project' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"><Users size={10} /> Project</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><Lock size={10} /> Private</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-sm text-gray-500">{tpl.visibility === 'project' && tpl.projectId ? getProjectName(tpl.projectId) : '—'}</td>
+                        <td className="py-3 px-3 text-sm text-gray-500">{tpl.questions?.length ?? 0}</td>
+                        <td className="py-3 px-3 text-sm text-gray-400">{tpl.createdAt}</td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-1 justify-end">
+                            <Button variant="ghost" size="xs" className="text-red-400 hover:text-red-600" onClick={() => deleteTemplate(tpl.id)}><Trash2 size={11} /> Delete</Button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedTplId === `sa-${tpl.id}` && (
+                        <tr key={`sa-${tpl.id}-expanded`}>
+                          <td colSpan={7} className="px-3 pb-3">
+                            <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Questions</p>
+                              {(tpl.questions || []).map((q, i) => (
+                                <div key={q.id} className="flex items-start gap-2 text-sm text-gray-700">
+                                  <span className="text-gray-400 w-5 flex-shrink-0">{i + 1}.</span>
+                                  <span>{q.text || q.label || 'Untitled question'}</span>
+                                  <span className="ml-auto text-xs text-gray-400">{q.type}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Survey Defaults */}
       <Card className="p-6">

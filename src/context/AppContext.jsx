@@ -66,10 +66,12 @@ export function AppProvider({ children }) {
 
   const createProject = (data) => {
     const today = new Date().toISOString().split('T')[0];
+    // Per P1-F-68: when a Standard User creates a project they must assign an Admin as owner.
+    // data.ownerName is provided by the creation modal in that case; falls back to currentUser.name for Admin/SA.
     const newProject = {
       id: `p${Date.now()}`,
       name: data.name,
-      owner: currentUser.name,
+      owner: data.ownerName || currentUser.name,
       status: 'Active',
       created: today,
       surveysCount: 0,
@@ -253,17 +255,31 @@ export function AppProvider({ children }) {
     return newSurvey;
   };
 
-  const saveTemplate = (name, questions) => {
+  const saveTemplate = (name, questions, visibility = 'private', projectId = null) => {
     const template = {
       id: `tpl${Date.now()}`,
       name,
       questions,
+      visibility, // 'private' | 'project'
+      projectId: visibility === 'project' ? projectId : null,
+      ownerId: currentUser.id,
       createdBy: currentUser.name,
       createdAt: new Date().toISOString().split('T')[0],
     };
     setTemplates(prev => [...prev, template]);
     addToast(`Template "${name}" saved`);
     return template;
+  };
+
+  const deleteTemplate = (templateId) => {
+    const tpl = templates.find(t => t.id === templateId);
+    setTemplates(prev => prev.filter(t => t.id !== templateId));
+    addToast(`Template "${tpl?.name || ''}" deleted`, 'warning');
+  };
+
+  const renameTemplate = (templateId, newName) => {
+    setTemplates(prev => prev.map(t => t.id === templateId ? { ...t, name: newName } : t));
+    addToast(`Template renamed to "${newName}"`);
   };
 
   const toggleExclusion = (surveyId, expertId) => {
@@ -383,7 +399,16 @@ export function AppProvider({ children }) {
   const deactivateUser = (userId) => {
     const user = internalUsers.find(u => u.id === userId);
     setInternalUsers(prev => prev.map(u => u.id === userId ? { ...u, status: 'Deactivated' } : u));
-    addAuditEvent('User deactivated', user ? `${user.firstName} ${user.lastName}` : userId, 'user', 'User account deactivated');
+    // Transfer all templates owned by the deactivated user to Super Admin (u1)
+    const superAdmin = internalUsers.find(u => u.role === 'Super Admin');
+    if (superAdmin) {
+      setTemplates(prev => prev.map(t =>
+        t.ownerId === userId
+          ? { ...t, ownerId: superAdmin.id, createdBy: superAdmin.firstName + ' ' + superAdmin.lastName }
+          : t
+      ));
+    }
+    addAuditEvent('User deactivated', user ? `${user.firstName} ${user.lastName}` : userId, 'user', 'User account deactivated; templates transferred to Super Admin');
     addToast('User deactivated', 'warning');
   };
 
@@ -534,7 +559,7 @@ export function AppProvider({ children }) {
       archiveProject, unarchiveProject, archiveSurvey, unarchiveSurvey,
       createSurvey, updateSurvey, deleteSurvey,
       approveSurvey, rejectSurvey, saveWaveSetup, launchSurvey, launchSurveyWithConfig, closeSurvey,
-      cloneSurvey, saveTemplate,
+      cloneSurvey, saveTemplate, deleteTemplate, renameTemplate,
       submitChangeRequest, resolveChangeRequest,
       createProposal, addUserToProject,
       deactivateUser, updateUserRole,

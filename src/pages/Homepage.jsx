@@ -86,10 +86,10 @@ function NewSurveyModal({ projects, onClose, onSelectProject, onGoToProjects }) 
           </div>
 
           {path === 'new' && (
-            <div className="mt-4 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
-              <Info size={14} className="text-amber-500 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-700">
-                Only <strong>Admins</strong> and <strong>Super Admins</strong> can create new projects. Contact your platform administrator, or go to <strong>Projects</strong> to see what's available and request access.
+            <div className="mt-4 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5">
+              <Info size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-blue-700">
+                You can create a new project from the Projects page. You'll need to assign an <strong>Admin</strong> as the Project Owner — you cannot own projects directly.
               </p>
             </div>
           )}
