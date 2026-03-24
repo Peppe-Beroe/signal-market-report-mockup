@@ -455,8 +455,8 @@ export const TEMPLATES = [
   {
     id: 'tpl4',
     name: 'Sustainability & ESG Criteria',
-    visibility: 'private',
-    projectId: null,
+    visibility: 'project',
+    projectId: 'p3',
     ownerId: 'u2',
     createdAt: '2026-02-10',
     questions: [

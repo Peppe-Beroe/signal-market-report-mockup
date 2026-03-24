@@ -644,8 +644,14 @@ function UseTemplateModal({ myTemplates, projectTemplates, onUse, onClose }) {
       onClick={() => onUse(t)}
       className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all"
     >
-      <p className="text-sm font-semibold text-gray-800">{t.name}</p>
-      <p className="text-xs text-gray-400 mt-0.5">{t.questions.length} questions · {t.createdBy} · {t.createdAt}</p>
+      <div className="flex items-center justify-between gap-2 mb-0.5">
+        <p className="text-sm font-semibold text-gray-800">{t.name}</p>
+        {t.visibility === 'project'
+          ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100 shrink-0">Public</span>
+          : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200 shrink-0">Private</span>
+        }
+      </div>
+      <p className="text-xs text-gray-400">{t.questions.length} questions · {t.createdBy} · {t.createdAt}</p>
     </button>
   );
 
