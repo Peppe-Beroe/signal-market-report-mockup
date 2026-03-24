@@ -432,7 +432,7 @@ export default function SurveyResults() {
   const pendingExperts = survey.emailStatus.filter(e => !survey.responses.find(r => r.expertId === e.expertId));
   const bouncedCount = survey.emailStatus.filter(e => e.status === 'bounced').length;
   const isRunning = survey.status === 'Running';
-  const canExclude = ['Super Admin', 'Admin'].includes(currentUser.role) && ['Running', 'Review'].includes(survey.status);
+  const canExclude = ['Super Admin', 'Admin'].includes(currentUser.role) && survey.status === 'Review';
   const nonResponding = survey.emailStatus.filter(e => !survey.responses.find(r => r.expertId === e.expertId)).length;
 
   const tabs = ['Responses', 'Summary', 'Distribution'];

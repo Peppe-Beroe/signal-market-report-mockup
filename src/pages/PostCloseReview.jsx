@@ -28,11 +28,11 @@ function BarChart({ data }) {
   );
 }
 
-function ResponseRow({ response, survey }) {
+function ResponseRow({ response, survey, canExclude, onToggleExclusion }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <>
-      <tr className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+      <tr className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${response.excluded ? 'opacity-60' : ''}`}>
         <td className="px-5 py-3">
           <div className="flex items-center gap-3">
             <div
@@ -42,19 +42,36 @@ function ResponseRow({ response, survey }) {
               {response.expertName.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-800">{response.expertName}</p>
+              <p className={`text-sm font-medium ${response.excluded ? 'line-through text-gray-400' : 'text-gray-800'}`}>{response.expertName}</p>
               <p className="text-xs text-gray-400">{response.company}</p>
             </div>
           </div>
         </td>
         <td className="px-4 py-3 text-sm text-gray-600">{response.submittedAt}</td>
         <td className="px-4 py-3">
-          <Badge color="green" size="xs">Included</Badge>
+          {response.excluded
+            ? <Badge color="red" size="xs">Excluded</Badge>
+            : <Badge color="green" size="xs">Included</Badge>
+          }
         </td>
         <td className="px-4 py-3">
-          <button onClick={() => setExpanded(!expanded)} className="text-gray-400 hover:text-gray-600 p-1">
-            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
+          <div className="flex items-center gap-2 justify-end">
+            {canExclude && (
+              <button
+                onClick={() => onToggleExclusion(response.expertId)}
+                className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg border transition-colors ${
+                  response.excluded
+                    ? 'border-green-200 text-green-600 hover:bg-green-50'
+                    : 'border-red-200 text-red-500 hover:bg-red-50'
+                }`}
+              >
+                {response.excluded ? <><Eye size={11} /> Include</> : <><EyeOff size={11} /> Exclude</>}
+              </button>
+            )}
+            <button onClick={() => setExpanded(!expanded)} className="text-gray-400 hover:text-gray-600 p-1">
+              {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+          </div>
         </td>
       </tr>
       {expanded && (
@@ -84,12 +101,16 @@ function ResponseRow({ response, survey }) {
 export default function PostCloseReview() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, attachReport, shareReport, addToast } = useApp();
+  const { surveys, projects, currentUser, toggleExclusion, attachReport, shareReport, addToast } = useApp();
 
   const survey = surveys.find(s => s.id === surveyId);
   const project = projects.find(p => p.id === projectId);
 
   if (!survey) return <div className="p-6 text-center text-gray-500">Survey not found.</div>;
+
+  const canExclude = ['Super Admin', 'Admin'].includes(currentUser.role);
+  const excludedCount = survey.responses.filter(r => r.excluded).length;
+  const includedCount = survey.responses.length - excludedCount;
 
   const q1Data = {};
   survey.questions[0]?.options?.forEach(o => q1Data[o] = 0);
@@ -129,7 +150,7 @@ export default function PostCloseReview() {
           <div className="flex items-center gap-3 p-3 rounded-xl bg-green-50 border border-green-200 mb-5">
             <CheckCircle size={15} className="text-green-600 flex-shrink-0" />
             <p className="text-sm text-green-700">
-              <strong>Wave {survey.wave} results ready for transfer</strong> — {survey.responsesReceived}/{survey.expertsTargeted} responses collected ({survey.responseRate}% response rate). All responses included.
+              <strong>Wave {survey.wave} results ready for review</strong> — {survey.responsesReceived}/{survey.expertsTargeted} responses collected ({survey.responseRate}% response rate).{excludedCount > 0 ? ` ${excludedCount} response${excludedCount > 1 ? 's' : ''} excluded from analysis.` : ' All responses included.'}
             </p>
           </div>
 
@@ -151,7 +172,7 @@ export default function PostCloseReview() {
           <Card className="mb-5">
             <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-semibold text-gray-900 text-sm">Responses</h2>
-              <Badge color="green" size="xs">{survey.responses.length} included · 0 excluded</Badge>
+              <Badge color={excludedCount > 0 ? 'amber' : 'green'} size="xs">{includedCount} included · {excludedCount} excluded</Badge>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -165,7 +186,7 @@ export default function PostCloseReview() {
                 </thead>
                 <tbody>
                   {survey.responses.map(r => (
-                    <ResponseRow key={r.expertId} response={r} survey={survey} />
+                    <ResponseRow key={r.expertId} response={r} survey={survey} canExclude={canExclude} onToggleExclusion={(expertId) => toggleExclusion(survey.id, expertId)} />
                   ))}
                 </tbody>
               </table>
