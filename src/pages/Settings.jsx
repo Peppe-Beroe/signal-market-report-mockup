@@ -63,8 +63,146 @@ Link: {{survey_link}}
 Thank you,
 Beroe Research Team`;
 
+function TemplateTable({
+  templates, showOwner, showMakePrivate,
+  renamingTplId, renameTplValue, onStartRename, onSaveRename, onCancelRename, onRenameChange,
+  expandedTplId, onToggleExpand,
+  onEditQuestions, onDelete, onMakePrivate, getProjectName,
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-100">
+            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
+            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Visibility</th>
+            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Project</th>
+            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider w-16">Qs</th>
+            {showOwner && <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Owner</th>}
+            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
+            <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-50">
+          {templates.map(tpl => {
+            const isExpanded = expandedTplId === tpl.id;
+            const isRenaming = renamingTplId === tpl.id;
+            const createdDate = tpl.createdAt ? new Date(tpl.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '—';
+            return (
+              <tr key={tpl.id} className="hover:bg-gray-50 transition-colors align-top">
+                {/* Name */}
+                <td className="py-3 px-3">
+                  {isRenaming ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={renameTplValue}
+                        onChange={e => onRenameChange(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') onSaveRename(tpl.id); if (e.key === 'Escape') onCancelRename(); }}
+                        className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:border-purple-400 focus:outline-none w-40"
+                        autoFocus
+                      />
+                      <button onClick={() => onSaveRename(tpl.id)} className="text-green-500 p-1"><CheckCircle size={13} /></button>
+                      <button onClick={onCancelRename} className="text-gray-400 p-1"><X size={13} /></button>
+                    </div>
+                  ) : (
+                    <div>
+                      <button
+                        onClick={() => onToggleExpand(tpl.id)}
+                        className="font-medium text-gray-800 hover:text-purple-700 text-left transition-colors"
+                      >
+                        {tpl.name}
+                      </button>
+                      {isExpanded && tpl.questions?.length > 0 && (
+                        <ol className="mt-2 space-y-1 pl-1">
+                          {tpl.questions.map((q, i) => (
+                            <li key={q.id} className="text-xs text-gray-500 flex gap-1.5">
+                              <span className="text-gray-300 w-4 shrink-0">{i + 1}.</span>
+                              <span>{q.text}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </div>
+                  )}
+                </td>
+                {/* Visibility */}
+                <td className="py-3 px-3"><VisibilityBadge visibility={tpl.visibility} /></td>
+                {/* Project */}
+                <td className="py-3 px-3 text-xs text-gray-500">
+                  {tpl.projectId ? getProjectName(tpl.projectId) : <span className="text-gray-300">—</span>}
+                </td>
+                {/* Questions count */}
+                <td className="py-3 px-3 text-xs text-gray-500">{tpl.questions?.length ?? 0}</td>
+                {/* Owner (conditional) */}
+                {showOwner && <td className="py-3 px-3 text-xs text-gray-500">{tpl.ownerName || tpl.ownerId || '—'}</td>}
+                {/* Created */}
+                <td className="py-3 px-3 text-xs text-gray-400 whitespace-nowrap">{createdDate}</td>
+                {/* Actions */}
+                <td className="py-3 px-3">
+                  <div className="flex items-center gap-1 justify-end">
+                    <Button variant="ghost" size="xs" onClick={() => onStartRename(tpl)}><Edit2 size={11} /> Rename</Button>
+                    <Button variant="ghost" size="xs" onClick={() => onEditQuestions(tpl)}><Eye size={11} /> Edit</Button>
+                    <Button variant="ghost" size="xs" className="text-red-400 hover:text-red-600" onClick={() => onDelete(tpl.id)}><Trash2 size={11} /> Delete</Button>
+                    {showMakePrivate && tpl.visibility === 'project' && (
+                      <Button variant="ghost" size="xs" className="text-amber-600 hover:text-amber-800" onClick={() => onMakePrivate(tpl.id)}><Lock size={11} /> Make private</Button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function EditQuestionsModal({ template, onSave, onClose }) {
+  const [questions, setQuestions] = useState((template.questions || []).map(q => ({ ...q })));
+  const updateText = (idx, text) => setQuestions(prev => prev.map((q, i) => i === idx ? { ...q, text } : q));
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="fade-in bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 max-h-[80vh] flex flex-col">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-lg font-bold text-gray-900">Edit template questions</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+        <p className="text-sm text-gray-400 mb-4">{template.name}</p>
+        <div className="overflow-y-auto flex-1 space-y-3 mb-4">
+          {questions.map((q, i) => (
+            <div key={q.id} className="p-3 rounded-xl border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs text-gray-400 w-5">{i + 1}.</span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">{q.type}</span>
+                {q.required === false && <span className="text-xs text-gray-400">Optional</span>}
+              </div>
+              <input
+                type="text"
+                value={q.text || ''}
+                onChange={e => updateText(i, e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
+              />
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2 justify-end">
+          <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" onClick={() => onSave(questions)}><Save size={14} /> Save changes</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VisibilityBadge({ visibility }) {
+  return visibility === 'project'
+    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100"><Users size={10} /> Public</span>
+    : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><Lock size={10} /> Private</span>;
+}
+
 export default function Settings() {
-  const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs, categories, setCategories, templates, deleteTemplate, renameTemplate, projects } = useApp();
+  const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs, categories, setCategories, templates, deleteTemplate, renameTemplate, updateTemplateQuestions, revertTemplateToPrivate, projects, internalUsers } = useApp();
   const isSuperAdmin = currentUser.role === 'Super Admin';
   const isStandardUser = currentUser.role === 'Researcher' || currentUser.role === 'Standard User';
   const profileReadOnly = !isSuperAdmin; // Admin and Standard User see read-only profile
@@ -103,9 +241,16 @@ export default function Settings() {
   const [renamingTplId, setRenamingTplId] = useState(null);
   const [renameTplValue, setRenameTplValue] = useState('');
   const [expandedTplId, setExpandedTplId] = useState(null);
+  const [editingTpl, setEditingTpl] = useState(null); // template being edited (questions)
 
   const myTemplates = templates.filter(t => t.ownerId === currentUser.id);
   const allTemplates = templates; // Super Admin view
+
+  // Public templates shared to projects the current user belongs to (but doesn't own)
+  const myProjectIds = (internalUsers.find(u => u.id === currentUser.id)?.projects || []).map(p => p.id);
+  const sharedWithMeTemplates = templates.filter(t =>
+    t.visibility === 'project' && t.ownerId !== currentUser.id && myProjectIds.includes(t.projectId)
+  );
 
   const startRenameTpl = (tpl) => { setRenamingTplId(tpl.id); setRenameTplValue(tpl.name); };
   const saveRenameTpl = (id) => { renameTemplate(id, renameTplValue); setRenamingTplId(null); };
@@ -367,154 +512,86 @@ export default function Settings() {
         </div>
       </Card>
 
+      {/* ── TEMPLATES ─────────────────────────────────────────────────────── */}
+
       {/* My Templates — all users */}
-      <Card className="p-6">
-        <SectionHeader icon={BookTemplate} title="My Templates" description="Survey question templates you have created" />
-        {myTemplates.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-4">No templates yet. Save a survey as a template from the survey builder to see it here.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Visibility</th>
-                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Project</th>
-                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Questions</th>
-                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
-                  <th className="py-2 px-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {myTemplates.map(tpl => (
-                  <>
-                    <tr key={tpl.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-3">
-                        {renamingTplId === tpl.id ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="text"
-                              value={renameTplValue}
-                              onChange={e => setRenameTplValue(e.target.value)}
-                              onKeyDown={e => e.key === 'Enter' && saveRenameTpl(tpl.id)}
-                              className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:border-purple-400 focus:outline-none"
-                              autoFocus
-                            />
-                            <button onClick={() => saveRenameTpl(tpl.id)} className="text-green-500 p-1"><CheckCircle size={13} /></button>
-                            <button onClick={() => setRenamingTplId(null)} className="text-gray-400 p-1"><X size={13} /></button>
-                          </div>
-                        ) : (
-                          <button onClick={() => setExpandedTplId(expandedTplId === tpl.id ? null : tpl.id)} className="text-sm font-medium text-gray-800 hover:text-purple-700 text-left">{tpl.name}</button>
-                        )}
-                      </td>
-                      <td className="py-3 px-3">
-                        {tpl.visibility === 'project' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"><Users size={10} /> Project</span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><Lock size={10} /> Private</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 text-sm text-gray-500">{tpl.visibility === 'project' && tpl.projectId ? getProjectName(tpl.projectId) : '—'}</td>
-                      <td className="py-3 px-3 text-sm text-gray-500">{tpl.questions?.length ?? 0}</td>
-                      <td className="py-3 px-3 text-sm text-gray-400">{tpl.createdAt}</td>
-                      <td className="py-3 px-3">
-                        <div className="flex items-center gap-1 justify-end">
-                          <Button variant="ghost" size="xs" onClick={() => startRenameTpl(tpl)}><Edit2 size={11} /> Rename</Button>
-                          <Button variant="ghost" size="xs" className="text-red-400 hover:text-red-600" onClick={() => deleteTemplate(tpl.id)}><Trash2 size={11} /> Delete</Button>
-                        </div>
-                      </td>
-                    </tr>
-                    {expandedTplId === tpl.id && (
-                      <tr key={`${tpl.id}-expanded`}>
-                        <td colSpan={6} className="px-3 pb-3">
-                          <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Questions</p>
-                            {(tpl.questions || []).map((q, i) => (
-                              <div key={q.id} className="flex items-start gap-2 text-sm text-gray-700">
-                                <span className="text-gray-400 w-5 flex-shrink-0">{i + 1}.</span>
-                                <span>{q.text || q.label || 'Untitled question'}</span>
-                                <span className="ml-auto text-xs text-gray-400">{q.type}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+      {!isSuperAdmin && (
+        <Card className="p-6">
+          <SectionHeader icon={BookTemplate} title="My Templates" description="Templates you have created — Private (only you) or Public (shared with a project)" />
+          {myTemplates.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">No templates yet. Save a survey as a template from the survey builder.</p>
+          ) : (
+            <TemplateTable
+              templates={myTemplates}
+              showOwner={false}
+              showMakePrivate={false}
+              renamingTplId={renamingTplId} renameTplValue={renameTplValue}
+              onStartRename={startRenameTpl} onSaveRename={saveRenameTpl}
+              onCancelRename={() => setRenamingTplId(null)}
+              onRenameChange={v => setRenameTplValue(v)}
+              expandedTplId={expandedTplId} onToggleExpand={id => setExpandedTplId(expandedTplId === id ? null : id)}
+              onEditQuestions={tpl => setEditingTpl(tpl)}
+              onDelete={deleteTemplate}
+              onMakePrivate={null}
+              getProjectName={getProjectName}
+            />
+          )}
+        </Card>
+      )}
+
+      {/* Shared with me — public templates from my projects (non-SA, non-owner) */}
+      {!isSuperAdmin && sharedWithMeTemplates.length > 0 && (
+        <Card className="p-6">
+          <SectionHeader icon={Users} title="Project Templates" description="Public templates shared with your projects by other editors — you can edit, rename, or delete them" />
+          <TemplateTable
+            templates={sharedWithMeTemplates}
+            showOwner={true}
+            showMakePrivate={false}
+            renamingTplId={renamingTplId} renameTplValue={renameTplValue}
+            onStartRename={startRenameTpl} onSaveRename={saveRenameTpl}
+            onCancelRename={() => setRenamingTplId(null)}
+            onRenameChange={v => setRenameTplValue(v)}
+            expandedTplId={expandedTplId} onToggleExpand={id => setExpandedTplId(expandedTplId === id ? null : id)}
+            onEditQuestions={tpl => setEditingTpl(tpl)}
+            onDelete={deleteTemplate}
+            onMakePrivate={null}
+            getProjectName={getProjectName}
+          />
+        </Card>
+      )}
 
       {/* All Templates — Super Admin only */}
       {isSuperAdmin && (
         <Card className="p-6">
-          <SectionHeader icon={Eye} title="All Templates" description="Org-wide view of all templates created by any user" />
+          <SectionHeader icon={Eye} title="All Templates" description="Org-wide view of every template — you can edit, rename, delete any template, and revert Public templates to Private" />
           {allTemplates.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-4">No templates have been created in the organisation yet.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Owner</th>
-                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Visibility</th>
-                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Project</th>
-                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Questions</th>
-                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
-                    <th className="py-2 px-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {allTemplates.map(tpl => (
-                    <>
-                      <tr key={tpl.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="py-3 px-3">
-                          <button onClick={() => setExpandedTplId(expandedTplId === `sa-${tpl.id}` ? null : `sa-${tpl.id}`)} className="text-sm font-medium text-gray-800 hover:text-purple-700 text-left">{tpl.name}</button>
-                        </td>
-                        <td className="py-3 px-3 text-sm text-gray-600">{tpl.createdBy}</td>
-                        <td className="py-3 px-3">
-                          {tpl.visibility === 'project' ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"><Users size={10} /> Project</span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><Lock size={10} /> Private</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-3 text-sm text-gray-500">{tpl.visibility === 'project' && tpl.projectId ? getProjectName(tpl.projectId) : '—'}</td>
-                        <td className="py-3 px-3 text-sm text-gray-500">{tpl.questions?.length ?? 0}</td>
-                        <td className="py-3 px-3 text-sm text-gray-400">{tpl.createdAt}</td>
-                        <td className="py-3 px-3">
-                          <div className="flex items-center gap-1 justify-end">
-                            <Button variant="ghost" size="xs" className="text-red-400 hover:text-red-600" onClick={() => deleteTemplate(tpl.id)}><Trash2 size={11} /> Delete</Button>
-                          </div>
-                        </td>
-                      </tr>
-                      {expandedTplId === `sa-${tpl.id}` && (
-                        <tr key={`sa-${tpl.id}-expanded`}>
-                          <td colSpan={7} className="px-3 pb-3">
-                            <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Questions</p>
-                              {(tpl.questions || []).map((q, i) => (
-                                <div key={q.id} className="flex items-start gap-2 text-sm text-gray-700">
-                                  <span className="text-gray-400 w-5 flex-shrink-0">{i + 1}.</span>
-                                  <span>{q.text || q.label || 'Untitled question'}</span>
-                                  <span className="ml-auto text-xs text-gray-400">{q.type}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <TemplateTable
+              templates={allTemplates}
+              showOwner={true}
+              showMakePrivate={true}
+              renamingTplId={renamingTplId} renameTplValue={renameTplValue}
+              onStartRename={startRenameTpl} onSaveRename={saveRenameTpl}
+              onCancelRename={() => setRenamingTplId(null)}
+              onRenameChange={v => setRenameTplValue(v)}
+              expandedTplId={expandedTplId} onToggleExpand={id => setExpandedTplId(expandedTplId === id ? null : id)}
+              onEditQuestions={tpl => setEditingTpl(tpl)}
+              onDelete={deleteTemplate}
+              onMakePrivate={revertTemplateToPrivate}
+              getProjectName={getProjectName}
+            />
           )}
         </Card>
+      )}
+
+      {/* Edit questions modal */}
+      {editingTpl && (
+        <EditQuestionsModal
+          template={editingTpl}
+          onSave={(qs) => { updateTemplateQuestions(editingTpl.id, qs); setEditingTpl(null); }}
+          onClose={() => setEditingTpl(null)}
+        />
       )}
 
       {/* Survey Defaults */}

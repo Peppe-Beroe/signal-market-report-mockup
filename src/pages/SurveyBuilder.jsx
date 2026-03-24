@@ -620,8 +620,8 @@ function SaveTemplateModal({ onSave, onClose, projectName }) {
             <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 cursor-pointer hover:border-purple-300 transition-colors" style={visibility === 'project' ? { borderColor: '#4A00F8', backgroundColor: '#f5f3ff' } : {}}>
               <input type="radio" name="visibility" value="project" checked={visibility === 'project'} onChange={() => setVisibility('project')} className="mt-0.5 accent-purple-600" />
               <div>
-                <p className="text-sm font-medium text-gray-800">Share with project</p>
-                <p className="text-xs text-gray-400">All editors of <span className="font-medium text-gray-600">{projectName || 'this project'}</span> can see and use this template.</p>
+                <p className="text-sm font-medium text-gray-800">Public — shared with project</p>
+                <p className="text-xs text-gray-400">All editors of <span className="font-medium text-gray-600">{projectName || 'this project'}</span> can view, apply, edit, and delete this template. This cannot be undone by you — only a Super Admin can revert it to private.</p>
               </div>
             </label>
           </div>

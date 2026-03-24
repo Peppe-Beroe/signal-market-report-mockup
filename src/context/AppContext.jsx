@@ -282,6 +282,21 @@ export function AppProvider({ children }) {
     addToast(`Template renamed to "${newName}"`);
   };
 
+  const updateTemplateQuestions = (templateId, updatedQuestions) => {
+    const tpl = templates.find(t => t.id === templateId);
+    setTemplates(prev => prev.map(t => t.id === templateId ? { ...t, questions: updatedQuestions } : t));
+    addAuditEvent('Template questions updated', tpl?.name || templateId, 'template', `Questions edited by ${currentUser.name}`);
+    addToast('Template questions updated');
+  };
+
+  // Super Admin only — revert a public template back to private
+  const revertTemplateToPrivate = (templateId) => {
+    const tpl = templates.find(t => t.id === templateId);
+    setTemplates(prev => prev.map(t => t.id === templateId ? { ...t, visibility: 'private', projectId: null } : t));
+    addAuditEvent('Template reverted to private', tpl?.name || templateId, 'template', `Visibility reverted to private by Super Admin`);
+    addToast(`"${tpl?.name}" reverted to private`);
+  };
+
   const toggleExclusion = (surveyId, expertId) => {
     setSurveys(prev => prev.map(s => {
       if (s.id !== surveyId) return s;
@@ -559,7 +574,7 @@ export function AppProvider({ children }) {
       archiveProject, unarchiveProject, archiveSurvey, unarchiveSurvey,
       createSurvey, updateSurvey, deleteSurvey,
       approveSurvey, rejectSurvey, saveWaveSetup, launchSurvey, launchSurveyWithConfig, closeSurvey,
-      cloneSurvey, saveTemplate, deleteTemplate, renameTemplate,
+      cloneSurvey, saveTemplate, deleteTemplate, renameTemplate, updateTemplateQuestions, revertTemplateToPrivate,
       submitChangeRequest, resolveChangeRequest,
       createProposal, addUserToProject,
       deactivateUser, updateUserRole,
