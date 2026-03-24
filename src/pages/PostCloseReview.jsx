@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, CheckCircle, AlertTriangle, X, ChevronDown, ChevronUp, Edit2, Eye, EyeOff, Paperclip, Share2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -128,7 +129,7 @@ export default function PostCloseReview() {
           <div className="flex items-center gap-3 p-3 rounded-xl bg-green-50 border border-green-200 mb-5">
             <CheckCircle size={15} className="text-green-600 flex-shrink-0" />
             <p className="text-sm text-green-700">
-              <strong>Wave 2 results ready for transfer</strong> — {survey.responsesReceived}/{survey.expertsTargeted} responses collected ({survey.responseRate}% response rate). All responses included.
+              <strong>Wave {survey.wave} results ready for transfer</strong> — {survey.responsesReceived}/{survey.expertsTargeted} responses collected ({survey.responseRate}% response rate). All responses included.
             </p>
           </div>
 
