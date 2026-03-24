@@ -1,5 +1,5 @@
 import { createContext, useContext, useState } from 'react';
-import { USERS, PROJECTS, SURVEYS, EXPERTS, AUDIT_EVENTS, INTERNAL_USERS, PROPOSALS, NOTIFICATIONS } from '../data/mockData';
+import { USERS, PROJECTS, SURVEYS, EXPERTS, AUDIT_EVENTS, INTERNAL_USERS, PROPOSALS, NOTIFICATIONS, TEMPLATES } from '../data/mockData';
 
 const DEFAULT_CATEGORIES = [
   { id: 'cat1', name: 'Metals & Mining', active: true },
@@ -18,7 +18,7 @@ export function AppProvider({ children }) {
   const [experts, setExperts] = useState(EXPERTS);
   const [auditEvents, setAuditEvents] = useState(AUDIT_EVENTS);
   const [toasts, setToasts] = useState([]);
-  const [templates, setTemplates] = useState([]);
+  const [templates, setTemplates] = useState(TEMPLATES);
   const [changeRequests, setChangeRequests] = useState([]);
   const [internalUsers, setInternalUsers] = useState(INTERNAL_USERS);
   const [orgTimezone, setOrgTimezone] = useState('IST');
