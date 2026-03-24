@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Play, BarChart2, Eye, ExternalLink, Users, Calendar, ChevronRight, Mail, Shield, UserCheck, Archive, ArchiveRestore, StopCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Play, BarChart2, Eye, ExternalLink, Users, Calendar, ChevronRight, Mail, Shield, UserCheck, Archive, ArchiveRestore, StopCircle, X, AlertTriangle, UserPlus } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { USERS } from '../data/mockData';
 import Card from '../components/ui/Card';
@@ -14,6 +14,124 @@ const ROLE_COLORS = {
   'Researcher': 'green',
 };
 
+// Modal used in Team tab — "Invite Member" (Owner/SA) or "Propose Member" (Editor/Viewer)
+function TeamMemberModal({ project, internalUsers, currentUser, canDirectAdd, onConfirm, onClose }) {
+  const [userId, setUserId] = useState('');
+  const [role, setRole] = useState('Editor');
+  const [justification, setJustification] = useState('');
+  const [error, setError] = useState('');
+
+  const candidates = internalUsers.filter(u => u.status === 'Active');
+  const selectedUser = candidates.find(u => u.id === userId);
+  const isStandardUserTarget = selectedUser?.role === 'Standard User' || selectedUser?.role === 'Researcher';
+
+  const handleSubmit = () => {
+    if (!userId) { setError('Please select a user.'); return; }
+    if (!canDirectAdd && !justification.trim()) { setError('Please provide a justification.'); return; }
+    onConfirm({ userId, selectedUser, role, justification: justification.trim() });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+            <UserPlus size={16} className="text-purple-600" />
+            {canDirectAdd ? 'Invite member' : 'Propose member access'}
+          </h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            <X size={16} className="text-gray-500" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          {!canDirectAdd && (
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-100 text-xs text-amber-700">
+              <AlertTriangle size={13} className="mt-0.5 flex-shrink-0" />
+              As a Project Editor, your request will be sent to the Project Owner for approval.
+            </div>
+          )}
+
+          {/* User picker */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">User</label>
+            <select
+              value={userId}
+              onChange={e => { setUserId(e.target.value); setError(''); }}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none transition-colors"
+            >
+              <option value="">Select a user…</option>
+              {candidates.map(u => (
+                <option key={u.id} value={u.id}>{u.firstName} {u.lastName} — {u.role}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Role radio group */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Project role</label>
+            <div className="space-y-2">
+              {['Owner', 'Editor', 'Viewer'].map(r => {
+                const disabled = r === 'Owner' && isStandardUserTarget;
+                return (
+                  <label
+                    key={r}
+                    className={`flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer ${
+                      disabled ? 'opacity-40 cursor-not-allowed bg-gray-50 border-gray-100' :
+                      role === r ? 'border-purple-300 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="team-role"
+                      value={r}
+                      checked={role === r}
+                      disabled={disabled}
+                      onChange={() => !disabled && setRole(r)}
+                      className="mt-0.5 accent-purple-600"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{r}</p>
+                      {disabled && <p className="text-xs text-gray-400 mt-0.5">Owner requires Admin org role</p>}
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Justification — only for proposal flow */}
+          {!canDirectAdd && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Justification</label>
+              <textarea
+                value={justification}
+                onChange={e => { setJustification(e.target.value); setError(''); }}
+                rows={3}
+                placeholder="Why does this person need access to this project?"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:border-purple-400 focus:outline-none transition-colors"
+              />
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-center gap-2 text-xs text-red-600">
+              <AlertTriangle size={13} /> {error}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-100">
+          <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" onClick={handleSubmit}>
+            {canDirectAdd ? 'Add member' : 'Submit proposal'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const MOCK_TEAM = [
   { ...USERS.superadmin, projectRole: 'Owner' },
   { ...USERS.admin, projectRole: 'Editor' },
@@ -23,10 +141,11 @@ const MOCK_TEAM = [
 export default function ProjectDetail() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { projects, surveys, currentUser, deleteSurvey, archiveSurvey, unarchiveSurvey, closeSurvey, launchSurveyWithConfig, addToast } = useApp();
+  const { projects, surveys, currentUser, internalUsers, createProposal, addUserToProject, deleteSurvey, archiveSurvey, unarchiveSurvey, closeSurvey, launchSurveyWithConfig, addToast } = useApp();
   const [activeTab, setActiveTab] = useState('surveys');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showArchivedSurveys, setShowArchivedSurveys] = useState(false);
+  const [showMemberModal, setShowMemberModal] = useState(false);
 
   const project = projects.find(p => p.id === projectId);
   if (!project) return (
@@ -40,6 +159,28 @@ export default function ProjectDetail() {
   const projectSurveys = allProjectSurveys.filter(s => showArchivedSurveys ? s.archived : !s.archived);
   const archivedSurveyCount = allProjectSurveys.filter(s => s.archived).length;
   const isAdminOrAbove = currentUser.role === 'Admin' || currentUser.role === 'Super Admin';
+
+  // Per P1-F-70: Super Admin or Project Owner → direct invite; everyone else → propose
+  const canDirectAdd =
+    currentUser.role === 'Super Admin' ||
+    MOCK_TEAM.some(m => m.id === currentUser.id && m.projectRole === 'Owner');
+
+  const handleMemberModalConfirm = ({ userId, selectedUser, role, justification }) => {
+    if (canDirectAdd) {
+      addUserToProject(userId, project.id, project.name, role);
+    } else {
+      createProposal({
+        type: 'membership',
+        targetUser: userId,
+        targetUserName: `${selectedUser.firstName} ${selectedUser.lastName}`,
+        project: project.id,
+        projectName: project.name,
+        proposedRole: role,
+        justification,
+      });
+    }
+    setShowMemberModal(false);
+  };
 
   const handleDelete = (surveyId) => {
     deleteSurvey(surveyId);
@@ -313,9 +454,9 @@ export default function ProjectDetail() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-gray-500">{MOCK_TEAM.length} members with access to this project</p>
-            <Button onClick={() => {}}>
+            <Button onClick={() => setShowMemberModal(true)}>
               <Plus size={16} />
-              Invite Member
+              {canDirectAdd ? 'Invite Member' : 'Propose Member'}
             </Button>
           </div>
           <Card>
@@ -370,6 +511,18 @@ export default function ProjectDetail() {
             </div>
           </Card>
         </div>
+      )}
+
+      {/* Team member modal — Invite (Owner/SA) or Propose (Editor/Viewer) */}
+      {showMemberModal && (
+        <TeamMemberModal
+          project={project}
+          internalUsers={internalUsers}
+          currentUser={currentUser}
+          canDirectAdd={canDirectAdd}
+          onConfirm={handleMemberModalConfirm}
+          onClose={() => setShowMemberModal(false)}
+        />
       )}
     </div>
   );
