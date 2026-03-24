@@ -3,42 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Plus, FolderOpen, Calendar, User, FileText, X, Archive, ArchiveRestore } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
-import Badge from '../components/ui/Badge';
 import StatusBadge from '../components/ui/StatusBadge';
 import Button from '../components/ui/Button';
-
-const CATEGORIES = ['Metals & Mining', 'Chemicals', 'Packaging', 'Energy', 'Agriculture', 'Technology', 'Healthcare', 'Consumer Goods'];
-
-const categoryColors = {
-  'Metals & Mining': 'purple',
-  'Chemicals': 'amber',
-  'Packaging': 'green',
-  'Energy': 'blue',
-  'Agriculture': 'green',
-  'Technology': 'purple',
-  'Healthcare': 'blue',
-  'Consumer Goods': 'amber',
-};
 
 export default function ProjectsList() {
   const { projects, surveys, currentUser, createProject, archiveProject, unarchiveProject } = useApp();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('All');
   const [showArchived, setShowArchived] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: '', category: CATEGORIES[0] });
+  const [form, setForm] = useState({ name: '' });
   const [errors, setErrors] = useState({});
 
   const isAdminOrAbove = currentUser.role === 'Admin' || currentUser.role === 'Super Admin';
-  const categories = ['All', ...new Set(projects.filter(p => !p.archived).map(p => p.category))];
 
   const filtered = projects.filter(p => {
     const matchArchive = showArchived ? p.archived : !p.archived;
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.category.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = filter === 'All' || p.category === filter;
-    return matchArchive && matchSearch && matchFilter;
+    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
+    return matchArchive && matchSearch;
   });
 
   const archivedCount = projects.filter(p => p.archived).length;
@@ -46,18 +28,17 @@ export default function ProjectsList() {
   const handleCreate = () => {
     const errs = {};
     if (!form.name.trim()) errs.name = 'Project name is required';
-    if (!form.category) errs.category = 'Category is required';
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     const project = createProject(form);
     setShowModal(false);
-    setForm({ name: '', category: CATEGORIES[0] });
+    setForm({ name: '' });
     setErrors({});
     navigate(`/projects/${project.id}`);
   };
 
   const closeModal = () => {
     setShowModal(false);
-    setForm({ name: '', category: CATEGORIES[0] });
+    setForm({ name: '' });
     setErrors({});
   };
 
@@ -86,24 +67,8 @@ export default function ProjectsList() {
             className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm bg-white focus:border-purple-400 transition-colors"
           />
         </div>
-        <div className="flex gap-2">
-          {!showArchived && categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setFilter(cat)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                filter === cat
-                  ? 'border-purple-300 text-white'
-                  : 'border-gray-200 text-gray-600 bg-white hover:bg-gray-50'
-              }`}
-              style={filter === cat ? { backgroundColor: '#4A00F8', borderColor: '#4A00F8' } : {}}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
         <button
-          onClick={() => { setShowArchived(!showArchived); setFilter('All'); }}
+          onClick={() => setShowArchived(!showArchived)}
           className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
             showArchived ? 'text-white' : 'border-gray-200 text-gray-500 bg-white hover:bg-gray-50'
           }`}
@@ -134,9 +99,6 @@ export default function ProjectsList() {
                 className="p-5"
               >
                 <div className="flex items-start justify-between mb-3">
-                  <Badge color={categoryColors[p.category] || 'gray'} size="sm">
-                    {p.category}
-                  </Badge>
                   <StatusBadge status={p.status} size="xs" />
                 </div>
 
@@ -204,17 +166,6 @@ export default function ProjectsList() {
                   autoFocus
                 />
                 {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Category <span className="text-red-400">*</span></label>
-                <select
-                  value={form.category}
-                  onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors bg-white"
-                >
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
               </div>
             </div>
 

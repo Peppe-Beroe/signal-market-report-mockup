@@ -650,14 +650,20 @@ function UseTemplateModal({ templates, onUse, onClose }) {
 export default function SurveyBuilder({ mode = 'create' }) {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, experts, templates, orgTimezone, addToast, createSurvey, updateSurvey, cloneSurvey, saveTemplate, resolveAmendments } = useApp();
+  const { surveys, projects, experts, templates, categories, orgTimezone, addToast, createSurvey, updateSurvey, cloneSurvey, saveTemplate, resolveAmendments } = useApp();
 
   const project = projects.find(p => p.id === projectId);
   const existingSurvey = surveys.find(s => s.id === surveyId);
   const existingWaveConfig = mode === 'edit' ? existingSurvey?.waveConfig : null;
 
+  const activeCategories = (categories || []).filter(c => c.active);
   const [surveyName, setSurveyName] = useState(
     mode === 'edit' && existingSurvey ? existingSurvey.name : ''
+  );
+  const [surveyCategory, setSurveyCategory] = useState(
+    mode === 'edit' && existingSurvey?.category
+      ? existingSurvey.category
+      : (activeCategories[0]?.name || '')
   );
   const [questions, setQuestions] = useState(
     mode === 'edit' && existingSurvey ? existingSurvey.questions : [newQuestion()]
@@ -815,9 +821,9 @@ export default function SurveyBuilder({ mode = 'create' }) {
     if (!surveyName.trim()) { addToast('Please enter a survey name first.', 'warning'); return; }
     const waveConfig = buildWaveConfig();
     if (mode === 'edit' && surveyId) {
-      updateSurvey({ surveyId, name: surveyName, questions, waveConfig });
+      updateSurvey({ surveyId, name: surveyName, category: surveyCategory, questions, waveConfig });
     } else {
-      const saved = createSurvey({ projectId, name: surveyName, questions, status: 'Draft', waveConfig });
+      const saved = createSurvey({ projectId, name: surveyName, category: surveyCategory, questions, status: 'Draft', waveConfig });
       navigate(`/projects/${projectId}/surveys/${saved.id}/builder`, { replace: true });
     }
     setIsDirty(false);
@@ -843,9 +849,9 @@ export default function SurveyBuilder({ mode = 'create' }) {
       resolveAmendments(surveyId, resolutions);
     }
     if (mode === 'edit' && surveyId) {
-      updateSurvey({ surveyId, name: surveyName, questions, status: 'Submitted', waveConfig });
+      updateSurvey({ surveyId, name: surveyName, category: surveyCategory, questions, status: 'Submitted', waveConfig });
     } else {
-      createSurvey({ projectId, name: surveyName, questions, status: 'Submitted', waveConfig });
+      createSurvey({ projectId, name: surveyName, category: surveyCategory, questions, status: 'Submitted', waveConfig });
     }
     setIsDirty(false);
     navigate(`/projects/${projectId}`);
@@ -1091,8 +1097,8 @@ export default function SurveyBuilder({ mode = 'create' }) {
       {activeTab === 'questions' && <div className="flex-1 flex overflow-hidden">
         {/* Left: Editor */}
         <div className="flex-1 overflow-y-auto p-6" style={{ minWidth: 0 }}>
-          {/* Survey name */}
-          <div className="mb-5">
+          {/* Survey name + category */}
+          <div className="mb-5 space-y-3">
             <input
               type="text"
               value={surveyName}
@@ -1100,6 +1106,19 @@ export default function SurveyBuilder({ mode = 'create' }) {
               placeholder="Enter survey name..."
               className="w-full text-xl font-bold text-gray-900 border-0 border-b-2 border-gray-100 pb-2 bg-transparent focus:border-purple-400 focus:outline-none transition-colors placeholder-gray-300"
             />
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-500 flex-shrink-0">Category</label>
+              <select
+                value={surveyCategory}
+                onChange={e => { setSurveyCategory(e.target.value); setIsDirty(true); }}
+                className="border border-gray-200 rounded-lg px-2.5 py-1 text-sm bg-white focus:border-purple-400 focus:outline-none transition-colors text-gray-700"
+              >
+                {activeCategories.length === 0 && <option value="">No categories available</option>}
+                {activeCategories.map(c => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Questions */}

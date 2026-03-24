@@ -15,26 +15,26 @@ export const EXPERTS = [
 
 export const PROJECTS = [
   {
-    id: 'p1', name: 'Q2 2026 Steel Market Signal', category: 'Metals & Mining', owner: 'Sarah Chen',
+    id: 'p1', name: 'Q2 2026 Steel Market Signal', owner: 'Sarah Chen',
     status: 'Active', created: '2026-03-01', surveysCount: 3, lastActivity: '2026-03-10', archived: false,
   },
   {
-    id: 'p2', name: 'H1 2026 Chemical Feedstocks', category: 'Chemicals', owner: 'Marco Rossi',
+    id: 'p2', name: 'H1 2026 Chemical Feedstocks', owner: 'Marco Rossi',
     status: 'Active', created: '2026-02-15', surveysCount: 2, lastActivity: '2026-03-08', archived: false,
   },
   {
-    id: 'p3', name: 'Q1 2026 Packaging Trends', category: 'Packaging', owner: 'Sarah Chen',
+    id: 'p3', name: 'Q1 2026 Packaging Trends', owner: 'Sarah Chen',
     status: 'Active', created: '2026-01-10', surveysCount: 3, lastActivity: '2026-03-05', archived: false,
   },
   {
-    id: 'p4', name: 'Q4 2025 Energy Procurement Review', category: 'Energy', owner: 'Sarah Chen',
+    id: 'p4', name: 'Q4 2025 Energy Procurement Review', owner: 'Sarah Chen',
     status: 'Archived', created: '2025-10-01', surveysCount: 1, lastActivity: '2025-12-20', archived: true,
   },
 ];
 
 export const SURVEYS = [
   {
-    id: 's1', projectId: 'p1', name: 'Steel Price Outlook — Wave 1',
+    id: 's1', projectId: 'p1', name: 'Steel Price Outlook — Wave 1', category: 'Metals & Mining',
     status: 'Running', wave: 1,
     createdBy: 'Marco Rossi', approvedBy: 'Sarah Chen',
     sendDate: '2026-03-05', closeDate: '2026-03-20',
@@ -83,7 +83,7 @@ export const SURVEYS = [
     ],
   },
   {
-    id: 's2', projectId: 'p1', name: 'Steel Supply Chain Risk — Wave 1',
+    id: 's2', projectId: 'p1', name: 'Steel Supply Chain Risk — Wave 1', category: 'Metals & Mining',
     status: 'Submitted', wave: 1,
     createdBy: 'Marco Rossi', approvedBy: null,
     sendDate: '2026-03-28', closeDate: '2026-04-12',
@@ -125,7 +125,7 @@ export const SURVEYS = [
     archived: false,
   },
   {
-    id: 's3', projectId: 'p2', name: 'Ethylene Pricing Outlook — Wave 2',
+    id: 's3', projectId: 'p2', name: 'Ethylene Pricing Outlook — Wave 2', category: 'Chemicals',
     status: 'Review', wave: 2,
     createdBy: 'Sarah Chen', approvedBy: 'Maria Santos',
     sendDate: '2026-02-20', closeDate: '2026-03-08',
@@ -150,7 +150,7 @@ export const SURVEYS = [
     archived: false,
   },
   {
-    id: 's4', projectId: 'p3', name: 'Packaging Cost Index — Wave 1',
+    id: 's4', projectId: 'p3', name: 'Packaging Cost Index — Wave 1', category: 'Packaging',
     status: 'Draft', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: null,
     sendDate: null, closeDate: null,
@@ -167,7 +167,7 @@ export const SURVEYS = [
     archived: false,
   },
   {
-    id: 's5', projectId: 'p3', name: 'Packaging Sustainability Practices — Wave 1',
+    id: 's5', projectId: 'p3', name: 'Packaging Sustainability Practices — Wave 1', category: 'Packaging',
     status: 'Running', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: 'Sarah Chen',
     sendDate: '2026-03-10', closeDate: '2026-03-28',
@@ -209,7 +209,7 @@ export const SURVEYS = [
     archived: false,
   },
   {
-    id: 's6', projectId: 'p3', name: 'Flexible Packaging Demand Outlook — Wave 1',
+    id: 's6', projectId: 'p3', name: 'Flexible Packaging Demand Outlook — Wave 1', category: 'Packaging',
     status: 'Submitted', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: null,
     sendDate: '2026-04-02', closeDate: '2026-04-18',
@@ -243,7 +243,7 @@ export const SURVEYS = [
   },
   {
     // s7 — APPROVED: approved, locked, awaiting scheduled send (Wave 2 of Steel Price Outlook)
-    id: 's7', projectId: 'p1', name: 'Steel Price Outlook — Wave 2',
+    id: 's7', projectId: 'p1', name: 'Steel Price Outlook — Wave 2', category: 'Metals & Mining',
     status: 'Approved', wave: 2,
     createdBy: 'Marco Rossi', approvedBy: 'Sarah Chen',
     sendDate: '2026-03-30', closeDate: '2026-04-15',
@@ -280,7 +280,7 @@ export const SURVEYS = [
   },
   {
     // s8 — CLOSED: close date passed, responses collected, entering Review (Wave 1 of Ethylene — precedes s3 Wave 2)
-    id: 's8', projectId: 'p2', name: 'Ethylene Pricing Outlook — Wave 1',
+    id: 's8', projectId: 'p2', name: 'Ethylene Pricing Outlook — Wave 1', category: 'Chemicals',
     status: 'Closed', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: 'Maria Santos',
     sendDate: '2026-01-20', closeDate: '2026-02-05',
@@ -322,7 +322,7 @@ export const SURVEYS = [
   },
   {
     // s9 — ARCHIVED: manually archived survey from the archived Energy project
-    id: 's9', projectId: 'p4', name: 'Energy Procurement Cost Drivers — Wave 1',
+    id: 's9', projectId: 'p4', name: 'Energy Procurement Cost Drivers — Wave 1', category: 'Energy',
     status: 'Archived', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: 'Maria Santos',
     sendDate: '2025-10-15', closeDate: '2025-11-01',

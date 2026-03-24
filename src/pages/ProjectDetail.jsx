@@ -319,7 +319,6 @@ export default function ProjectDetail() {
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <Badge color="purple">{project.category}</Badge>
               <StatusBadge status={project.status} size="xs" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-3">{project.name}</h1>
@@ -395,6 +394,7 @@ export default function ProjectDetail() {
                   <thead>
                     <tr className="border-b border-gray-100">
                       <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-5 py-3">Name</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Category</th>
                       <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Status</th>
                       <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Wave</th>
                       <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Responses</th>
@@ -409,6 +409,13 @@ export default function ProjectDetail() {
                         <td className="px-5 py-4">
                           <p className="text-sm font-semibold text-gray-800">{survey.name}</p>
                           <p className="text-xs text-gray-400 mt-0.5">By {survey.createdBy}</p>
+                        </td>
+                        <td className="px-4 py-4">
+                          {survey.category ? (
+                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-100">{survey.category}</span>
+                          ) : (
+                            <span className="text-xs text-gray-300">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-4">
                           <StatusBadge status={survey.status} size="xs" />

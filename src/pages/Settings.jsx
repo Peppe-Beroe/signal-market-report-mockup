@@ -16,14 +16,6 @@ const TIMEZONES = [
   { value: 'SGT', label: 'SGT — Singapore Standard Time (UTC+8)' },
 ];
 
-const DEFAULT_CATEGORIES = [
-  { id: 'cat1', name: 'Metals & Mining', active: true },
-  { id: 'cat2', name: 'Chemicals', active: true },
-  { id: 'cat3', name: 'Packaging', active: true },
-  { id: 'cat4', name: 'Energy', active: true },
-  { id: 'cat5', name: 'Agriculture', active: false },
-];
-
 const MERGE_TAGS_EMAIL = ['expert_name', 'survey_name', 'survey_link', 'close_date'];
 
 function SectionHeader({ icon: Icon, title, description }) {
@@ -72,7 +64,7 @@ Thank you,
 Beroe Research Team`;
 
 export default function Settings() {
-  const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs } = useApp();
+  const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs, categories, setCategories } = useApp();
   const isSuperAdmin = currentUser.role === 'Super Admin';
   const isStandardUser = currentUser.role === 'Researcher' || currentUser.role === 'Standard User';
   const profileReadOnly = !isSuperAdmin; // Admin and Standard User see read-only profile
@@ -100,7 +92,6 @@ export default function Settings() {
     defaultCloseDays: 14,
     autoTransferDays: 7,
   });
-  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [addingCategory, setAddingCategory] = useState(false);
   const [renamingId, setRenamingId] = useState(null);
@@ -270,7 +261,7 @@ export default function Settings() {
       {/* Category Taxonomy — Super Admin only */}
       {isSuperAdmin && (
         <Card className="p-6">
-          <SectionHeader icon={List} title="Category Taxonomy" description="Manage the categories used to classify projects" />
+          <SectionHeader icon={List} title="Category Taxonomy" description="Manage the categories used to classify surveys" />
           <div className="space-y-2 mb-4">
             {categories.map(cat => (
               <div key={cat.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">

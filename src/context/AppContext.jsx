@@ -1,6 +1,14 @@
 import { createContext, useContext, useState } from 'react';
 import { USERS, PROJECTS, SURVEYS, EXPERTS, AUDIT_EVENTS, INTERNAL_USERS, PROPOSALS, NOTIFICATIONS } from '../data/mockData';
 
+const DEFAULT_CATEGORIES = [
+  { id: 'cat1', name: 'Metals & Mining', active: true },
+  { id: 'cat2', name: 'Chemicals', active: true },
+  { id: 'cat3', name: 'Packaging', active: true },
+  { id: 'cat4', name: 'Energy', active: true },
+  { id: 'cat5', name: 'Agriculture', active: false },
+];
+
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
@@ -15,6 +23,7 @@ export function AppProvider({ children }) {
   const [internalUsers, setInternalUsers] = useState(INTERNAL_USERS);
   const [orgTimezone, setOrgTimezone] = useState('IST');
   const [proposals, setProposals] = useState(PROPOSALS);
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [notificationPrefs, setNotificationPrefs] = useState(() => {
     const events = [
       'survey_approved', 'survey_rejected', 'proposal_approved', 'proposal_rejected',
@@ -60,7 +69,6 @@ export function AppProvider({ children }) {
     const newProject = {
       id: `p${Date.now()}`,
       name: data.name,
-      category: data.category,
       owner: currentUser.name,
       status: 'Active',
       created: today,
@@ -68,7 +76,7 @@ export function AppProvider({ children }) {
       lastActivity: today,
     };
     setProjects(prev => [...prev, newProject]);
-    addAuditEvent('Project created', data.name, 'project', `New project under ${data.category} category`);
+    addAuditEvent('Project created', data.name, 'project', 'New project created');
     addToast(`Project "${data.name}" created`);
     return newProject;
   };
@@ -104,12 +112,13 @@ export function AppProvider({ children }) {
     addToast('Expert deactivated', 'warning');
   };
 
-  const createSurvey = ({ projectId, name, questions, status = 'Draft', waveConfig = null }) => {
+  const createSurvey = ({ projectId, name, category = '', questions, status = 'Draft', waveConfig = null }) => {
     const wave = surveys.filter(s => s.projectId === projectId).length + 1;
     const newSurvey = {
       id: `s${Date.now()}`,
       projectId,
       name,
+      category,
       status,
       wave,
       createdBy: currentUser.name,
@@ -131,7 +140,7 @@ export function AppProvider({ children }) {
     return newSurvey;
   };
 
-  const updateSurvey = ({ surveyId, name, questions, status, waveConfig }) => {
+  const updateSurvey = ({ surveyId, name, category, questions, status, waveConfig }) => {
     setSurveys(prev => prev.map(s => {
       if (s.id !== surveyId) return s;
       // If re-submitting after rejection, store the current questions as previousSnapshot
@@ -139,6 +148,7 @@ export function AppProvider({ children }) {
       return {
         ...s,
         name,
+        ...(category !== undefined ? { category } : {}),
         questions,
         ...(waveConfig !== undefined ? { waveConfig } : {}),
         ...(status ? { status } : {}),
@@ -531,6 +541,7 @@ export function AppProvider({ children }) {
       attachReport, shareReport,
       toggleExclusion, updateAnnotation, transferToDataHub,
       proposeAmendments, resolveAmendments, respondToEditorFeedback,
+      categories, setCategories,
       orgTimezone, setOrgTimezone,
       notificationPrefs, setNotificationPrefs,
       toasts, addToast, removeToast,
