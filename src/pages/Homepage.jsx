@@ -1,11 +1,127 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle, Clock, TrendingUp, Users, AlertCircle, ArrowRight,
-  Activity, Database, PlusCircle, AlertTriangle, FileText
+  Activity, Database, PlusCircle, AlertTriangle, FileText,
+  FolderOpen, FolderPlus, X, Info
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
+
+// Modal for Standard User "new survey" CTA — asks where the survey should go before navigating.
+function NewSurveyModal({ projects, onClose, onSelectProject, onGoToProjects }) {
+  const [path, setPath] = useState('existing'); // 'existing' | 'new'
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const activeProjects = projects.filter(p => !p.archived && p.status === 'Active');
+
+  function handleStart() {
+    if (path === 'existing' && selectedProjectId) {
+      onSelectProject(selectedProjectId);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative"
+        onClick={e => e.stopPropagation()}
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+          <X size={18} />
+        </button>
+
+        <h2 className="text-lg font-bold text-gray-900 mb-1">Where should this survey go?</h2>
+        <p className="text-sm text-gray-500 mb-5">Surveys always live inside a project. Choose the destination before you start building.</p>
+
+        {/* Option A — existing project */}
+        <button
+          onClick={() => setPath('existing')}
+          className={`w-full text-left rounded-xl border-2 p-4 mb-3 transition-all ${path === 'existing' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}
+        >
+          <div className="flex items-start gap-3">
+            <div className={`p-2 rounded-lg flex-shrink-0 ${path === 'existing' ? 'bg-purple-100' : 'bg-gray-100'}`}>
+              <FolderOpen size={18} style={{ color: path === 'existing' ? '#4A00F8' : '#9CA3AF' }} />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-800 text-sm">Add to an existing project</p>
+              <p className="text-xs text-gray-500 mt-0.5">Select the project this survey belongs to</p>
+            </div>
+          </div>
+
+          {path === 'existing' && (
+            <div className="mt-4">
+              {activeProjects.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">No active projects available.</p>
+              ) : (
+                <select
+                  value={selectedProjectId}
+                  onChange={e => setSelectedProjectId(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <option value="">— Select a project —</option>
+                  {activeProjects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+        </button>
+
+        {/* Option B — new project needed */}
+        <button
+          onClick={() => setPath('new')}
+          className={`w-full text-left rounded-xl border-2 p-4 transition-all ${path === 'new' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}
+        >
+          <div className="flex items-start gap-3">
+            <div className={`p-2 rounded-lg flex-shrink-0 ${path === 'new' ? 'bg-purple-100' : 'bg-gray-100'}`}>
+              <FolderPlus size={18} style={{ color: path === 'new' ? '#4A00F8' : '#9CA3AF' }} />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-800 text-sm">A new project is needed first</p>
+              <p className="text-xs text-gray-500 mt-0.5">This survey topic doesn't fit any existing project</p>
+            </div>
+          </div>
+
+          {path === 'new' && (
+            <div className="mt-4 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+              <Info size={14} className="text-amber-500 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700">
+                Only <strong>Admins</strong> and <strong>Super Admins</strong> can create new projects. Contact your platform administrator, or go to <strong>Projects</strong> to see what's available and request access.
+              </p>
+            </div>
+          )}
+        </button>
+
+        {/* Footer actions */}
+        <div className="flex items-center justify-end gap-3 mt-5">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors">
+            Cancel
+          </button>
+          {path === 'existing' ? (
+            <button
+              onClick={handleStart}
+              disabled={!selectedProjectId}
+              className="px-5 py-2 rounded-lg text-white text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ backgroundColor: '#4A00F8' }}
+            >
+              Start Survey
+            </button>
+          ) : (
+            <button
+              onClick={onGoToProjects}
+              className="px-5 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Go to Projects →
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Design rule: every KPI card is always clickable — no static numbers.
 function KpiCard({ icon: Icon, label, value, sub, color = '#4A00F8', onClick }) {
@@ -387,6 +503,8 @@ export default function Homepage() {
   }
 
   // ── RESEARCHER VIEW ───────────────────────────────────────────────────────────
+  const [showNewSurveyModal, setShowNewSurveyModal] = useState(false);
+
   const mySurveys = surveys.filter(s => s.createdBy === currentUser.name);
   const myDrafts = mySurveys.filter(s => s.status === 'Draft' && !s.rejectionReason);
   const rejectedSurveys = mySurveys.filter(s => s.status === 'Draft' && s.rejectionReason);
@@ -518,16 +636,16 @@ export default function Homepage() {
         )}
       </Card>
 
-      {/* CTA — navigates to new survey creation */}
+      {/* CTA — opens destination modal before creating a survey */}
       <Card
         className="p-5 border-dashed border-2 border-purple-200 bg-purple-50 flex flex-col items-center justify-center text-center cursor-pointer hover:border-purple-400 hover:bg-purple-100 transition-all duration-150"
-        onClick={() => navigate('/projects/p1/surveys/new')}
+        onClick={() => setShowNewSurveyModal(true)}
       >
         <div className="p-3 rounded-full bg-white shadow-sm mb-3">
           <PlusCircle size={24} style={{ color: '#4A00F8' }} />
         </div>
         <h3 className="font-semibold text-gray-800 mb-1">Start a new survey</h3>
-        <p className="text-sm text-gray-500">Design and launch your next wave</p>
+        <p className="text-sm text-gray-500">You'll choose which project it belongs to</p>
         <div className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium shadow-sm" style={{ backgroundColor: '#4A00F8' }}>
           New Survey
         </div>
@@ -561,6 +679,21 @@ export default function Homepage() {
         </div>
       ) : (
         surveysColumn
+      )}
+
+      {showNewSurveyModal && (
+        <NewSurveyModal
+          projects={projects}
+          onClose={() => setShowNewSurveyModal(false)}
+          onSelectProject={projectId => {
+            setShowNewSurveyModal(false);
+            navigate(`/projects/${projectId}/surveys/new`);
+          }}
+          onGoToProjects={() => {
+            setShowNewSurveyModal(false);
+            navigate('/projects');
+          }}
+        />
       )}
     </div>
   );
