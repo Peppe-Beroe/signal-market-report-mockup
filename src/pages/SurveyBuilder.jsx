@@ -4,7 +4,7 @@ import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Save,
   Send, Eye, EyeOff, X, Check, Smartphone, Monitor,
   AlignLeft, List, CheckSquare, Star, Type, AlignJustify,
-  BarChart2, Calendar, Hash, Copy, BookTemplate, ChevronUp as Up, ChevronDown as Down,
+  BarChart2, Calendar, Hash, BookTemplate, ChevronUp as Up, ChevronDown as Down,
   Mail, Bell, AlertTriangle, Search, Tag, Users, Edit3, GitCompare, XCircle
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -653,7 +653,7 @@ function UseTemplateModal({ myTemplates, projectTemplates, onUse, onClose }) {
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="fade-in bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-900">Use a Template</h2>
+          <h2 className="text-lg font-bold text-gray-900">Apply a Template</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
         {!hasAny ? (
@@ -685,7 +685,7 @@ function UseTemplateModal({ myTemplates, projectTemplates, onUse, onClose }) {
 export default function SurveyBuilder({ mode = 'create' }) {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, surveys, projects, experts, templates, categories, orgTimezone, addToast, createSurvey, updateSurvey, cloneSurvey, saveTemplate, resolveAmendments } = useApp();
+  const { currentUser, surveys, projects, experts, templates, categories, orgTimezone, addToast, createSurvey, updateSurvey, saveTemplate, resolveAmendments } = useApp();
   const myTemplates = templates.filter(t => t.ownerId === currentUser.id);
   const projectTemplates = templates.filter(t => t.visibility === 'project' && t.projectId === projectId && t.ownerId !== currentUser.id);
 
@@ -894,12 +894,6 @@ export default function SurveyBuilder({ mode = 'create' }) {
     navigate(`/projects/${projectId}`);
   };
 
-  const handleClone = () => {
-    if (!surveyId || mode !== 'edit') { addToast('Save the survey first before cloning.', 'warning'); return; }
-    const cloned = cloneSurvey(surveyId);
-    if (cloned) navigate(`/projects/${projectId}/surveys/${cloned.id}/builder`);
-  };
-
   const handleSaveTemplate = (name, visibility) => {
     saveTemplate(name, questions, visibility, projectId);
     setShowSaveTemplateModal(false);
@@ -995,17 +989,12 @@ export default function SurveyBuilder({ mode = 'create' }) {
           )}
           {mode === 'create' && (
             <Button variant="ghost" size="sm" onClick={() => setShowUseTemplateModal(true)}>
-              <BookTemplate size={14} /> Use template
+              <BookTemplate size={14} /> Apply template
             </Button>
           )}
           <Button variant="ghost" size="sm" onClick={() => setShowSaveTemplateModal(true)}>
             <Save size={14} /> Save as template
           </Button>
-          {mode === 'edit' && (
-            <Button variant="secondary" size="sm" onClick={handleClone}>
-              <Copy size={14} /> Clone
-            </Button>
-          )}
           <Button variant="secondary" size="sm" onClick={handleSaveDraft}>
             <Save size={14} /> Save Draft
           </Button>
