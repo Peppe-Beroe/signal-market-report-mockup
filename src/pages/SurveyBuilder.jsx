@@ -906,6 +906,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
   };
 
   const handleUseTemplate = (template) => {
+    if (questions.length > 0 && !window.confirm(`Applying this template will replace the ${questions.length} existing question${questions.length !== 1 ? 's' : ''}. Continue?`)) return;
     setQuestions(template.questions.map(q => ({ ...q, id: `q${Date.now()}_${Math.random().toString(36).slice(2, 6)}` })));
     setShowUseTemplateModal(false);
     addToast(`Template "${template.name}" loaded`);
@@ -993,11 +994,9 @@ export default function SurveyBuilder({ mode = 'create' }) {
           {isDirty && !autoSaveToast && (
             <span className="text-xs text-amber-500 font-medium">Unsaved changes</span>
           )}
-          {mode === 'create' && (
-            <Button variant="ghost" size="sm" onClick={() => setShowUseTemplateModal(true)}>
-              <BookTemplate size={14} /> Apply template
-            </Button>
-          )}
+          <Button variant="ghost" size="sm" onClick={() => setShowUseTemplateModal(true)}>
+            <BookTemplate size={14} /> Apply template
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowSaveTemplateModal(true)}>
             <Save size={14} /> Save as template
           </Button>
