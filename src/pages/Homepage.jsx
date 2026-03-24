@@ -228,6 +228,8 @@ const MOCK_EXPERT_REQUEST = {
 export default function Homepage() {
   const { currentUser, surveys, projects, experts, auditEvents } = useApp();
   const navigate = useNavigate();
+  // Must be declared here (top of component) — hooks cannot be called after early returns.
+  const [showNewSurveyModal, setShowNewSurveyModal] = useState(false);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -503,8 +505,6 @@ export default function Homepage() {
   }
 
   // ── RESEARCHER VIEW ───────────────────────────────────────────────────────────
-  const [showNewSurveyModal, setShowNewSurveyModal] = useState(false);
-
   const mySurveys = surveys.filter(s => s.createdBy === currentUser.name);
   const myDrafts = mySurveys.filter(s => s.status === 'Draft' && !s.rejectionReason);
   const rejectedSurveys = mySurveys.filter(s => s.status === 'Draft' && s.rejectionReason);
