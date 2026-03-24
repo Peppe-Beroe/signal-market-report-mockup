@@ -435,7 +435,7 @@ export default function SurveyResults() {
   const canExclude = ['Super Admin', 'Admin'].includes(currentUser.role) && survey.status === 'Review';
   const nonResponding = survey.emailStatus.filter(e => !survey.responses.find(r => r.expertId === e.expertId)).length;
 
-  const tabs = ['Responses', 'Summary', 'Distribution'];
+  const tabs = ['Responses', 'Summary'];
 
   const handleExportCSV = () => {
     const headers = ['Expert', 'Company', 'Submitted At', 'Status', 'Annotation', ...survey.questions.map(q => q.text)];
@@ -791,11 +791,63 @@ export default function SurveyResults() {
               excluded={excludedCount}
             />
           ))}
+          {/* Response Timeline and Respondents by Company */}
+          {(() => {
+            const activeResponses = survey.responses.filter(r => !r.excluded);
+            if (activeResponses.length === 0) return null;
+            const byDate = activeResponses.reduce((acc, r) => {
+              const date = r.submittedAt.split(' ')[0];
+              acc[date] = (acc[date] || 0) + 1;
+              return acc;
+            }, {});
+            const maxDateCount = Math.max(...Object.values(byDate), 1);
+            const byCompany = activeResponses.reduce((acc, r) => {
+              acc[r.company] = (acc[r.company] || 0) + 1;
+              return acc;
+            }, {});
+            return (
+              <>
+                <Card className="p-5">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-4">Response Timeline</h3>
+                  <div className="space-y-2.5">
+                    {Object.entries(byDate).sort().map(([date, count]) => (
+                      <div key={date} className="flex items-center gap-3">
+                        <span className="text-xs text-gray-500 w-24 flex-shrink-0">{date}</span>
+                        <div className="flex-1 h-6 bg-gray-100 rounded overflow-hidden">
+                          <div
+                            className="h-full rounded transition-all duration-500 flex items-center px-2"
+                            style={{ width: `${(count / maxDateCount) * 100}%`, backgroundColor: '#4A00F8' }}
+                          >
+                            <span className="text-white text-xs font-semibold">{count}</span>
+                          </div>
+                        </div>
+                        <span className="text-xs text-gray-400 w-20 flex-shrink-0">{count} response{count !== 1 ? 's' : ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+                <Card className="p-5">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-4">Respondents by Company</h3>
+                  <div className="space-y-2.5">
+                    {Object.entries(byCompany).sort((a, b) => b[1] - a[1]).map(([company, count]) => {
+                      const pct = Math.round((count / activeResponses.length) * 100);
+                      return (
+                        <div key={company} className="flex items-center gap-3">
+                          <span className="text-xs text-gray-600 w-36 flex-shrink-0 truncate" title={company}>{company}</span>
+                          <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
+                            <div className="h-full rounded" style={{ width: `${pct}%`, backgroundColor: '#7C3AED' }} />
+                          </div>
+                          <span className="text-xs font-semibold text-gray-700 w-10 text-right">{pct}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              </>
+            );
+          })()}
         </div>
       )}
-
-      {/* Distribution tab */}
-      {activeTab === 'distribution' && <DistributionTab survey={survey} />}
     </div>
   );
 }
