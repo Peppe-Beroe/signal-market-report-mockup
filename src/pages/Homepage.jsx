@@ -10,19 +10,26 @@ import Card from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
 import Button from '../components/ui/Button';
 
-function KpiCard({ icon: Icon, label, value, sub, color = '#4A00F8' }) {
+function KpiCard({ icon: Icon, label, value, sub, color = '#4A00F8', onClick }) {
+  const clickable = !!onClick;
   return (
-    <Card className="p-5">
+    <Card
+      className={`p-5 transition-all duration-150 ${clickable ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-gray-500 font-medium mb-1">{label}</p>
-          <p className="text-3xl font-bold text-gray-900">{value}</p>
+          <p className={`text-3xl font-bold text-gray-900 ${clickable ? 'group-hover:underline' : ''}`}>{value}</p>
           {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
         </div>
         <div className="p-2.5 rounded-xl" style={{ backgroundColor: color + '18' }}>
           <Icon size={20} style={{ color }} />
         </div>
       </div>
+      {clickable && (
+        <p className="text-xs mt-2 font-medium" style={{ color }}>View →</p>
+      )}
     </Card>
   );
 }
@@ -142,9 +149,9 @@ export default function Homepage() {
         </div>
 
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <KpiCard icon={Activity} label="Active Projects" value={activeProjects} sub="Across all teams" />
-          <KpiCard icon={Database} label="Total Surveys" value={totalSurveys} sub="All statuses" color="#10B981" />
-          <KpiCard icon={Users} label="Experts in DB" value={experts.length} sub={`${experts.filter(e => e.status === 'Active').length} active, ${experts.filter(e => e.status === 'Opted-out').length} opted-out`} color="#F59E0B" />
+          <KpiCard icon={Activity} label="Active Projects" value={activeProjects} sub="Across all teams" onClick={() => navigate('/projects')} />
+          <KpiCard icon={Database} label="Total Surveys" value={totalSurveys} sub="All statuses" color="#10B981" onClick={() => navigate('/projects')} />
+          <KpiCard icon={Users} label="Experts in DB" value={experts.length} sub={`${experts.filter(e => e.status === 'Active').length} active, ${experts.filter(e => e.status === 'Opted-out').length} opted-out`} color="#F59E0B" onClick={() => navigate('/experts')} />
           <KpiCard icon={AlertCircle} label="Pending Approvals" value={pendingSurveys.length} sub="Needs your action" color="#EF4444" />
         </div>
 
@@ -227,8 +234,8 @@ export default function Homepage() {
         </div>
 
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <KpiCard icon={Activity} label="My Projects" value={myProjects.length} sub="You own these" />
-          <KpiCard icon={TrendingUp} label="Surveys Running" value={runningSurveys.length} sub="Collecting responses" color="#10B981" />
+          <KpiCard icon={Activity} label="My Projects" value={myProjects.length} sub="You own these" onClick={() => navigate('/projects')} />
+          <KpiCard icon={TrendingUp} label="Surveys Running" value={runningSurveys.length} sub="Collecting responses" color="#10B981" onClick={() => navigate('/projects')} />
           <KpiCard icon={AlertCircle} label="Awaiting My Approval" value={pendingSurveys.length} sub="Action required" color="#F59E0B" />
           <KpiCard icon={Clock} label="Closing This Week" value={closingThisWeek.length} sub="Within 7 days" color="#EF4444" />
         </div>
@@ -507,7 +514,7 @@ export default function Homepage() {
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <KpiCard icon={Database} label="My Surveys" value={mySurveys.length} sub="All statuses" />
+        <KpiCard icon={Database} label="My Surveys" value={mySurveys.length} sub="All statuses" onClick={() => navigate('/projects')} />
         <KpiCard icon={Clock} label="Awaiting Feedback" value={pendingSurveys.filter(s => s.createdBy === currentUser.name).length} sub="Submitted for approval" color="#F59E0B" />
         <KpiCard icon={TrendingUp} label="Avg Response Rate" value={`${avgResponseRate}%`} sub="Running surveys" color="#10B981" />
       </div>
