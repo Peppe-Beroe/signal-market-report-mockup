@@ -143,7 +143,7 @@ function QuestionSummaryCard({ question, responses, excluded }) {
   );
 }
 
-function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, orgTimezone, canExclude }) {
+function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, orgTimezone, canExclude, isRunning }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [annotation, setAnnotation] = useState(response.annotation || '');
@@ -155,7 +155,7 @@ function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, 
 
   return (
     <>
-      <tr className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${response.excluded ? 'opacity-60' : ''}`}>
+      <tr className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${!isRunning && response.excluded ? 'opacity-60' : ''}`}>
         <td className="px-5 py-3">
           <div className="flex items-center gap-3">
             <div
@@ -165,7 +165,7 @@ function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, 
               {response.expertName.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
             <div>
-              <p className={`text-sm font-medium ${response.excluded ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+              <p className={`text-sm font-medium ${!isRunning && response.excluded ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                 {response.expertName}
               </p>
               <p className="text-xs text-gray-400">{response.company}</p>
@@ -174,7 +174,7 @@ function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, 
         </td>
         <td className="px-4 py-3 text-sm text-gray-600">{response.submittedAt}{response.submittedAt ? ` (${orgTimezone})` : ''}</td>
         <td className="px-4 py-3">
-          {response.excluded
+          {!isRunning && response.excluded
             ? <Badge color="red" size="xs">Excluded</Badge>
             : <Badge color="green" size="xs">Submitted</Badge>
           }
@@ -599,7 +599,7 @@ export default function SurveyResults() {
       {/* Responses tab */}
       {activeTab === 'responses' && (
         <div className="space-y-4">
-          {excludedCount > 0 && (
+          {excludedCount > 0 && !isRunning && (
             <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-100">
               <AlertTriangle size={15} className="text-amber-500" />
               <p className="text-sm text-amber-700">
@@ -617,7 +617,7 @@ export default function SurveyResults() {
               { key: 'all', label: 'All' },
               { key: 'responded', label: 'Responded' },
               { key: 'awaiting', label: 'Awaiting' },
-              { key: 'excluded', label: 'Excluded' },
+              ...(!isRunning ? [{ key: 'excluded', label: 'Excluded' }] : []),
               { key: 'bounced', label: 'Bounced' },
               { key: 'opted_out', label: 'Opted-out' },
             ].map(f => (
@@ -655,7 +655,7 @@ export default function SurveyResults() {
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Submitted</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Status</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Annotation</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Actions</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">{isRunning ? '' : 'Actions'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -702,6 +702,7 @@ export default function SurveyResults() {
                             onAnnotationChange={(expertId, ann) => updateAnnotation(surveyId, expertId, ann)}
                             orgTimezone={orgTimezone}
                             canExclude={canExclude}
+                            isRunning={isRunning}
                           />
                         ))}
                         {sortedEmails.map(e => (

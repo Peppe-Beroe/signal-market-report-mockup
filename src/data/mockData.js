@@ -49,7 +49,7 @@ export const SURVEYS = [
     responses: [
       { expertId: 'e1', expertName: 'Dr. James Wright', company: 'SteelCorp', submittedAt: '2026-03-06 09:12', answers: { q1: 'Increase 5–10%', q2: 'North America', q3: 4, q4: ['Energy costs', 'Logistics disruptions'], q5: 'Rising energy costs in EU and potential trade tariffs from US remain key watch points.' }, excluded: false, annotation: '' },
       { expertId: 'e2', expertName: 'Anna Kowalski', company: 'EuroMfg', submittedAt: '2026-03-07 14:35', answers: { q1: 'Stay flat (±5%)', q2: 'Europe', q3: 3, q4: ['Geopolitical risk', 'Currency fluctuations'], q5: 'EU demand softness and geopolitical uncertainty around eastern Europe.' }, excluded: false, annotation: 'Outlook more conservative than panel average' },
-      { expertId: 'e3', expertName: 'Raj Patel', company: 'Tata Steel', submittedAt: '2026-03-08 11:20', answers: { q1: 'Increase >10%', q2: 'Asia-Pacific', q3: 4, q4: ['Raw material availability', 'Demand shifts'], q5: 'India infrastructure spend driving significant demand. Iron ore tightness is a real concern.' }, excluded: true, annotation: 'Outlier — APAC-specific view, not representative of global panel' },
+      { expertId: 'e3', expertName: 'Raj Patel', company: 'Tata Steel', submittedAt: '2026-03-08 11:20', answers: { q1: 'Increase >10%', q2: 'Asia-Pacific', q3: 4, q4: ['Raw material availability', 'Demand shifts'], q5: 'India infrastructure spend driving significant demand. Iron ore tightness is a real concern.' }, excluded: false, annotation: '' },
     ],
     amendments: [],
     archived: false,
