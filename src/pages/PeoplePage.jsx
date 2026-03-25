@@ -842,7 +842,7 @@ export default function PeoplePage() {
 
   const isSuperAdmin = currentUser.role === 'Super Admin';
   const isAdmin = currentUser.role === 'Admin';
-  const isStandardUser = currentUser.role === 'Researcher' || currentUser.role === 'Standard User';
+  const isStandardUser = currentUser.role === 'Standard User';
   const totalSuperAdmins = internalUsers.filter(u => u.role === 'Super Admin').length;
 
   const [activeTab, setActiveTab] = useState('users');

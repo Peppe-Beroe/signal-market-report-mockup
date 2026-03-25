@@ -5,7 +5,7 @@ import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 
-const ROLE_COLORS = { 'Super Admin': 'purple', 'Admin': 'navy', 'Researcher': 'green' };
+const ROLE_COLORS = { 'Super Admin': 'purple', 'Admin': 'navy', 'Standard User': 'green' };
 
 const TIMEZONES = [
   { value: 'IST', label: 'IST — India Standard Time (UTC+5:30)' },
@@ -204,7 +204,7 @@ function VisibilityBadge({ visibility }) {
 export default function Settings() {
   const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs, categories, setCategories, templates, deleteTemplate, renameTemplate, updateTemplateQuestions, revertTemplateToPrivate, projects, internalUsers } = useApp();
   const isSuperAdmin = currentUser.role === 'Super Admin';
-  const isStandardUser = currentUser.role === 'Researcher' || currentUser.role === 'Standard User';
+  const isStandardUser = currentUser.role === 'Standard User';
   const profileReadOnly = !isSuperAdmin; // Admin and Standard User see read-only profile
 
   const [profile] = useState({ name: currentUser.name, email: currentUser.email });

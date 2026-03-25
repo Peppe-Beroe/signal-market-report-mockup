@@ -16,7 +16,7 @@ export default function ProjectsList() {
   const [errors, setErrors] = useState({});
 
   const isAdminOrAbove = currentUser.role === 'Admin' || currentUser.role === 'Super Admin';
-  const isStandardUser = currentUser.role === 'Standard User' || currentUser.role === 'Researcher';
+  const isStandardUser = currentUser.role === 'Standard User';
   // Per P1-F-68: Standard Users must assign an Admin as Project Owner at creation time.
   const adminUsers = internalUsers
     ? internalUsers.filter(u => (u.role === 'Admin' || u.role === 'Super Admin') && u.status === 'Active')

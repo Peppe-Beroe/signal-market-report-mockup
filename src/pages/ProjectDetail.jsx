@@ -11,7 +11,7 @@ import Button from '../components/ui/Button';
 const ROLE_COLORS = {
   'Super Admin': 'purple',
   'Admin': 'blue',
-  'Researcher': 'green',
+  'Standard User': 'green',
 };
 
 // Modal used in Team tab — "Invite Member" (Owner/SA) or "Propose Member" (Editor/Viewer)
@@ -23,7 +23,7 @@ function TeamMemberModal({ project, internalUsers, currentUser, canDirectAdd, on
 
   const candidates = internalUsers.filter(u => u.status === 'Active');
   const selectedUser = candidates.find(u => u.id === userId);
-  const isStandardUserTarget = selectedUser?.role === 'Standard User' || selectedUser?.role === 'Researcher';
+  const isStandardUserTarget = selectedUser?.role === 'Standard User';
 
   const handleSubmit = () => {
     if (!userId) { setError('Please select a user.'); return; }

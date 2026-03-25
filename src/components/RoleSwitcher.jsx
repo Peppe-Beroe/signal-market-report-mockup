@@ -6,7 +6,7 @@ import { USERS } from '../data/mockData';
 const roleColors = {
   'Super Admin': 'bg-purple-100 text-purple-800',
   'Admin': 'bg-blue-100 text-blue-800',
-  'Researcher': 'bg-green-100 text-green-700',
+  'Standard User': 'bg-green-100 text-green-700',
 };
 
 export default function RoleSwitcher() {

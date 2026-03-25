@@ -71,7 +71,7 @@ export default function AuditLog() {
   };
 
   // Only Admin and Super Admin can see this page
-  if (currentUser.role === 'Researcher') {
+  if (currentUser.role === 'Standard User') {
     return (
       <div className="p-6 text-center">
         <p className="text-gray-500">You do not have permission to view the audit log.</p>

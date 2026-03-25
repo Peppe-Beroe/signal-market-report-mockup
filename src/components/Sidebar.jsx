@@ -6,7 +6,7 @@ import { useApp } from '../context/AppContext';
 const roleColors = {
   'Super Admin': { bg: 'bg-purple-100', text: 'text-purple-700' },
   'Admin': { bg: 'bg-blue-100', text: 'text-blue-700' },
-  'Researcher': { bg: 'bg-green-100', text: 'text-green-700' },
+  'Standard User': { bg: 'bg-green-100', text: 'text-green-700' },
 };
 
 function OnboardingChecklist({ surveys, experts }) {
@@ -73,7 +73,7 @@ export default function Sidebar() {
     ...(isSuperAdmin ? [{ to: '/audit', icon: ClipboardList, label: 'Audit Log' }] : []),
   ];
 
-  const rc = roleColors[currentUser.role] || roleColors['Researcher'];
+  const rc = roleColors[currentUser.role] || roleColors['Standard User'];
 
   return (
     <aside className="w-60 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 h-full">

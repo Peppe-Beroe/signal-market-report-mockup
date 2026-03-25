@@ -1,7 +1,7 @@
 export const USERS = {
   superadmin: { id: 'u1', name: 'Maria Santos', role: 'Super Admin', email: 'maria.santos@beroe.com', avatar: 'MS' },
   admin: { id: 'u2', name: 'Sarah Chen', role: 'Admin', email: 'sarah.chen@beroe.com', avatar: 'SC' },
-  researcher: { id: 'u3', name: 'Marco Rossi', role: 'Researcher', email: 'm.rossi@beroe.com', avatar: 'MR' },
+  researcher: { id: 'u3', name: 'Marco Rossi', role: 'Standard User', email: 'm.rossi@beroe.com', avatar: 'MR' },
 };
 
 export const EXPERTS = [

@@ -886,7 +886,7 @@ export default function ApprovalReview() {
                       <XCircle size={14} className="text-red-500" />
                       <span className="text-xs font-medium text-red-700">Rejection mode</span>
                     </div>
-                    <label className="block text-xs font-medium text-gray-600">Feedback for researcher</label>
+                    <label className="block text-xs font-medium text-gray-600">Feedback for standard user</label>
                     <textarea
                       value={rejectReason}
                       onChange={e => setRejectReason(e.target.value)}
@@ -935,7 +935,7 @@ export default function ApprovalReview() {
           {/* Submission notes */}
           <Card className="p-5">
             <h3 className="text-sm font-semibold text-gray-700 mb-2">Submission Notes</h3>
-            <p className="text-xs text-gray-400 italic">No notes added by the researcher.</p>
+            <p className="text-xs text-gray-400 italic">No notes added by the standard user.</p>
           </Card>
         </div>
       </div>

@@ -86,7 +86,7 @@ export default function Login() {
               {[
                 { key: 'superadmin', label: 'Super Admin', initials: 'MS', color: 'text-purple-700 border-purple-200 bg-purple-50 hover:bg-purple-100' },
                 { key: 'admin', label: 'Admin', initials: 'SC', color: 'text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100' },
-                { key: 'researcher', label: 'Researcher', initials: 'MR', color: 'text-green-700 border-green-200 bg-green-50 hover:bg-green-100' },
+                { key: 'researcher', label: 'Standard User', initials: 'MR', color: 'text-green-700 border-green-200 bg-green-50 hover:bg-green-100' },
               ].map(role => (
                 <button
                   key={role.key}
