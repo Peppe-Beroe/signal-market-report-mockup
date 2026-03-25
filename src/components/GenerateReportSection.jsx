@@ -129,7 +129,7 @@ export function GenerateReportSection({ survey, addToast }) {
             </Button>
             {!sent ? (
               <Button size="sm" className="flex-1" onClick={handleSend}>
-                <Send size={13} /> Send to {survey.responsesReceived}
+                <Send size={13} /> Send to {survey.responsesReceived} experts
               </Button>
             ) : (
               <span className="flex-1 flex items-center justify-center gap-1 text-xs text-green-600 font-medium">
