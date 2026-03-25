@@ -6,7 +6,7 @@ import Card from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
-import { AttachReportSection } from '../components/AttachReportSection';
+import { GenerateReportSection } from '../components/GenerateReportSection';
 
 function BarChart({ data }) {
   const max = Math.max(...Object.values(data), 1);
@@ -101,7 +101,7 @@ function ResponseRow({ response, survey, canExclude, onToggleExclusion }) {
 export default function PostCloseReview() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, currentUser, toggleExclusion, attachReport, shareReport, addToast } = useApp();
+  const { surveys, projects, currentUser, toggleExclusion, addToast } = useApp();
 
   const survey = surveys.find(s => s.id === surveyId);
   const project = projects.find(p => p.id === projectId);
@@ -155,17 +155,10 @@ export default function PostCloseReview() {
             </p>
           </div>
 
-          {/* Attach report section */}
-          {survey.status !== 'Transferred' && (
+          {/* Generate report section */}
+          {survey.status !== 'Transferred' && canExclude && (
             <div className="mb-5">
-              <AttachReportSection
-                surveyId={surveyId}
-                attachReport={attachReport}
-                shareReport={shareReport}
-                addToast={addToast}
-                responsesReceived={survey.responsesReceived}
-                survey={survey}
-              />
+              <GenerateReportSection survey={survey} addToast={addToast} />
             </div>
           )}
 
