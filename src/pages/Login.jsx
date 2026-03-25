@@ -1,17 +1,23 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Building2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import Button from '../components/ui/Button';
 
 export default function Login() {
   const navigate = useNavigate();
   const { switchRole } = useApp();
+  const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState('sarah.chen@beroe.com');
   const [password, setPassword] = useState('demo1234');
   const [showPw, setShowPw] = useState(false);
 
-  const handleSignIn = (e) => {
+  const handleSSOClick = () => {
+    // Demo: SSO path signs in as Admin
+    switchRole('admin');
+    navigate('/dashboard');
+  };
+
+  const handleEmailSignIn = (e) => {
     e.preventDefault();
     switchRole('admin');
     navigate('/dashboard');
@@ -41,43 +47,69 @@ export default function Login() {
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Sign in to Signal</h1>
           <p className="text-sm text-gray-500 mb-6">Access the Market Report Platform</p>
 
-          <form onSubmit={handleSignIn} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 bg-gray-50 focus:bg-white transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-              <div className="relative">
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 bg-gray-50 focus:bg-white transition-colors pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
+          {/* Primary: SSO */}
+          <button
+            onClick={handleSSOClick}
+            className="w-full flex items-center justify-center gap-2.5 py-2.5 rounded-lg text-white font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: '#4A00F8' }}
+          >
+            <Building2 size={16} />
+            Sign in with Beroe SSO
+          </button>
 
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-gray-100" />
+            <span className="text-xs text-gray-400">or</span>
+            <div className="flex-1 h-px bg-gray-100" />
+          </div>
+
+          {/* Fallback: email/password */}
+          {!showEmailForm ? (
             <button
-              type="submit"
-              className="w-full py-2.5 rounded-lg text-white font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity mt-2"
-              style={{ backgroundColor: '#4A00F8' }}
+              onClick={() => setShowEmailForm(true)}
+              className="w-full py-2.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
             >
-              Sign in
+              Sign in with email and password
             </button>
-          </form>
+          ) : (
+            <form onSubmit={handleEmailSignIn} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 bg-gray-50 focus:bg-white transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 bg-gray-50 focus:bg-white transition-colors pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+              <button
+                type="submit"
+                className="w-full py-2.5 rounded-lg text-white font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: '#4A00F8' }}
+              >
+                Sign in
+              </button>
+            </form>
+          )}
 
           {/* Demo roles */}
           <div className="mt-6 pt-5 border-t border-gray-100">
