@@ -337,6 +337,11 @@ export function AppProvider({ children }) {
 
   const archiveSurvey = (surveyId) => {
     const survey = surveys.find(s => s.id === surveyId);
+    const blocked = ['Submitted', 'Approved', 'Running'];
+    if (survey && blocked.includes(survey.status)) {
+      addToast(`Cannot archive a ${survey.status} survey — ${survey.status === 'Running' ? 'close it first' : 'withdraw it first'}`, 'warning');
+      return;
+    }
     setSurveys(prev => prev.map(s => s.id === surveyId ? { ...s, archived: true } : s));
     addAuditEvent('Survey archived', survey?.name || surveyId, 'survey', 'Survey moved to archive');
     addToast(`Survey archived`);

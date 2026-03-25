@@ -296,7 +296,8 @@ export default function ProjectDetail() {
       default:
         break;
     }
-    if (isAdminOrAbove && !survey.archived) {
+    const archivableStates = ['Draft', 'Closed', 'Review'];
+    if (isAdminOrAbove && !survey.archived && archivableStates.includes(survey.status)) {
       actions.push(
         <Button key="archive" size="xs" variant="ghost" onClick={() => archiveSurvey(survey.id)} title="Archive survey" className="text-gray-400 hover:text-gray-600">
           <Archive size={12} />
