@@ -46,7 +46,7 @@ export default function ExpertThankYou() {
 
         <p className="text-sm text-gray-600 leading-relaxed mb-5">
           Your answers have been recorded for the{' '}
-          <strong>Steel Price Outlook — Wave 1</strong> survey.
+          <strong>Steel Price Outlook</strong> survey.
           As a thank-you, Beroe will share the final Signal Market Report once it is published.
         </p>
 
@@ -54,10 +54,6 @@ export default function ExpertThankYou() {
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-500">Survey</span>
             <span className="font-medium text-gray-800">Steel Price Outlook</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Wave</span>
-            <span className="font-medium text-gray-800">Wave 1</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-500">Submitted by</span>

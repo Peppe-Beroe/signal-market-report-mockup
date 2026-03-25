@@ -737,7 +737,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
   const [amendOverrideValues, setAmendOverrideValues] = useState({});
   const [showAmendPanel, setShowAmendPanel] = useState(true);
 
-  // Wave Settings state — initialized from existing config (supports rejected→Draft round-trip)
+  // Schedule Settings state — initialized from existing config (supports rejected→Draft round-trip)
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 16);
   const closeDefaultStr = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
@@ -1013,7 +1013,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
       <div className="bg-white border-b border-gray-100 px-6 flex items-center gap-1 flex-shrink-0">
         {[
           { id: 'questions', label: 'Questions', count: questions.length },
-          { id: 'wave', label: 'Wave Settings' },
+          { id: 'wave', label: 'Schedule Settings' },
           { id: 'experts', label: `Expert List (${selectedExperts.size})` },
         ].map(tab => (
           <button
@@ -1047,7 +1047,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
             {pendingEditorAmendments.map(a => {
               const res = amendResolutions[a.id];
               const typeColors = { question_edit: 'amber', question_add: 'green', question_remove: 'red', expert_add: 'green', expert_remove: 'red', wave_setting: 'blue' };
-              const typeLabels = { question_edit: 'Question edited', question_add: 'Question added', question_remove: 'Question removed', expert_add: 'Expert added', expert_remove: 'Expert removed', wave_setting: 'Wave setting' };
+              const typeLabels = { question_edit: 'Question edited', question_add: 'Question added', question_remove: 'Question removed', expert_add: 'Expert added', expert_remove: 'Expert removed', wave_setting: 'Schedule setting' };
               const renderVal = (val) => {
                 if (!val && val !== 0) return <span className="italic text-gray-400">(none)</span>;
                 if (typeof val === 'object' && val.text) return <span>{val.text}</span>;
@@ -1248,7 +1248,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
         </div>
       </div>}
 
-      {/* Wave Settings tab */}
+      {/* Schedule Settings tab */}
       {activeTab === 'wave' && (
         <div className="flex-1 overflow-y-auto p-6 max-w-3xl mx-auto w-full">
           {/* Schedule */}
@@ -1485,7 +1485,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
               You are about to submit <strong>"{surveyName}"</strong> for approval.
             </p>
             <p className="text-sm text-gray-500 mb-5">
-              The entire survey — questions, wave settings, and expert list — will be locked. The approver reviews everything as a single snapshot. If rejected, you return to Draft with full edit access.
+              The entire survey — questions, schedule settings, and expert list — will be locked. The approver reviews everything as a single snapshot. If rejected, you return to Draft with full edit access.
             </p>
             <div className="bg-gray-50 rounded-xl p-3 mb-5 space-y-1">
               <div className="flex items-center gap-2 text-xs text-gray-600">

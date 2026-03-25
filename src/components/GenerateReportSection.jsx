@@ -48,7 +48,7 @@ export function GenerateReportSection({ survey, addToast }) {
   };
 
   const surveySlug = survey.name.replace(/\s+/g, '_').replace(/[^A-Za-z0-9_]/g, '');
-  const reportName = `${surveySlug}_Wave${survey.wave}_${PRESETS[preset].label.replace(/\s+/g, '_')}.pdf`;
+  const reportName = `${surveySlug}_${PRESETS[preset].label.replace(/\s+/g, '_')}.pdf`;
 
   return (
     <Card className="p-5">

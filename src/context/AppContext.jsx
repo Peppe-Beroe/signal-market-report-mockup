@@ -196,9 +196,9 @@ export function AppProvider({ children }) {
     setSurveys(prev => prev.map(s =>
       s.id === surveyId ? { ...s, waveConfig: config } : s
     ));
-    addAuditEvent('Wave setup configured', survey?.name || surveyId, 'survey',
+    addAuditEvent('Schedule configured', survey?.name || surveyId, 'survey',
       `Send: ${config.sendDate ? config.sendDate.split('T')[0] : '—'} · Close: ${config.closeDate ? config.closeDate.split('T')[0] : '—'} · Experts: ${config.selectedExperts?.length || 0}`);
-    addToast('Wave setup saved — survey ready for approval');
+    addToast('Schedule saved — survey ready for approval');
   };
 
   const launchSurvey = (surveyId) => {

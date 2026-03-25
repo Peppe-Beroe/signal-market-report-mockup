@@ -37,7 +37,7 @@ function useBreadcrumbs(surveys, projects) {
             if (action === 'approve') crumbs.push({ label: 'Approval Review', path: null });
             if (action === 'results') crumbs.push({ label: 'Results', path: null });
             if (action === 'review') crumbs.push({ label: 'Post-Close Review', path: null });
-            if (action === 'wave-setup') crumbs.push({ label: 'Wave Setup', path: null });
+            if (action === 'schedule-setup') crumbs.push({ label: 'Schedule Setup', path: null });
           }
         }
       }

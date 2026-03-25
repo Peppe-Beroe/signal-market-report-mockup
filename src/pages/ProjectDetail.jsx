@@ -247,7 +247,7 @@ export default function ProjectDetail() {
               if (survey.waveConfig) {
                 launchSurveyWithConfig(survey.id, survey.waveConfig);
               } else {
-                addToast('Wave setup is missing — cannot launch', 'warning');
+                addToast('Schedule is missing — cannot launch', 'warning');
               }
             }}
           >

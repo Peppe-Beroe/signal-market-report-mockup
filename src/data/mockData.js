@@ -34,7 +34,7 @@ export const PROJECTS = [
 
 export const SURVEYS = [
   {
-    id: 's1', projectId: 'p1', name: 'Steel Price Outlook — Wave 1', category: 'Metals & Mining',
+    id: 's1', projectId: 'p1', name: 'Steel Price Outlook', category: 'Metals & Mining',
     status: 'Running', wave: 1,
     createdBy: 'Marco Rossi', approvedBy: 'Sarah Chen',
     sendDate: '2026-03-05', closeDate: '2026-03-20',
@@ -83,7 +83,7 @@ export const SURVEYS = [
     ],
   },
   {
-    id: 's2', projectId: 'p1', name: 'Steel Supply Chain Risk — Wave 1', category: 'Metals & Mining',
+    id: 's2', projectId: 'p1', name: 'Steel Supply Chain Risk', category: 'Metals & Mining',
     status: 'Submitted', wave: 1,
     createdBy: 'Marco Rossi', approvedBy: null,
     sendDate: '2026-03-28', closeDate: '2026-04-12',
@@ -125,24 +125,24 @@ export const SURVEYS = [
     archived: false,
   },
   {
-    id: 's3', projectId: 'p2', name: 'Ethylene Pricing Outlook — Wave 2', category: 'Chemicals',
-    status: 'Review', wave: 2,
+    id: 's3', projectId: 'p2', name: 'Polypropylene Supply Outlook', category: 'Chemicals',
+    status: 'Review', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: 'Maria Santos',
     sendDate: '2026-02-20', closeDate: '2026-03-08',
     closeTimestamp: '2026-03-08T23:59:00',
     autoTransferDate: '2026-03-15',
     expertsTargeted: 6, responsesReceived: 5, responseRate: 83,
     questions: [
-      { id: 'q1', type: 'single_choice', required: true, text: 'Where do you expect ethylene contract prices to be in Q3 2026?', options: ['Significantly higher (>15%)', 'Moderately higher (5–15%)', 'Flat (±5%)', 'Moderately lower (5–15%)', 'Significantly lower (>15%)'] },
-      { id: 'q2', type: 'rating_scale', required: true, text: 'Rate feedstock availability confidence for next 6 months', scale: 5, labels: ['Very low', 'Very good'] },
+      { id: 'q1', type: 'single_choice', required: true, text: 'How do you expect polypropylene contract prices to trend in Q3 2026?', options: ['Significantly higher (>15%)', 'Moderately higher (5–15%)', 'Flat (±5%)', 'Moderately lower (5–15%)', 'Significantly lower (>15%)'] },
+      { id: 'q2', type: 'rating_scale', required: true, text: 'Rate propylene feedstock availability confidence for the next 6 months', scale: 5, labels: ['Very low', 'Very good'] },
       { id: 'q3', type: 'open_text', required: false, text: 'Any key market observations for Q2–Q3 2026?' },
     ],
     responses: [
-      { expertId: 'e1', expertName: 'Dr. James Wright', company: 'SteelCorp', submittedAt: '2026-02-22', answers: { q1: 'Moderately higher (5–15%)', q2: 3, q3: 'Naphtha feedstock remains tight in Asia.' }, excluded: false, annotation: '' },
+      { expertId: 'e1', expertName: 'Dr. James Wright', company: 'SteelCorp', submittedAt: '2026-02-22', answers: { q1: 'Moderately higher (5–15%)', q2: 3, q3: 'Propylene feedstock tight in Asia due to naphtha cracker constraints.' }, excluded: false, annotation: '' },
       { expertId: 'e2', expertName: 'Anna Kowalski', company: 'EuroMfg', submittedAt: '2026-02-24', answers: { q1: 'Flat (±5%)', q2: 4, q3: null }, excluded: false, annotation: '' },
-      { expertId: 'e3', expertName: 'Raj Patel', company: 'Tata Steel', submittedAt: '2026-02-25', answers: { q1: 'Significantly higher (>15%)', q2: 2, q3: 'Cracker outages in Middle East adding pressure.' }, excluded: false, annotation: '' },
+      { expertId: 'e3', expertName: 'Raj Patel', company: 'Tata Steel', submittedAt: '2026-02-25', answers: { q1: 'Significantly higher (>15%)', q2: 2, q3: 'PDH plant outages in the Middle East adding pressure to propylene supply.' }, excluded: false, annotation: '' },
       { expertId: 'e4', expertName: 'Sophie Dubois', company: 'ArcelorMittal', submittedAt: '2026-02-28', answers: { q1: 'Moderately higher (5–15%)', q2: 3, q3: null }, excluded: false, annotation: '' },
-      { expertId: 'e5', expertName: 'Carlos Mendez', company: 'Ternium', submittedAt: '2026-03-01', answers: { q1: 'Flat (±5%)', q2: 4, q3: 'LATAM demand recovery could absorb spare capacity.' }, excluded: false, annotation: '' },
+      { expertId: 'e5', expertName: 'Carlos Mendez', company: 'Ternium', submittedAt: '2026-03-01', answers: { q1: 'Flat (±5%)', q2: 4, q3: 'LATAM demand recovery could absorb spare PP capacity.' }, excluded: false, annotation: '' },
     ],
     reminders: [],
     emailStatus: [],
@@ -150,7 +150,7 @@ export const SURVEYS = [
     archived: false,
   },
   {
-    id: 's4', projectId: 'p3', name: 'Packaging Cost Index — Wave 1', category: 'Packaging',
+    id: 's4', projectId: 'p3', name: 'Packaging Cost Index', category: 'Packaging',
     status: 'Draft', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: null,
     sendDate: null, closeDate: null,
@@ -167,7 +167,7 @@ export const SURVEYS = [
     archived: false,
   },
   {
-    id: 's5', projectId: 'p3', name: 'Packaging Sustainability Practices — Wave 1', category: 'Packaging',
+    id: 's5', projectId: 'p3', name: 'Packaging Sustainability Practices', category: 'Packaging',
     status: 'Running', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: 'Sarah Chen',
     sendDate: '2026-03-10', closeDate: '2026-03-28',
@@ -209,7 +209,7 @@ export const SURVEYS = [
     archived: false,
   },
   {
-    id: 's6', projectId: 'p3', name: 'Flexible Packaging Demand Outlook — Wave 1', category: 'Packaging',
+    id: 's6', projectId: 'p3', name: 'Flexible Packaging Demand Outlook', category: 'Packaging',
     status: 'Submitted', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: null,
     sendDate: '2026-04-02', closeDate: '2026-04-18',
@@ -242,17 +242,17 @@ export const SURVEYS = [
     archived: false,
   },
   {
-    // s7 — APPROVED: approved, locked, awaiting scheduled send (Wave 2 of Steel Price Outlook)
-    id: 's7', projectId: 'p1', name: 'Steel Price Outlook — Wave 2', category: 'Metals & Mining',
-    status: 'Approved', wave: 2,
+    // s7 — APPROVED: approved, locked, awaiting scheduled send (Steel Trade Flow Analysis)
+    id: 's7', projectId: 'p1', name: 'Steel Trade Flow Analysis', category: 'Metals & Mining',
+    status: 'Approved', wave: 1,
     createdBy: 'Marco Rossi', approvedBy: 'Sarah Chen',
     sendDate: '2026-03-30', closeDate: '2026-04-15',
     expertsTargeted: 5, responsesReceived: 0, responseRate: 0,
     questions: [
-      { id: 'q1', type: 'single_choice', required: true, text: 'How do you expect hot-rolled coil (HRC) prices to trend in Q4 2026?', options: ['Increase >10%', 'Increase 5–10%', 'Stay flat (±5%)', 'Decrease 5–10%', 'Decrease >10%'] },
-      { id: 'q2', type: 'rating_scale', required: true, text: 'How would you rate current steel demand conditions in your region?', scale: 5, labels: ['Very weak', 'Very strong'] },
-      { id: 'q3', type: 'multi_choice', required: false, text: 'Which factors have changed most since Wave 1? (select all that apply)', options: ['Energy costs', 'Trade policy shifts', 'Logistics conditions', 'Currency movements', 'Demand recovery'] },
-      { id: 'q4', type: 'open_text', required: false, text: 'What is your single biggest concern for steel markets over the next 6 months?' },
+      { id: 'q1', type: 'single_choice', required: true, text: 'How has the volume of steel imports into your primary procurement region changed over the past 6 months?', options: ['Increased significantly (>15%)', 'Increased moderately (5–15%)', 'Remained stable (±5%)', 'Decreased moderately (5–15%)', 'Decreased significantly (>15%)'] },
+      { id: 'q2', type: 'rating_scale', required: true, text: 'How would you rate the impact of current trade policies on your steel procurement costs?', scale: 5, labels: ['No impact', 'Very high impact'] },
+      { id: 'q3', type: 'multi_choice', required: false, text: 'Which trade flow factors are creating the most disruption in your region? (select all that apply)', options: ['Import tariffs', 'Anti-dumping measures', 'Export restrictions', 'Currency volatility', 'New regional trade agreements'] },
+      { id: 'q4', type: 'open_text', required: false, text: 'How is your organisation adapting procurement strategy in response to current steel trade flow conditions?' },
     ],
     responses: [],
     reminders: [],
@@ -260,9 +260,9 @@ export const SURVEYS = [
     waveConfig: {
       sendDate: '2026-03-30',
       closeDate: '2026-04-15',
-      emailSubject: 'Q2 2026 Steel Price Outlook — Wave 2 Expert Survey',
+      emailSubject: 'Q2 2026 Steel Trade Flow Analysis — Expert Survey',
       senderName: 'Sarah Chen, Beroe',
-      emailBody: 'Dear {{EXPERT_FIRST_NAME}},\n\nFollowing our Wave 1 survey, we are now collecting updated expert views for our Q2 2026 Steel Market Signal report. Your continued participation is greatly valued.\n\nPlease complete the survey by {{CLOSE_DATE}}.\n\nKind regards,\n{{SENDER_NAME}}',
+      emailBody: 'Dear {{EXPERT_FIRST_NAME}},\n\nWe are collecting expert perspectives on steel trade flow dynamics for the Beroe Q2 2026 Steel Market Signal report. Your insights would be greatly valued.\n\nPlease complete the survey by {{CLOSE_DATE}}.\n\nKind regards,\n{{SENDER_NAME}}',
       reminders: ['2026-04-08', '2026-04-13'],
       alertEnabled: true,
       alertThreshold: 50,
@@ -279,8 +279,8 @@ export const SURVEYS = [
     archived: false,
   },
   {
-    // s8 — CLOSED: close date passed, responses collected, entering Review (Wave 1 of Ethylene — precedes s3 Wave 2)
-    id: 's8', projectId: 'p2', name: 'Ethylene Pricing Outlook — Wave 1', category: 'Chemicals',
+    // s8 — CLOSED: close date passed, responses collected, entering Review
+    id: 's8', projectId: 'p2', name: 'Ethylene Pricing Outlook', category: 'Chemicals',
     status: 'Closed', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: 'Maria Santos',
     sendDate: '2026-01-20', closeDate: '2026-02-05',
@@ -302,7 +302,7 @@ export const SURVEYS = [
     waveConfig: {
       sendDate: '2026-01-20',
       closeDate: '2026-02-05',
-      emailSubject: 'H1 2026 Ethylene Pricing Outlook — Wave 1 Expert Survey',
+      emailSubject: 'H1 2026 Ethylene Pricing Outlook — Expert Survey',
       senderName: 'Sarah Chen, Beroe',
       emailBody: 'Dear {{EXPERT_FIRST_NAME}},\n\nWe are collecting expert views on ethylene pricing for the Beroe H1 2026 Chemical Feedstocks report.\n\nPlease complete the survey by {{CLOSE_DATE}}.\n\nKind regards,\n{{SENDER_NAME}}',
       reminders: ['2026-01-30'],
@@ -322,7 +322,7 @@ export const SURVEYS = [
   },
   {
     // s9 — ARCHIVED: manually archived survey from the archived Energy project
-    id: 's9', projectId: 'p4', name: 'Energy Procurement Cost Drivers — Wave 1', category: 'Energy',
+    id: 's9', projectId: 'p4', name: 'Energy Procurement Cost Drivers', category: 'Energy',
     status: 'Archived', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: 'Maria Santos',
     sendDate: '2025-10-15', closeDate: '2025-11-01',
@@ -363,24 +363,24 @@ export const SURVEYS = [
 ];
 
 export const AUDIT_EVENTS = [
-  { id: 'a1', user: 'Marco Rossi', action: 'Survey submitted for approval', target: 'Steel Supply Chain Risk — Wave 1', targetType: 'survey', timestamp: '2026-03-10 16:42', details: 'Survey moved to Submitted status' },
-  { id: 'a2', user: 'Sarah Chen', action: 'Survey launched', target: 'Steel Price Outlook — Wave 1', targetType: 'survey', timestamp: '2026-03-05 08:00', details: 'Invitations sent to 5 experts' },
-  { id: 'a3', user: 'Sarah Chen', action: 'Reminder email sent', target: 'Steel Price Outlook — Wave 1', targetType: 'survey', timestamp: '2026-03-12 09:00', details: 'Reminder 1 sent to 2 non-responding experts' },
+  { id: 'a1', user: 'Marco Rossi', action: 'Survey submitted for approval', target: 'Steel Supply Chain Risk', targetType: 'survey', timestamp: '2026-03-10 16:42', details: 'Survey moved to Submitted status' },
+  { id: 'a2', user: 'Sarah Chen', action: 'Survey launched', target: 'Steel Price Outlook', targetType: 'survey', timestamp: '2026-03-05 08:00', details: 'Invitations sent to 5 experts' },
+  { id: 'a3', user: 'Sarah Chen', action: 'Reminder email sent', target: 'Steel Price Outlook', targetType: 'survey', timestamp: '2026-03-12 09:00', details: 'Reminder 1 sent to 2 non-responding experts' },
   { id: 'a4', user: 'Maria Santos', action: 'Expert record updated', target: 'Dr. James Wright', targetType: 'expert', timestamp: '2026-03-09 11:15', details: 'Email address verified' },
   { id: 'a5', user: 'Sarah Chen', action: 'User logged in', target: 'sarah.chen@beroe.com', targetType: 'user', timestamp: '2026-03-16 08:30', details: 'Successful login from 192.168.1.1' },
   { id: 'a6', user: 'Marco Rossi', action: 'User logged in', target: 'm.rossi@beroe.com', targetType: 'user', timestamp: '2026-03-16 09:05', details: 'Successful login from 10.0.0.5' },
-  { id: 'a7', user: 'Marco Rossi', action: 'Survey created', target: 'Steel Supply Chain Risk — Wave 1', targetType: 'survey', timestamp: '2026-03-10 14:20', details: 'Draft survey created with 3 questions' },
-  { id: 'a8', user: 'Sarah Chen', action: 'Survey approved', target: 'Steel Price Outlook — Wave 1', targetType: 'survey', timestamp: '2026-03-04 17:30', details: 'Approved for launch' },
-  { id: 'a9', user: 'Dr. James Wright', action: 'Response submitted', target: 'Steel Price Outlook — Wave 1', targetType: 'survey', timestamp: '2026-03-06 09:12', details: 'Expert submitted all 5 answers' },
-  { id: 'a10', user: 'Anna Kowalski', action: 'Response submitted', target: 'Steel Price Outlook — Wave 1', targetType: 'survey', timestamp: '2026-03-07 14:35', details: 'Expert submitted all 5 answers' },
+  { id: 'a7', user: 'Marco Rossi', action: 'Survey created', target: 'Steel Supply Chain Risk', targetType: 'survey', timestamp: '2026-03-10 14:20', details: 'Draft survey created with 3 questions' },
+  { id: 'a8', user: 'Sarah Chen', action: 'Survey approved', target: 'Steel Price Outlook', targetType: 'survey', timestamp: '2026-03-04 17:30', details: 'Approved for launch' },
+  { id: 'a9', user: 'Dr. James Wright', action: 'Response submitted', target: 'Steel Price Outlook', targetType: 'survey', timestamp: '2026-03-06 09:12', details: 'Expert submitted all 5 answers' },
+  { id: 'a10', user: 'Anna Kowalski', action: 'Response submitted', target: 'Steel Price Outlook', targetType: 'survey', timestamp: '2026-03-07 14:35', details: 'Expert submitted all 5 answers' },
   { id: 'a11', user: 'Maria Santos', action: 'Expert added', target: 'Carlos Mendez', targetType: 'expert', timestamp: '2026-02-28 10:00', details: 'New expert record created — Ternium, Procurement Director' },
   { id: 'a12', user: 'Linda Park', action: 'Expert opted out', target: 'Linda Park', targetType: 'expert', timestamp: '2026-03-01 16:22', details: 'Expert requested removal from survey panel' },
   { id: 'a13', user: 'Maria Santos', action: 'User role changed', target: 'Marco Rossi', targetType: 'user', timestamp: '2026-02-20 09:00', details: 'Role changed from Viewer to Researcher' },
-  { id: 'a14', user: 'Sarah Chen', action: 'Annotation added', target: 'Steel Price Outlook — Wave 1', targetType: 'survey', timestamp: '2026-03-08 15:45', details: 'Annotation added to Raj Patel response: "Outlier — APAC-specific view"' },
-  { id: 'a15', user: 'Maria Santos', action: 'Survey approved', target: 'Ethylene Pricing Outlook — Wave 2', targetType: 'survey', timestamp: '2026-02-19 14:00', details: 'Approved for launch' },
+  { id: 'a14', user: 'Sarah Chen', action: 'Annotation added', target: 'Steel Price Outlook', targetType: 'survey', timestamp: '2026-03-08 15:45', details: 'Annotation added to Raj Patel response: "Outlier — APAC-specific view"' },
+  { id: 'a15', user: 'Maria Santos', action: 'Survey approved', target: 'Polypropylene Supply Outlook', targetType: 'survey', timestamp: '2026-02-19 14:00', details: 'Approved for launch' },
   { id: 'a16', user: 'Sarah Chen', action: 'Project created', target: 'Q2 2026 Steel Market Signal', targetType: 'project', timestamp: '2026-03-01 09:00', details: 'New project under Metals & Mining category' },
-  { id: 'a17', user: 'Raj Patel', action: 'Response submitted', target: 'Ethylene Pricing Outlook — Wave 2', targetType: 'survey', timestamp: '2026-02-25 11:30', details: 'Expert submitted 3 answers' },
-  { id: 'a18', user: 'Sarah Chen', action: 'Dataset transferred to DataHub', target: 'Ethylene Pricing Outlook — Wave 2', targetType: 'survey', timestamp: '2026-03-15 10:00', details: '5 responses exported to DataHub' },
+  { id: 'a17', user: 'Raj Patel', action: 'Response submitted', target: 'Polypropylene Supply Outlook', targetType: 'survey', timestamp: '2026-02-25 11:30', details: 'Expert submitted 3 answers' },
+  { id: 'a18', user: 'Sarah Chen', action: 'Dataset transferred to DataHub', target: 'Polypropylene Supply Outlook', targetType: 'survey', timestamp: '2026-03-15 10:00', details: '5 responses exported to DataHub' },
 ];
 
 export const INTERNAL_USERS = [
@@ -399,7 +399,7 @@ export const PROPOSALS = [
 ];
 
 export const NOTIFICATIONS = [
-  { id: 'n1', type: 'approval', message: 'Steel Supply Chain Risk — Wave 1 needs your approval', timestamp: '2 hours ago', read: false, link: '/projects/p1/surveys/s2/approve' },
+  { id: 'n1', type: 'approval', message: 'Steel Supply Chain Risk needs your approval', timestamp: '2 hours ago', read: false, link: '/projects/p1/surveys/s2/approve' },
   { id: 'n2', type: 'rejection', message: 'Your survey was rejected — revision required. Reason: "Questions need more specificity"', timestamp: '1 day ago', read: false, link: '/projects/p2' },
   { id: 'n3', type: 'proposal', message: 'Marco Rossi proposed adding Priya Mehta to Q2 Steel Market Signal', timestamp: '2 days ago', read: true, link: '/people' },
   { id: 'n4', type: 'invite', message: 'Platform invite request for Anna Lewis was approved', timestamp: '3 days ago', read: true, link: '/people' },

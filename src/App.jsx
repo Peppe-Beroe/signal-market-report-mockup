@@ -13,7 +13,7 @@ import ExpertDatabase from './pages/ExpertDatabase';
 import ExpertDetail from './pages/ExpertDetail';
 import Settings from './pages/Settings';
 import AuditLog from './pages/AuditLog';
-import WaveSetup from './pages/WaveSetup';
+import ScheduleSetup from './pages/ScheduleSetup';
 import PeoplePage from './pages/PeoplePage';
 import NotificationsPage from './pages/NotificationsPage';
 import ExpertSurvey from './pages/expert/ExpertSurvey';
@@ -39,7 +39,7 @@ export default function App() {
             <Route path="projects/:projectId/surveys/:surveyId/approve" element={<ApprovalReview />} />
             <Route path="projects/:projectId/surveys/:surveyId/results" element={<SurveyResults />} />
             <Route path="projects/:projectId/surveys/:surveyId/review" element={<PostCloseReview />} />
-            <Route path="projects/:projectId/surveys/:surveyId/wave-setup" element={<WaveSetup />} />
+            <Route path="projects/:projectId/surveys/:surveyId/schedule-setup" element={<ScheduleSetup />} />
             <Route path="experts" element={<ExpertDatabase />} />
             <Route path="experts/:expertId" element={<ExpertDetail />} />
             <Route path="people" element={<PeoplePage />} />

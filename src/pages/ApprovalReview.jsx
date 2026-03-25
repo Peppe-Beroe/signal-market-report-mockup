@@ -220,7 +220,7 @@ export default function ApprovalReview() {
 
   const tabs = [
     { id: 'content', label: 'Survey Content' },
-    { id: 'wave', label: 'Wave Settings' },
+    { id: 'wave', label: 'Schedule Settings' },
     { id: 'experts', label: 'Expert List' },
   ];
 
@@ -244,7 +244,7 @@ export default function ApprovalReview() {
     return <span>{String(val)}</span>;
   };
 
-  const typeLabel = { question_edit: 'Question edited', question_add: 'Question added', question_remove: 'Question removed', expert_add: 'Expert added', expert_remove: 'Expert removed', wave_setting: 'Wave setting changed' };
+  const typeLabel = { question_edit: 'Question edited', question_add: 'Question added', question_remove: 'Question removed', expert_add: 'Expert added', expert_remove: 'Expert removed', wave_setting: 'Schedule setting changed' };
   const typeColor = { question_edit: 'amber', question_add: 'green', question_remove: 'red', expert_add: 'green', expert_remove: 'red', wave_setting: 'blue' };
   const colorMap = { amber: 'bg-amber-50 border-amber-200 text-amber-800', green: 'bg-green-50 border-green-200 text-green-800', red: 'bg-red-50 border-red-200 text-red-800', blue: 'bg-blue-50 border-blue-200 text-blue-800' };
 
@@ -470,12 +470,12 @@ export default function ApprovalReview() {
             </div>
           )}
 
-          {/* Amend mode — Wave settings */}
+          {/* Amend mode — Schedule settings */}
           {amendMode && activeTab === 'wave' && (
             <div className="space-y-4">
               <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
                 <Edit3 size={14} className="text-amber-600 flex-shrink-0" />
-                <p className="text-xs text-amber-700"><strong>Amend mode:</strong> Edit wave settings. Changes will be tracked.</p>
+                <p className="text-xs text-amber-700"><strong>Amend mode:</strong> Edit schedule settings. Changes will be tracked.</p>
               </div>
               <Card className="p-5 space-y-4">
                 {[
@@ -595,7 +595,7 @@ export default function ApprovalReview() {
                   {[
                     { label: 'Created by', value: survey.createdBy },
                     { label: 'Project', value: project?.name },
-                    { label: 'Wave', value: `Wave ${survey.wave}` },
+                    { label: 'Category', value: survey.category },
                     { label: 'Questions', value: survey.questions.length },
                     { label: 'Experts targeted', value: survey.expertsTargeted },
                     { label: 'Submitted', value: '2026-03-10 16:42' },
@@ -661,14 +661,14 @@ export default function ApprovalReview() {
             </div>
           )}
 
-          {/* Tab: Wave Settings */}
+          {/* Tab: Schedule Settings */}
           {!amendMode && activeTab === 'wave' && (
             <div className="space-y-4">
               {survey.waveConfig ? (
                 <Card className="p-5">
                   <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <Calendar size={15} className="text-gray-400" />
-                    Wave Schedule
+                    Schedule
                   </h2>
                   <div className="grid grid-cols-2 gap-3 text-sm mb-5">
                     {[
@@ -738,9 +738,9 @@ export default function ApprovalReview() {
                   <div className="flex items-start gap-3">
                     <Info size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-gray-700">No wave settings configured</p>
+                      <p className="text-sm font-semibold text-gray-700">No schedule settings configured</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        Wave settings (scheduling, email template, reminders) should be configured in Draft before submission.
+                        Schedule settings (send date, email template, reminders) should be configured in Draft before submission.
                       </p>
                     </div>
                   </div>
@@ -806,7 +806,7 @@ export default function ApprovalReview() {
             {approved ? (
               <div className="text-center py-4">
                 <CheckCircle size={36} className="text-green-500 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-green-700">Survey + Wave Approved!</p>
+                <p className="text-sm font-semibold text-green-700">Survey Approved!</p>
                 <p className="text-xs text-gray-400 mt-1">Redirecting to project...</p>
               </div>
             ) : (
@@ -916,7 +916,7 @@ export default function ApprovalReview() {
               {[
                 { label: `Has questions (${survey.questions.length})`, ok: survey.questions.length > 0 },
                 { label: 'All questions have text', ok: survey.questions.every(q => q.text) },
-                { label: 'Wave setup configured', ok: Boolean(survey.waveConfig) },
+                { label: 'Schedule configured', ok: Boolean(survey.waveConfig) },
                 { label: `Expert list set (${survey.waveConfig?.selectedExperts?.length || 0} experts)`, ok: Boolean(survey.waveConfig?.selectedExperts?.length) },
                 { label: 'Send & close dates set', ok: Boolean(survey.waveConfig?.sendDate && survey.waveConfig?.closeDate) },
               ].map(({ label, ok }) => (
