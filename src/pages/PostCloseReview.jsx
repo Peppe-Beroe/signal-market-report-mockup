@@ -111,15 +111,16 @@ export default function PostCloseReview() {
   const canExclude = ['Super Admin', 'Admin'].includes(currentUser.role);
   const excludedCount = survey.responses.filter(r => r.excluded).length;
   const includedCount = survey.responses.length - excludedCount;
+  const includedResponses = survey.responses.filter(r => !r.excluded);
 
   const q1Data = {};
   survey.questions[0]?.options?.forEach(o => q1Data[o] = 0);
-  survey.responses.forEach(r => {
+  includedResponses.forEach(r => {
     const ans = r.answers.q1;
     if (ans) q1Data[ans] = (q1Data[ans] || 0) + 1;
   });
 
-  const q2Values = survey.responses.map(r => r.answers.q2).filter(Boolean);
+  const q2Values = includedResponses.map(r => r.answers.q2).filter(Boolean);
   const q2Avg = q2Values.length > 0 ? (q2Values.reduce((a, b) => a + b, 0) / q2Values.length).toFixed(1) : '—';
 
   return (
@@ -210,7 +211,7 @@ export default function PostCloseReview() {
               <Card className="p-5">
                 <p className="text-sm font-semibold text-gray-800 mb-3">{survey.questions[2].text}</p>
                 <div className="space-y-2">
-                  {survey.responses
+                  {includedResponses
                     .filter(r => r.answers.q3)
                     .map(r => (
                       <blockquote key={r.expertId} className="border-l-2 pl-3 py-1" style={{ borderColor: '#4A00F8' }}>
