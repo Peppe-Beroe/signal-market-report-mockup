@@ -396,7 +396,6 @@ export default function ProjectDetail() {
                       <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-5 py-3">Name</th>
                       <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Category</th>
                       <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Status</th>
-                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Wave</th>
                       <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Responses</th>
                       <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Send Date</th>
                       <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Close Date</th>
@@ -419,9 +418,6 @@ export default function ProjectDetail() {
                         </td>
                         <td className="px-4 py-4">
                           <StatusBadge status={survey.status} size="xs" />
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className="text-sm text-gray-600">Wave {survey.wave}</span>
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-2 min-w-24">
