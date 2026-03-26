@@ -515,4 +515,23 @@ export const TEMPLATES = [
       { id: 'q4', type: 'open_text', required: false, text: 'What is the single most important development in your market over the past 90 days?' },
     ],
   },
+  {
+    // tpl7 — project-shared template in p1 owned by Sarah Chen (u2)
+    // Ensures Standard User (Marco, u3) sees the "Project Templates" section in Settings
+    id: 'tpl7',
+    name: 'Steel Market Expert Briefing',
+    visibility: 'project',
+    projectId: 'p1',
+    ownerId: 'u2',
+    ownerName: 'Sarah Chen',
+    createdAt: '2026-03-01',
+    categories: ['cat1'],
+    versionCount: 2,
+    questions: [
+      { id: 'q1', type: 'single_choice', required: true, text: 'How do you expect global crude steel production to trend over the next 6 months?', options: ['Increase >5%', 'Increase 1–5%', 'Stay flat', 'Decrease 1–5%', 'Decrease >5%'] },
+      { id: 'q2', type: 'rating_scale', required: true, text: 'How significant is the impact of energy cost increases on steel production economics?', scale: 5, labels: ['No impact', 'Very significant'] },
+      { id: 'q3', type: 'multi_choice', required: false, text: 'Which regions are you seeing the most market activity in? (select all that apply)', options: ['China', 'India', 'Europe', 'North America', 'Southeast Asia', 'Middle East'] },
+      { id: 'q4', type: 'open_text', required: false, text: 'What are the key structural shifts you are observing in the global steel market?' },
+    ],
+  },
 ];
