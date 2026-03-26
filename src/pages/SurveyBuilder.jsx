@@ -1498,7 +1498,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
               <div className="flex items-center gap-1.5">
                 <Globe size={12} className="text-gray-400 flex-shrink-0" />
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                  surveyTypology === 'standard_intelligence_survey'
+                  surveyTypology === 'other_survey'
                     ? 'bg-blue-50 text-blue-700 border border-blue-100'
                     : 'bg-purple-50 border border-purple-100'
                 }`} style={surveyTypology === 'market_signal_report' ? { color: '#4A00F8' } : {}}>

@@ -16,7 +16,7 @@ const DEFAULT_TYPOLOGY_CONFIG = {
     short_text: true, long_text: true, ranking: true, date_picker: true, number: true,
     file_attachment: false,
   },
-  standard_intelligence_survey: {
+  other_survey: {
     single_choice: true, multi_choice: true, rating_scale: true, open_text: true,
     short_text: true, long_text: true, ranking: true, date_picker: true, number: true,
     file_attachment: true,
@@ -360,6 +360,25 @@ export function AppProvider({ children }) {
     addToast(`Org-Wide proposal for "${proposal.templateName}" rejected`);
   };
 
+  const revertTemplateVersion = (templateId, targetVersion) => {
+    setTemplates(prev => prev.map(t => {
+      if (t.id !== templateId) return t;
+      const newVersion = (t.versionCount || 1) + 1;
+      const newEntry = {
+        v: newVersion,
+        date: new Date().toISOString().split('T')[0],
+        changedBy: currentUser.name,
+        summary: `Reverted to v${targetVersion}`,
+      };
+      return {
+        ...t,
+        versionCount: newVersion,
+        versionHistory: [...(t.versionHistory || []), newEntry],
+      };
+    }));
+    addToast(`Template reverted to v${targetVersion} — saved as new version`, 'success');
+  };
+
   // Super Admin — update a question type's availability for a typology
   const updateTypologyConfig = (typology, questionType, enabled) => {
     setTypologyConfig(prev => ({
@@ -652,7 +671,7 @@ export function AppProvider({ children }) {
       archiveProject, unarchiveProject, archiveSurvey, unarchiveSurvey,
       createSurvey, updateSurvey, deleteSurvey,
       approveSurvey, rejectSurvey, saveWaveSetup, launchSurvey, launchSurveyWithConfig, closeSurvey,
-      cloneSurvey, saveTemplate, deleteTemplate, renameTemplate, updateTemplateQuestions, revertTemplateToPrivate,
+      cloneSurvey, saveTemplate, deleteTemplate, renameTemplate, updateTemplateQuestions, revertTemplateToPrivate, revertTemplateVersion,
       proposeOrgWide, approveOrgWide, rejectOrgWide, orgWideProposals,
       typologyConfig, updateTypologyConfig,
       submitChangeRequest, resolveChangeRequest,

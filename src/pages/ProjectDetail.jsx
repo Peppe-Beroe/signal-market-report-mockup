@@ -189,9 +189,9 @@ function CreateSurveyModal({ onConfirm, onClose }) {
               </label>
               <label
                 className="flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors hover:border-purple-300"
-                style={typology === 'standard_intelligence_survey' ? { borderColor: '#4A00F8', backgroundColor: '#f5f3ff' } : { borderColor: '#E5E7EB' }}
+                style={typology === 'other_survey' ? { borderColor: '#4A00F8', backgroundColor: '#f5f3ff' } : { borderColor: '#E5E7EB' }}
               >
-                <input type="radio" name="typology" value="standard_intelligence_survey" checked={typology === 'standard_intelligence_survey'} onChange={() => setTypology('standard_intelligence_survey')} className="mt-0.5 accent-purple-600" />
+                <input type="radio" name="typology" value="other_survey" checked={typology === 'other_survey'} onChange={() => setTypology('other_survey')} className="mt-0.5 accent-purple-600" />
                 <div>
                   <div className="flex items-center gap-2 mb-0.5">
                     <FileText size={13} className="text-blue-500" />

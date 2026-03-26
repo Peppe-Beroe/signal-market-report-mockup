@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Bell, Sliders, Save, CheckCircle, Globe, List, Mail, Plus, X, Edit2, Info, BookTemplate, Trash2, Lock, Users, Eye, ThumbsUp, ThumbsDown, Paperclip, ToggleLeft, ToggleRight, ArrowUpRight } from 'lucide-react';
+import { User, Bell, Sliders, Save, CheckCircle, Globe, List, Mail, Plus, X, Edit2, Info, BookTemplate, Trash2, Lock, Users, Eye, ThumbsUp, ThumbsDown, Paperclip, ToggleLeft, ToggleRight, ArrowUpRight, History, FileText } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -68,6 +68,7 @@ function TemplateTable({
   renamingTplId, renameTplValue, onStartRename, onSaveRename, onCancelRename, onRenameChange,
   expandedTplId, onToggleExpand,
   onEditQuestions, onDelete, onMakePrivate, onProposeOrgWide, getProjectName, categories,
+  restrictToOwner = false, currentUserId = null, onViewDetail = null,
 }) {
   const getCatNames = (tpl) => (tpl.categories || []).map(cid => categories.find(c => c.id === cid)?.name).filter(Boolean);
   return (
@@ -90,6 +91,7 @@ function TemplateTable({
             const isExpanded = expandedTplId === tpl.id;
             const isRenaming = renamingTplId === tpl.id;
             const createdDate = tpl.createdAt ? new Date(tpl.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '—';
+            const isOwner = !restrictToOwner || tpl.ownerId === currentUserId;
             return (
               <tr key={tpl.id} className="hover:bg-gray-50 transition-colors align-top">
                 {/* Name */}
@@ -150,13 +152,16 @@ function TemplateTable({
                 {/* Actions */}
                 <td className="py-3 px-3">
                   <div className="flex items-center gap-1 justify-end flex-wrap">
-                    <Button variant="ghost" size="xs" onClick={() => onStartRename(tpl)}><Edit2 size={11} /> Rename</Button>
-                    <Button variant="ghost" size="xs" onClick={() => onEditQuestions(tpl)}><Eye size={11} /> Edit</Button>
-                    <Button variant="ghost" size="xs" className="text-red-400 hover:text-red-600" onClick={() => onDelete(tpl.id)}><Trash2 size={11} /> Delete</Button>
-                    {showMakePrivate && (tpl.visibility === 'project' || tpl.visibility === 'org_wide') && (
+                    {onViewDetail && (
+                      <Button variant="ghost" size="xs" onClick={() => onViewDetail(tpl)}><Eye size={11} /> Details</Button>
+                    )}
+                    {isOwner && <Button variant="ghost" size="xs" onClick={() => onStartRename(tpl)}><Edit2 size={11} /> Rename</Button>}
+                    {isOwner && <Button variant="ghost" size="xs" onClick={() => onEditQuestions(tpl)}><Eye size={11} /> Edit</Button>}
+                    {isOwner && <Button variant="ghost" size="xs" className="text-red-400 hover:text-red-600" onClick={() => onDelete(tpl.id)}><Trash2 size={11} /> Delete</Button>}
+                    {isOwner && showMakePrivate && (tpl.visibility === 'project' || tpl.visibility === 'org_wide') && (
                       <Button variant="ghost" size="xs" className="text-amber-600 hover:text-amber-800" onClick={() => onMakePrivate(tpl.id)}><Lock size={11} /> Make private</Button>
                     )}
-                    {showProposeOrgWide && tpl.visibility !== 'org_wide' && (
+                    {isOwner && showProposeOrgWide && tpl.visibility !== 'org_wide' && (
                       pendingProposalTemplateIds?.includes(tpl.id)
                         ? <span className="text-xs text-violet-500 font-medium px-1">Pending…</span>
                         : <Button variant="ghost" size="xs" className="text-violet-600 hover:text-violet-800" onClick={() => onProposeOrgWide(tpl.id)}><ArrowUpRight size={11} /> Propose Org-Wide</Button>
@@ -215,8 +220,146 @@ function VisibilityBadge({ visibility }) {
   return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><Lock size={10} /> Private</span>;
 }
 
+function TemplateDetailModal({ template, onClose, onRevert, categories, internalUsers, getProjectName }) {
+  const getCatNames = (tpl) => (tpl.categories || []).map(cid => categories.find(c => c.id === cid)?.name).filter(Boolean);
+  const owner = internalUsers.find(u => u.id === template.ownerId);
+  const ownerName = owner ? `${owner.firstName} ${owner.lastName}` : (template.ownerName || '—');
+
+  // Build version history: use stored versionHistory if available, otherwise generate from versionCount
+  const count = template.versionCount || 1;
+  const baseDate = new Date(template.createdAt || '2026-01-15');
+  const history = template.versionHistory || Array.from({ length: count }, (_, i) => {
+    const d = new Date(baseDate);
+    d.setDate(d.getDate() + i * 18);
+    return {
+      v: i + 1,
+      date: d.toISOString().split('T')[0],
+      changedBy: ownerName,
+      summary: i === 0 ? 'Template created' : `Questions updated — v${i + 1}`,
+    };
+  });
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="fade-in bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[88vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-start justify-between p-6 border-b border-gray-100">
+          <div className="flex-1 min-w-0 pr-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <h2 className="text-lg font-bold text-gray-900 truncate">{template.name}</h2>
+              <VisibilityBadge visibility={template.visibility} />
+              <span className="text-xs font-semibold text-purple-500">v{template.versionCount || 1}</span>
+            </div>
+            {getCatNames(template).length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {getCatNames(template).map(n => <span key={n} className="px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-500">{n}</span>)}
+              </div>
+            )}
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0 p-1 rounded-lg hover:bg-gray-100"><X size={18} /></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Metadata grid */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <p className="text-xs text-gray-400 mb-0.5">Owner</p>
+              <p className="text-sm font-medium text-gray-700">{ownerName}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <p className="text-xs text-gray-400 mb-0.5">Created</p>
+              <p className="text-sm font-medium text-gray-700">
+                {template.createdAt ? new Date(template.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <p className="text-xs text-gray-400 mb-0.5">Questions</p>
+              <p className="text-sm font-medium text-gray-700">{template.questions?.length ?? 0}</p>
+            </div>
+            {template.projectId && (
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 col-span-3">
+                <p className="text-xs text-gray-400 mb-0.5">Linked project</p>
+                <p className="text-sm font-medium text-gray-700">{getProjectName(template.projectId)}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Current questions list */}
+          <div>
+            <p className="text-sm font-semibold text-gray-700 mb-3">Current questions (v{template.versionCount || 1})</p>
+            {(template.questions || []).length === 0 ? (
+              <p className="text-xs text-gray-400 italic">No questions in this template.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {template.questions.map((q, i) => (
+                  <div key={q.id} className="flex items-start gap-2 p-2.5 rounded-xl border border-gray-100 hover:bg-gray-50">
+                    <span className="text-xs text-gray-300 w-5 shrink-0 mt-0.5">{i + 1}.</span>
+                    <p className="text-xs text-gray-600 flex-1">{q.text || <span className="italic text-gray-300">No text</span>}</p>
+                    <span className="text-xs text-gray-400 shrink-0">{q.type?.replace('_', ' ')}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Version history */}
+          <div>
+            <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <History size={14} className="text-gray-400" />
+              Version history
+            </p>
+            <div className="overflow-x-auto rounded-xl border border-gray-100">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50">
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider w-16">Ver.</th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Changed by</th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Summary</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {[...history].reverse().map((entry) => {
+                    const isCurrent = entry.v === (template.versionCount || 1);
+                    return (
+                      <tr key={entry.v} className={`transition-colors ${isCurrent ? 'bg-purple-50' : 'hover:bg-gray-50'}`}>
+                        <td className="py-2.5 px-3">
+                          <span className={`text-xs font-bold ${isCurrent ? 'text-purple-600' : 'text-gray-500'}`}>v{entry.v}</span>
+                          {isCurrent && <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs bg-purple-100 text-purple-600">current</span>}
+                        </td>
+                        <td className="py-2.5 px-3 text-xs text-gray-500 whitespace-nowrap">
+                          {entry.date ? new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}
+                        </td>
+                        <td className="py-2.5 px-3 text-xs text-gray-600">{entry.changedBy}</td>
+                        <td className="py-2.5 px-3 text-xs text-gray-500">{entry.summary}</td>
+                        <td className="py-2.5 px-3 text-right">
+                          {!isCurrent && (
+                            <Button variant="ghost" size="xs" className="text-purple-600 hover:text-purple-800" onClick={() => onRevert(entry.v)}>
+                              ↩ Revert to v{entry.v}
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">Reverting creates a new version — no history is ever deleted.</p>
+          </div>
+        </div>
+
+        <div className="flex justify-end p-4 border-t border-gray-100">
+          <Button variant="secondary" size="sm" onClick={onClose}>Close</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Settings() {
-  const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs, categories, setCategories, templates, deleteTemplate, renameTemplate, updateTemplateQuestions, revertTemplateToPrivate, proposeOrgWide, approveOrgWide, rejectOrgWide, orgWideProposals, typologyConfig, updateTypologyConfig, projects, internalUsers } = useApp();
+  const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs, categories, setCategories, templates, deleteTemplate, renameTemplate, updateTemplateQuestions, revertTemplateToPrivate, revertTemplateVersion, proposeOrgWide, approveOrgWide, rejectOrgWide, orgWideProposals, typologyConfig, updateTypologyConfig, projects, internalUsers } = useApp();
   const isSuperAdmin = currentUser.role === 'Super Admin';
   const isStandardUser = currentUser.role === 'Standard User';
   const profileReadOnly = !isSuperAdmin; // Admin and Standard User see read-only profile
@@ -256,14 +399,15 @@ export default function Settings() {
   const [renameTplValue, setRenameTplValue] = useState('');
   const [expandedTplId, setExpandedTplId] = useState(null);
   const [editingTpl, setEditingTpl] = useState(null); // template being edited (questions)
+  const [viewingTpl, setViewingTpl] = useState(null); // template being viewed in detail modal
 
-  const myTemplates = templates.filter(t => t.ownerId === currentUser.id);
   const allTemplates = templates; // Super Admin view
 
-  // Public templates shared to projects the current user belongs to (but doesn't own)
   const myProjectIds = (internalUsers.find(u => u.id === currentUser.id)?.projects || []).map(p => p.id);
-  const sharedWithMeTemplates = templates.filter(t =>
-    t.visibility === 'project' && t.ownerId !== currentUser.id && myProjectIds.includes(t.projectId)
+  const visibleTemplates = templates.filter(t =>
+    t.ownerId === currentUser.id ||
+    (t.visibility === 'project' && myProjectIds.includes(t.projectId)) ||
+    t.visibility === 'org_wide'
   );
 
   const startRenameTpl = (tpl) => { setRenamingTplId(tpl.id); setRenameTplValue(tpl.name); };
@@ -528,16 +672,16 @@ export default function Settings() {
 
       {/* ── TEMPLATES ─────────────────────────────────────────────────────── */}
 
-      {/* My Templates — all users */}
+      {/* Survey Templates — unified section for Admin / Standard User */}
       {!isSuperAdmin && (
         <Card className="p-6">
-          <SectionHeader icon={BookTemplate} title="My Templates" description="Templates you have created — Private or Project-shared. Propose any for Org-Wide via the action button." />
-          {myTemplates.length === 0 ? (
+          <SectionHeader icon={BookTemplate} title="Survey Templates" description="All templates visible to you — your private templates and project-shared templates from your projects." />
+          {visibleTemplates.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-4">No templates yet. Save a survey as a template from the survey builder.</p>
           ) : (
             <TemplateTable
-              templates={myTemplates}
-              showOwner={false}
+              templates={visibleTemplates}
+              showOwner={true}
               showMakePrivate={false}
               showProposeOrgWide={true}
               pendingProposalTemplateIds={(orgWideProposals || []).map(p => p.templateId)}
@@ -552,33 +696,11 @@ export default function Settings() {
               onProposeOrgWide={proposeOrgWide}
               getProjectName={getProjectName}
               categories={categories}
+              restrictToOwner={true}
+              currentUserId={currentUser.id}
+              onViewDetail={null}
             />
           )}
-        </Card>
-      )}
-
-      {/* Shared with me — project templates from my projects (non-SA, non-owner) */}
-      {!isSuperAdmin && sharedWithMeTemplates.length > 0 && (
-        <Card className="p-6">
-          <SectionHeader icon={Users} title="Project Templates" description="Project-shared templates from projects you belong to — you can edit, rename, delete, or propose for Org-Wide." />
-          <TemplateTable
-            templates={sharedWithMeTemplates}
-            showOwner={true}
-            showMakePrivate={false}
-            showProposeOrgWide={true}
-            pendingProposalTemplateIds={(orgWideProposals || []).map(p => p.templateId)}
-            renamingTplId={renamingTplId} renameTplValue={renameTplValue}
-            onStartRename={startRenameTpl} onSaveRename={saveRenameTpl}
-            onCancelRename={() => setRenamingTplId(null)}
-            onRenameChange={v => setRenameTplValue(v)}
-            expandedTplId={expandedTplId} onToggleExpand={id => setExpandedTplId(expandedTplId === id ? null : id)}
-            onEditQuestions={tpl => setEditingTpl(tpl)}
-            onDelete={deleteTemplate}
-            onMakePrivate={null}
-            onProposeOrgWide={proposeOrgWide}
-            getProjectName={getProjectName}
-            categories={categories}
-          />
         </Card>
       )}
 
@@ -632,6 +754,7 @@ export default function Settings() {
               onProposeOrgWide={null}
               getProjectName={getProjectName}
               categories={categories}
+              onViewDetail={tpl => setViewingTpl(tpl)}
             />
           )}
         </Card>
@@ -646,6 +769,21 @@ export default function Settings() {
         />
       )}
 
+      {/* Template detail modal (SA) */}
+      {viewingTpl && (
+        <TemplateDetailModal
+          template={viewingTpl}
+          onClose={() => setViewingTpl(null)}
+          onRevert={(v) => {
+            revertTemplateVersion(viewingTpl.id, v);
+            setViewingTpl(prev => ({ ...prev, versionCount: (prev.versionCount || 1) + 1 }));
+          }}
+          categories={categories}
+          internalUsers={internalUsers}
+          getProjectName={getProjectName}
+        />
+      )}
+
       {/* Survey Configuration — Super Admin only */}
       {isSuperAdmin && typologyConfig && (
         <Card className="p-6">
@@ -653,7 +791,7 @@ export default function Settings() {
           {(() => {
             const TYPOLOGIES = [
               { key: 'market_signal_report', label: 'Market Signal Report' },
-              { key: 'standard_intelligence_survey', label: 'Other Survey' },
+              { key: 'other_survey', label: 'Other Survey' },
             ];
             const QT_LABELS = {
               single_choice: 'Single Choice', multi_choice: 'Multiple Choice', rating_scale: 'Rating Scale',

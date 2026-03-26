@@ -3,23 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle, Clock, TrendingUp, Users, AlertCircle, ArrowRight,
   Activity, Database, PlusCircle, AlertTriangle, FileText,
-  FolderOpen, FolderPlus, X, Info
+  FolderOpen, FolderPlus, X, Info, Globe
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
 
-// Modal for Standard User "new survey" CTA — asks where the survey should go before navigating.
+// Modal for Standard User "new survey" CTA — 2-step flow: step 1 = project destination, step 2 = survey name + typology.
 function NewSurveyModal({ projects, onClose, onSelectProject, onGoToProjects }) {
   const [path, setPath] = useState('existing'); // 'existing' | 'new'
   const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [step, setStep] = useState(1); // 1 = project selection, 2 = survey name + typology
+  const [surveyName, setSurveyName] = useState('');
+  const [typology, setTypology] = useState('');
   const activeProjects = projects.filter(p => !p.archived && p.status === 'Active');
-
-  function handleStart() {
-    if (path === 'existing' && selectedProjectId) {
-      onSelectProject(selectedProjectId);
-    }
-  }
+  const canProceedStep1 = path === 'existing' && selectedProjectId !== '';
+  const canCreate = surveyName.trim().length > 0 && typology !== '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
@@ -31,93 +30,168 @@ function NewSurveyModal({ projects, onClose, onSelectProject, onGoToProjects }) 
           <X size={18} />
         </button>
 
-        <h2 className="text-lg font-bold text-gray-900 mb-1">Where should this survey go?</h2>
-        <p className="text-sm text-gray-500 mb-5">Surveys always live inside a project. Choose the destination before you start building.</p>
+        {step === 1 && (
+          <>
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Where should this survey go?</h2>
+            <p className="text-sm text-gray-500 mb-5">Surveys always live inside a project. Choose the destination before you start building.</p>
 
-        {/* Option A — existing project */}
-        <button
-          onClick={() => setPath('existing')}
-          className={`w-full text-left rounded-xl border-2 p-4 mb-3 transition-all ${path === 'existing' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}
-        >
-          <div className="flex items-start gap-3">
-            <div className={`p-2 rounded-lg flex-shrink-0 ${path === 'existing' ? 'bg-purple-100' : 'bg-gray-100'}`}>
-              <FolderOpen size={18} style={{ color: path === 'existing' ? '#4A00F8' : '#9CA3AF' }} />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-800 text-sm">Add to an existing project</p>
-              <p className="text-xs text-gray-500 mt-0.5">Select the project this survey belongs to</p>
-            </div>
-          </div>
+            {/* Option A — existing project */}
+            <button
+              onClick={() => setPath('existing')}
+              className={`w-full text-left rounded-xl border-2 p-4 mb-3 transition-all ${path === 'existing' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`p-2 rounded-lg flex-shrink-0 ${path === 'existing' ? 'bg-purple-100' : 'bg-gray-100'}`}>
+                  <FolderOpen size={18} style={{ color: path === 'existing' ? '#4A00F8' : '#9CA3AF' }} />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">Add to an existing project</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Select the project this survey belongs to</p>
+                </div>
+              </div>
 
-          {path === 'existing' && (
-            <div className="mt-4">
-              {activeProjects.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">No active projects available.</p>
-              ) : (
-                <select
-                  value={selectedProjectId}
-                  onChange={e => setSelectedProjectId(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-                  onClick={e => e.stopPropagation()}
+              {path === 'existing' && (
+                <div className="mt-4">
+                  {activeProjects.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic">No active projects available.</p>
+                  ) : (
+                    <select
+                      value={selectedProjectId}
+                      onChange={e => setSelectedProjectId(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <option value="">— Select a project —</option>
+                      {activeProjects.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+            </button>
+
+            {/* Option B — new project needed */}
+            <button
+              onClick={() => setPath('new')}
+              className={`w-full text-left rounded-xl border-2 p-4 transition-all ${path === 'new' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`p-2 rounded-lg flex-shrink-0 ${path === 'new' ? 'bg-purple-100' : 'bg-gray-100'}`}>
+                  <FolderPlus size={18} style={{ color: path === 'new' ? '#4A00F8' : '#9CA3AF' }} />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">A new project is needed first</p>
+                  <p className="text-xs text-gray-500 mt-0.5">This survey topic doesn't fit any existing project</p>
+                </div>
+              </div>
+
+              {path === 'new' && (
+                <div className="mt-4 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5">
+                  <Info size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-blue-700">
+                    You can create a new project from the Projects page. You'll need to assign an <strong>Admin</strong> as the Project Owner — you cannot own projects directly.
+                  </p>
+                </div>
+              )}
+            </button>
+
+            {/* Footer actions */}
+            <div className="flex items-center justify-end gap-3 mt-5">
+              <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors">
+                Cancel
+              </button>
+              {path === 'existing' ? (
+                <button
+                  onClick={() => canProceedStep1 && setStep(2)}
+                  disabled={!canProceedStep1}
+                  className="px-5 py-2 rounded-lg text-white text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: '#4A00F8' }}
                 >
-                  <option value="">— Select a project —</option>
-                  {activeProjects.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                  Next →
+                </button>
+              ) : (
+                <button
+                  onClick={onGoToProjects}
+                  className="px-5 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Go to Projects →
+                </button>
               )}
             </div>
-          )}
-        </button>
+          </>
+        )}
 
-        {/* Option B — new project needed */}
-        <button
-          onClick={() => setPath('new')}
-          className={`w-full text-left rounded-xl border-2 p-4 transition-all ${path === 'new' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}
-        >
-          <div className="flex items-start gap-3">
-            <div className={`p-2 rounded-lg flex-shrink-0 ${path === 'new' ? 'bg-purple-100' : 'bg-gray-100'}`}>
-              <FolderPlus size={18} style={{ color: path === 'new' ? '#4A00F8' : '#9CA3AF' }} />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-800 text-sm">A new project is needed first</p>
-              <p className="text-xs text-gray-500 mt-0.5">This survey topic doesn't fit any existing project</p>
-            </div>
-          </div>
-
-          {path === 'new' && (
-            <div className="mt-4 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5">
-              <Info size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-blue-700">
-                You can create a new project from the Projects page. You'll need to assign an <strong>Admin</strong> as the Project Owner — you cannot own projects directly.
-              </p>
-            </div>
-          )}
-        </button>
-
-        {/* Footer actions */}
-        <div className="flex items-center justify-end gap-3 mt-5">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors">
-            Cancel
-          </button>
-          {path === 'existing' ? (
-            <button
-              onClick={handleStart}
-              disabled={!selectedProjectId}
-              className="px-5 py-2 rounded-lg text-white text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ backgroundColor: '#4A00F8' }}
-            >
-              Start Survey
+        {step === 2 && (
+          <>
+            <button onClick={() => setStep(1)} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 mb-4 transition-colors">
+              ← Back
             </button>
-          ) : (
-            <button
-              onClick={onGoToProjects}
-              className="px-5 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Go to Projects →
-            </button>
-          )}
-        </div>
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Survey details</h2>
+            <p className="text-sm text-gray-500 mb-5">Give your survey a name and choose its typology.</p>
+
+            {/* Survey name */}
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Survey name</label>
+              <input
+                type="text"
+                value={surveyName}
+                onChange={e => setSurveyName(e.target.value)}
+                placeholder="e.g. Steel Price Outlook Q3 2026"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors"
+                autoFocus
+              />
+            </div>
+
+            {/* Typology selector */}
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Survey typology</label>
+              <div className="space-y-2">
+                <label
+                  className="flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors hover:border-purple-300"
+                  style={typology === 'market_signal_report' ? { borderColor: '#4A00F8', backgroundColor: '#f5f3ff' } : { borderColor: '#E5E7EB' }}
+                >
+                  <input type="radio" name="typology" value="market_signal_report" checked={typology === 'market_signal_report'} onChange={() => setTypology('market_signal_report')} className="mt-0.5 accent-purple-600" />
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Globe size={13} className="text-purple-500" />
+                      <p className="text-sm font-semibold text-gray-800">Market Signal Report</p>
+                    </div>
+                    <p className="text-xs text-gray-500">Standard Beroe intelligence surveys. Base question type set.</p>
+                  </div>
+                </label>
+                <label
+                  className="flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors hover:border-purple-300"
+                  style={typology === 'other_survey' ? { borderColor: '#4A00F8', backgroundColor: '#f5f3ff' } : { borderColor: '#E5E7EB' }}
+                >
+                  <input type="radio" name="typology" value="other_survey" checked={typology === 'other_survey'} onChange={() => setTypology('other_survey')} className="mt-0.5 accent-purple-600" />
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <FileText size={13} className="text-blue-500" />
+                      <p className="text-sm font-semibold text-gray-800">Other Survey</p>
+                    </div>
+                    <p className="text-xs text-gray-500">General-purpose surveys. Includes File Attachment question type.</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Footer actions */}
+            <div className="flex items-center justify-end gap-3">
+              <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={() => canCreate && onSelectProject(selectedProjectId, surveyName.trim(), typology)}
+                disabled={!canCreate}
+                className="px-5 py-2 rounded-lg text-white text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ backgroundColor: '#4A00F8' }}
+              >
+                Create Survey
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -685,9 +759,9 @@ export default function Homepage() {
         <NewSurveyModal
           projects={projects}
           onClose={() => setShowNewSurveyModal(false)}
-          onSelectProject={projectId => {
+          onSelectProject={(projectId, surveyName, typology) => {
             setShowNewSurveyModal(false);
-            navigate(`/projects/${projectId}/surveys/new`);
+            navigate(`/projects/${projectId}/surveys/new`, { state: { typology, surveyName } });
           }}
           onGoToProjects={() => {
             setShowNewSurveyModal(false);

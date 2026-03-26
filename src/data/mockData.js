@@ -154,7 +154,7 @@ export const SURVEYS = [
   },
   {
     id: 's4', projectId: 'p3', name: 'Packaging Cost Index', category: 'Packaging',
-    typology: 'standard_intelligence_survey',
+    typology: 'other_survey',
     status: 'Draft', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: null,
     sendDate: null, closeDate: null,
