@@ -111,8 +111,10 @@ function QuestionCard({ question, index, total, onChange, onDelete, dragHandlers
     onChange({
       ...question,
       type: newType,
-      options: hasOpts ? (question.options.length > 0 ? question.options : ['Option A', 'Option B', 'Option C']) : [],
+      options: hasOpts ? ((question.options || []).length > 0 ? question.options : ['Option A', 'Option B', 'Option C']) : [],
       addOther: hasOpts ? question.addOther : false,
+      scale: question.scale || 5,
+      labels: question.labels || ['Very low', 'Very high'],
     });
   };
 
@@ -463,8 +465,8 @@ function ExpertPreview({ surveyName, questions, currentQIndex, setCurrentQIndex,
                       ))}
                     </div>
                     <div className="flex justify-between text-xs text-gray-400 mt-1">
-                      <span>{question.labels[0]}</span>
-                      <span>{question.labels[1]}</span>
+                      <span>{(question.labels || ['', ''])[0]}</span>
+                      <span>{(question.labels || ['', ''])[1]}</span>
                     </div>
                   </div>
                 )}
