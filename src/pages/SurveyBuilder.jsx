@@ -56,7 +56,11 @@ const newQuestion = (type = 'single_choice') => ({
   addOther: false,
   minValue: '',
   maxValue: '',
-  attachedFile: null,   // for file_attachment type: { name, size }
+  attachedFile: null,       // for file_attachment type: { name, size }
+  responseType: 'open_text', // for file_attachment: how the expert responds
+  responseOptions: ['Option A', 'Option B', 'Option C'], // for file_attachment + single/multi choice response
+  responseScale: 5,          // for file_attachment + rating_scale response
+  responseLabels: ['Very low', 'Very high'], // for file_attachment + rating_scale response
 });
 
 function QuestionTypeIcon({ type }) {
@@ -355,6 +359,82 @@ function QuestionCard({ question, index, total, onChange, onDelete, dragHandlers
                   <option value="rating_scale">Rating Scale</option>
                 </select>
               </div>
+
+              {/* Options editor — appears when responseType is single or multi choice */}
+              {(question.responseType === 'single_choice' || question.responseType === 'multi_choice') && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Response options</label>
+                  <div className="space-y-1.5">
+                    {(question.responseOptions || ['Option A', 'Option B', 'Option C']).map((opt, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <div className={`w-4 h-4 flex-shrink-0 border-2 border-gray-300 ${question.responseType === 'single_choice' ? 'rounded-full' : 'rounded'}`} />
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={e => {
+                            const opts = [...(question.responseOptions || [])];
+                            opts[i] = e.target.value;
+                            onChange({ ...question, responseOptions: opts });
+                          }}
+                          className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-gray-50 focus:bg-white transition-colors"
+                        />
+                        {(question.responseOptions || []).length > 2 && (
+                          <button
+                            onClick={() => onChange({ ...question, responseOptions: (question.responseOptions || []).filter((_, idx) => idx !== i) })}
+                            className="text-gray-300 hover:text-red-400 transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => onChange({ ...question, responseOptions: [...(question.responseOptions || []), `Option ${(question.responseOptions || []).length + 1}`] })}
+                      className="flex items-center gap-1.5 text-xs font-medium mt-1 hover:opacity-80 transition-opacity"
+                      style={{ color: '#4A00F8' }}
+                    >
+                      <Plus size={13} /> Add option
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Rating scale config — appears when responseType is rating_scale */}
+              {question.responseType === 'rating_scale' && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-medium text-gray-500 w-20">Scale</label>
+                    <select
+                      value={question.responseScale || 5}
+                      onChange={e => onChange({ ...question, responseScale: Number(e.target.value) })}
+                      className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white text-gray-700"
+                    >
+                      <option value={5}>1 – 5</option>
+                      <option value={7}>1 – 7</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-medium text-gray-500 w-20">Min label</label>
+                    <input
+                      type="text"
+                      value={(question.responseLabels || ['Very low', 'Very high'])[0]}
+                      onChange={e => onChange({ ...question, responseLabels: [e.target.value, (question.responseLabels || ['Very low', 'Very high'])[1]] })}
+                      className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-gray-50"
+                      placeholder="e.g. Very low"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-medium text-gray-500 w-20">Max label</label>
+                    <input
+                      type="text"
+                      value={(question.responseLabels || ['Very low', 'Very high'])[1]}
+                      onChange={e => onChange({ ...question, responseLabels: [(question.responseLabels || ['Very low', 'Very high'])[0], e.target.value] })}
+                      className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-gray-50"
+                      placeholder="e.g. Very high"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -600,7 +680,7 @@ function ExpertPreview({ surveyName, questions, currentQIndex, setCurrentQIndex,
                   />
                 )}
 
-                {/* File Attachment — expert view: downloadable reference + standard answer input */}
+                {/* File Attachment — expert view: downloadable reference + configured answer input */}
                 {question?.type === 'file_attachment' && (
                   <div className="space-y-3">
                     {question.attachedFile && (
@@ -615,13 +695,80 @@ function ExpertPreview({ surveyName, questions, currentQIndex, setCurrentQIndex,
                         </button>
                       </div>
                     )}
-                    <textarea
-                      value={previewAnswers[currentQIndex] || ''}
-                      onChange={e => handleAnswer(e.target.value)}
-                      placeholder="Your response..."
-                      rows={3}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:border-purple-400 transition-colors"
-                    />
+                    {/* Open text (default) */}
+                    {(!question.responseType || question.responseType === 'open_text') && (
+                      <textarea
+                        value={previewAnswers[currentQIndex] || ''}
+                        onChange={e => handleAnswer(e.target.value)}
+                        placeholder="Your response..."
+                        rows={3}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:border-purple-400 transition-colors"
+                      />
+                    )}
+                    {/* Single choice */}
+                    {question.responseType === 'single_choice' && (
+                      <div className="space-y-2">
+                        {(question.responseOptions || []).map((opt, i) => (
+                          <button
+                            key={i}
+                            onClick={() => handleAnswer(opt)}
+                            className={`w-full text-left p-3 rounded-xl border-2 text-sm transition-all ${previewAnswers[currentQIndex] === opt ? '' : 'border-gray-200 hover:border-purple-300 text-gray-700'}`}
+                            style={previewAnswers[currentQIndex] === opt ? { borderColor: '#4A00F8', backgroundColor: '#EDE9FF' } : {}}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${previewAnswers[currentQIndex] === opt ? '' : 'border-gray-300'}`} style={previewAnswers[currentQIndex] === opt ? { borderColor: '#4A00F8' } : {}}>
+                                {previewAnswers[currentQIndex] === opt && <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#4A00F8' }} />}
+                              </div>
+                              {opt || <span className="text-gray-300 italic">Empty option</span>}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {/* Multiple choice */}
+                    {question.responseType === 'multi_choice' && (
+                      <div className="space-y-2">
+                        {(question.responseOptions || []).map((opt, i) => {
+                          const selected = (previewAnswers[currentQIndex] || []).includes(opt);
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => handleMultiAnswer(opt)}
+                              className={`w-full text-left p-3 rounded-xl border-2 text-sm transition-all ${selected ? '' : 'border-gray-200 hover:border-purple-300 text-gray-700'}`}
+                              style={selected ? { borderColor: '#4A00F8', backgroundColor: '#EDE9FF', color: '#0F0A2E' } : {}}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${selected ? '' : 'border-gray-300'}`} style={selected ? { backgroundColor: '#4A00F8', borderColor: '#4A00F8' } : {}}>
+                                  {selected && <Check size={10} className="text-white" />}
+                                </div>
+                                {opt || <span className="text-gray-300 italic">Empty option</span>}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {/* Rating scale */}
+                    {question.responseType === 'rating_scale' && (
+                      <div>
+                        <div className="flex gap-2 justify-center my-2">
+                          {Array.from({ length: question.responseScale || 5 }, (_, i) => i + 1).map(n => (
+                            <button
+                              key={n}
+                              onClick={() => handleAnswer(n)}
+                              className={`w-11 h-11 rounded-xl border-2 text-sm font-bold transition-all ${previewAnswers[currentQIndex] === n ? 'text-white' : 'border-gray-200 text-gray-600 hover:border-purple-400'}`}
+                              style={previewAnswers[currentQIndex] === n ? { backgroundColor: '#4A00F8', borderColor: '#4A00F8' } : {}}
+                            >
+                              {n}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-400 mt-1">
+                          <span>{(question.responseLabels || ['', ''])[0]}</span>
+                          <span>{(question.responseLabels || ['', ''])[1]}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1355,7 +1502,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
                     ? 'bg-blue-50 text-blue-700 border border-blue-100'
                     : 'bg-purple-50 border border-purple-100'
                 }`} style={surveyTypology === 'market_signal_report' ? { color: '#4A00F8' } : {}}>
-                  {surveyTypology === 'market_signal_report' ? 'Market Signal Report' : 'Standard Intelligence Survey'}
+                  {surveyTypology === 'market_signal_report' ? 'Market Signal Report' : 'Other Survey'}
                 </span>
               </div>
             </div>

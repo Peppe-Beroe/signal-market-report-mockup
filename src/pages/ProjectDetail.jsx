@@ -141,8 +141,8 @@ const MOCK_TEAM = [
 // Modal to select survey name + typology before opening the builder (P1-F-82)
 function CreateSurveyModal({ onConfirm, onClose }) {
   const [surveyName, setSurveyName] = useState('');
-  const [typology, setTypology] = useState('market_signal_report');
-  const canCreate = surveyName.trim().length > 0;
+  const [typology, setTypology] = useState('');
+  const canCreate = surveyName.trim().length > 0 && typology !== '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -195,7 +195,7 @@ function CreateSurveyModal({ onConfirm, onClose }) {
                 <div>
                   <div className="flex items-center gap-2 mb-0.5">
                     <FileText size={13} className="text-blue-500" />
-                    <p className="text-sm font-semibold text-gray-800">Standard Intelligence Survey</p>
+                    <p className="text-sm font-semibold text-gray-800">Other Survey</p>
                   </div>
                   <p className="text-xs text-gray-500">General-purpose surveys. Includes File Attachment question type.</p>
                 </div>

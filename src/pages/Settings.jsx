@@ -653,7 +653,7 @@ export default function Settings() {
           {(() => {
             const TYPOLOGIES = [
               { key: 'market_signal_report', label: 'Market Signal Report' },
-              { key: 'standard_intelligence_survey', label: 'Standard Intelligence Survey' },
+              { key: 'standard_intelligence_survey', label: 'Other Survey' },
             ];
             const QT_LABELS = {
               single_choice: 'Single Choice', multi_choice: 'Multiple Choice', rating_scale: 'Rating Scale',
