@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Save,
   Send, Eye, EyeOff, X, Check, Smartphone, Monitor,
   AlignLeft, List, CheckSquare, Star, Type, AlignJustify,
   BarChart2, Calendar, Hash, BookTemplate, ChevronUp as Up, ChevronDown as Down,
-  Mail, Bell, AlertTriangle, Search, Tag, Users, Edit3, GitCompare, XCircle
+  Mail, Bell, AlertTriangle, Search, Tag, Users, Edit3, GitCompare, XCircle,
+  Paperclip, FileText, Globe
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Button from '../components/ui/Button';
@@ -41,6 +42,7 @@ const QUESTION_TYPES = [
   { value: 'ranking', label: 'Ranking', icon: BarChart2, description: 'Order options by preference' },
   { value: 'date_picker', label: 'Date Picker', icon: Calendar, description: 'Select a date' },
   { value: 'number', label: 'Number', icon: Hash, description: 'Numeric input with optional range' },
+  { value: 'file_attachment', label: 'File Attachment', icon: Paperclip, description: 'Attach a reference file for experts' },
 ];
 
 const newQuestion = (type = 'single_choice') => ({
@@ -54,6 +56,7 @@ const newQuestion = (type = 'single_choice') => ({
   addOther: false,
   minValue: '',
   maxValue: '',
+  attachedFile: null,   // for file_attachment type: { name, size }
 });
 
 function QuestionTypeIcon({ type }) {
@@ -69,6 +72,7 @@ function QuestionTypeIcon({ type }) {
     ranking: 'bg-indigo-50 text-indigo-600',
     date_picker: 'bg-pink-50 text-pink-600',
     number: 'bg-orange-50 text-orange-600',
+    file_attachment: 'bg-violet-50 text-violet-600',
   };
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${colors[type] || 'bg-gray-50 text-gray-600'}`}>
@@ -78,7 +82,7 @@ function QuestionTypeIcon({ type }) {
   );
 }
 
-function QuestionCard({ question, index, total, onChange, onDelete, dragHandlers, isDragOver }) {
+function QuestionCard({ question, index, total, onChange, onDelete, dragHandlers, isDragOver, allowedTypes }) {
   const [collapsed, setCollapsed] = useState(false);
 
   const updateOption = (i, value) => {
@@ -155,7 +159,10 @@ function QuestionCard({ question, index, total, onChange, onDelete, dragHandlers
               onChange={e => handleTypeChange(e.target.value)}
               className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white text-gray-700 w-full"
             >
-              {QUESTION_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              {(allowedTypes
+                ? QUESTION_TYPES.filter(t => allowedTypes.includes(t.value))
+                : QUESTION_TYPES
+              ).map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
 
@@ -295,6 +302,58 @@ function QuestionCard({ question, index, total, onChange, onDelete, dragHandlers
                   placeholder="No maximum"
                   className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-gray-50"
                 />
+              </div>
+            </div>
+          )}
+
+          {/* File Attachment type */}
+          {question.type === 'file_attachment' && (
+            <div className="space-y-3">
+              {/* Persistent data quality warning */}
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <AlertTriangle size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-amber-800">
+                  <p className="font-semibold mb-0.5">Data quality notice</p>
+                  <p>The attached file is <strong>not exported to DataHub</strong>. Only the expert's text response travels to DataHub. The attachment is reference material for the expert only and is retained in the platform record for audit purposes.</p>
+                </div>
+              </div>
+              {/* File upload simulation */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">Reference file</label>
+                {question.attachedFile ? (
+                  <div className="flex items-center gap-2 p-3 rounded-lg border border-gray-200 bg-gray-50">
+                    <FileText size={14} className="text-purple-500 flex-shrink-0" />
+                    <span className="text-sm text-gray-700 flex-1 truncate">{question.attachedFile.name}</span>
+                    <span className="text-xs text-gray-400">{question.attachedFile.size}</span>
+                    <button
+                      onClick={() => onChange({ ...question, attachedFile: null })}
+                      className="text-gray-300 hover:text-red-400 transition-colors ml-1"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => onChange({ ...question, attachedFile: { name: 'reference_document.pdf', size: '1.2 MB' } })}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 border-dashed border-gray-200 w-full justify-center text-sm text-gray-400 hover:border-purple-300 hover:text-purple-500 transition-colors"
+                  >
+                    <Paperclip size={14} /> Upload reference file (max 50 MB — PDF, DOCX, XLSX, PNG)
+                  </button>
+                )}
+              </div>
+              {/* Answer input type for the expert response */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">Expert response type</label>
+                <select
+                  value={question.responseType || 'open_text'}
+                  onChange={e => onChange({ ...question, responseType: e.target.value })}
+                  className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white text-gray-700 w-full"
+                >
+                  <option value="open_text">Open Text</option>
+                  <option value="single_choice">Single Choice</option>
+                  <option value="multi_choice">Multiple Choice</option>
+                  <option value="rating_scale">Rating Scale</option>
+                </select>
               </div>
             </div>
           )}
@@ -540,6 +599,31 @@ function ExpertPreview({ surveyName, questions, currentQIndex, setCurrentQIndex,
                     className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:border-purple-400 transition-colors"
                   />
                 )}
+
+                {/* File Attachment — expert view: downloadable reference + standard answer input */}
+                {question?.type === 'file_attachment' && (
+                  <div className="space-y-3">
+                    {question.attachedFile && (
+                      <div className="flex items-center gap-3 p-3 rounded-xl border border-violet-200 bg-violet-50">
+                        <FileText size={16} className="text-violet-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-violet-800 mb-0.5">Reference file attached</p>
+                          <p className="text-xs text-violet-600 truncate">{question.attachedFile.name}</p>
+                        </div>
+                        <button className="text-xs font-medium text-violet-700 border border-violet-300 rounded-lg px-2.5 py-1 hover:bg-violet-100 transition-colors flex-shrink-0">
+                          Download
+                        </button>
+                      </div>
+                    )}
+                    <textarea
+                      value={previewAnswers[currentQIndex] || ''}
+                      onChange={e => handleAnswer(e.target.value)}
+                      placeholder="Your response..."
+                      rows={3}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:border-purple-400 transition-colors"
+                    />
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -590,12 +674,15 @@ function UnsavedChangesModal({ onSave, onDiscard, onCancel }) {
   );
 }
 
-function SaveTemplateModal({ onSave, onClose, projectName }) {
+function SaveTemplateModal({ onSave, onClose, projectName, activeCategories = [] }) {
   const [name, setName] = useState('');
   const [visibility, setVisibility] = useState('private');
+  const [selectedCats, setSelectedCats] = useState([]);
+  const toggleCat = (id) => setSelectedCats(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  const canSave = name.trim() && selectedCats.length > 0;
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="fade-in bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
+      <div className="fade-in bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Save as Template</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
@@ -609,6 +696,31 @@ function SaveTemplateModal({ onSave, onClose, projectName }) {
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none mb-4"
           autoFocus
         />
+        {/* Category labels — required */}
+        <div className="mb-4">
+          <p className="text-sm font-medium text-gray-700 mb-1.5">Category labels <span className="text-red-500">*</span></p>
+          <p className="text-xs text-gray-400 mb-2">Select at least one category to classify this template.</p>
+          <div className="flex flex-wrap gap-2">
+            {activeCategories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => toggleCat(cat.id)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  selectedCats.includes(cat.id)
+                    ? 'border-purple-400 text-white'
+                    : 'border-gray-200 text-gray-500 hover:border-purple-300'
+                }`}
+                style={selectedCats.includes(cat.id) ? { backgroundColor: '#4A00F8', borderColor: '#4A00F8' } : {}}
+              >
+                {cat.name}
+              </button>
+            ))}
+            {activeCategories.length === 0 && <p className="text-xs text-gray-400 italic">No categories available — add them in Settings → Category Taxonomy.</p>}
+          </div>
+          {selectedCats.length === 0 && name.trim() && (
+            <p className="text-xs text-red-400 mt-1.5">At least one category is required.</p>
+          )}
+        </div>
         <div className="mb-5">
           <p className="text-sm font-medium text-gray-700 mb-2">Visibility</p>
           <div className="space-y-2">
@@ -622,63 +734,129 @@ function SaveTemplateModal({ onSave, onClose, projectName }) {
             <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 cursor-pointer hover:border-purple-300 transition-colors" style={visibility === 'project' ? { borderColor: '#4A00F8', backgroundColor: '#f5f3ff' } : {}}>
               <input type="radio" name="visibility" value="project" checked={visibility === 'project'} onChange={() => setVisibility('project')} className="mt-0.5 accent-purple-600" />
               <div>
-                <p className="text-sm font-medium text-gray-800">Public — shared with project</p>
-                <p className="text-xs text-gray-400">All editors of <span className="font-medium text-gray-600">{projectName || 'this project'}</span> can view, apply, edit, and delete this template. This cannot be undone by you — only a Super Admin can revert it to private.</p>
+                <p className="text-sm font-medium text-gray-800">Project — shared with project editors</p>
+                <p className="text-xs text-gray-400">All editors of <span className="font-medium text-gray-600">{projectName || 'this project'}</span> can view, apply, edit, and delete this template. To share beyond the project, propose it as Org-Wide from Settings → My Templates.</p>
               </div>
             </label>
           </div>
         </div>
         <div className="flex gap-2 justify-end">
           <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-          <Button size="sm" disabled={!name.trim()} onClick={() => onSave(name, visibility)}>Save Template</Button>
+          <Button size="sm" disabled={!canSave} onClick={() => onSave(name, visibility, selectedCats)}>Save Template</Button>
         </div>
       </div>
     </div>
   );
 }
 
-function UseTemplateModal({ myTemplates, projectTemplates, onUse, onClose }) {
-  const hasAny = myTemplates.length > 0 || projectTemplates.length > 0;
+function UseTemplateModal({ myTemplates, projectTemplates, orgWideTemplates, onUse, onClose, categories = [], surveyTypology, allowedTypeValues = [] }) {
+  const [activeCatFilter, setActiveCatFilter] = useState(null);
+  const hasAny = myTemplates.length > 0 || projectTemplates.length > 0 || orgWideTemplates.length > 0;
 
-  const TemplateButton = ({ t }) => (
-    <button
-      key={t.id}
-      onClick={() => onUse(t)}
-      className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all"
-    >
-      <div className="flex items-center justify-between gap-2 mb-0.5">
-        <p className="text-sm font-semibold text-gray-800">{t.name}</p>
-        {t.visibility === 'project'
-          ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100 shrink-0">Public</span>
-          : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200 shrink-0">Private</span>
-        }
-      </div>
-      <p className="text-xs text-gray-400">{t.questions.length} questions · {t.createdBy} · {t.createdAt}</p>
-    </button>
-  );
+  const getCatNames = (tpl) => (tpl.categories || []).map(cid => categories.find(c => c.id === cid)?.name).filter(Boolean);
+
+  const filterByCategory = (list) => {
+    if (!activeCatFilter) return list;
+    return list.filter(t => (t.categories || []).includes(activeCatFilter));
+  };
+
+  const getTypologyWarning = (tpl) => {
+    const disallowedQs = (tpl.questions || []).filter(q => !allowedTypeValues.includes(q.type));
+    return disallowedQs.length > 0
+      ? `${disallowedQs.length} question(s) will be excluded (not available in this survey's typology).`
+      : null;
+  };
+
+  const VisBadge = ({ v }) => {
+    if (v === 'org_wide') return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700 border border-violet-100 shrink-0"><Globe size={9} /> Org-Wide</span>;
+    if (v === 'project') return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100 shrink-0">Project</span>;
+    return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200 shrink-0">Private</span>;
+  };
+
+  const TemplateButton = ({ t }) => {
+    const warning = getTypologyWarning(t);
+    const catNames = getCatNames(t);
+    return (
+      <button
+        key={t.id}
+        onClick={() => onUse(t)}
+        className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all"
+      >
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <p className="text-sm font-semibold text-gray-800">{t.name}</p>
+          <VisBadge v={t.visibility} />
+        </div>
+        {catNames.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-1">
+            {catNames.map(n => <span key={n} className="px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-500">{n}</span>)}
+          </div>
+        )}
+        <p className="text-xs text-gray-400">{t.questions.length} questions{t.createdBy ? ` · ${t.createdBy}` : ''} · v{t.versionCount || 1}</p>
+        {warning && (
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5 border border-amber-200">
+            <AlertTriangle size={11} className="flex-shrink-0" /> {warning}
+          </div>
+        )}
+      </button>
+    );
+  };
+
+  const allCats = categories.filter(c => c.active);
+  const filtered = {
+    my: filterByCategory(myTemplates),
+    project: filterByCategory(projectTemplates),
+    org: filterByCategory(orgWideTemplates),
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="fade-in bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[80vh] flex flex-col">
+      <div className="fade-in bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Apply a Template</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
+        {/* Category filter pills */}
+        {allCats.length > 0 && hasAny && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            <button
+              onClick={() => setActiveCatFilter(null)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${!activeCatFilter ? 'text-white border-transparent' : 'border-gray-200 text-gray-500 hover:border-purple-300'}`}
+              style={!activeCatFilter ? { backgroundColor: '#4A00F8' } : {}}
+            >All</button>
+            {allCats.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setActiveCatFilter(activeCatFilter === c.id ? null : c.id)}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${activeCatFilter === c.id ? 'text-white border-transparent' : 'border-gray-200 text-gray-500 hover:border-purple-300'}`}
+                style={activeCatFilter === c.id ? { backgroundColor: '#4A00F8' } : {}}
+              >{c.name}</button>
+            ))}
+          </div>
+        )}
         {!hasAny ? (
           <p className="text-sm text-gray-400 text-center py-6">No templates available yet. Save a survey as a template to use it here.</p>
         ) : (
           <div className="overflow-y-auto flex-1 space-y-5">
-            {myTemplates.length > 0 && (
+            {filtered.org.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">My Templates</p>
-                <div className="space-y-2">{myTemplates.map(t => <TemplateButton key={t.id} t={t} />)}</div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Globe size={11} /> Org-Wide Templates</p>
+                <div className="space-y-2">{filtered.org.map(t => <TemplateButton key={t.id} t={t} />)}</div>
               </div>
             )}
-            {projectTemplates.length > 0 && (
+            {filtered.my.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">My Templates</p>
+                <div className="space-y-2">{filtered.my.map(t => <TemplateButton key={t.id} t={t} />)}</div>
+              </div>
+            )}
+            {filtered.project.length > 0 && (
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Project Templates</p>
-                <div className="space-y-2">{projectTemplates.map(t => <TemplateButton key={t.id} t={t} />)}</div>
+                <div className="space-y-2">{filtered.project.map(t => <TemplateButton key={t.id} t={t} />)}</div>
               </div>
+            )}
+            {filtered.org.length === 0 && filtered.my.length === 0 && filtered.project.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-4">No templates match the selected category.</p>
             )}
           </div>
         )}
@@ -693,9 +871,11 @@ function UseTemplateModal({ myTemplates, projectTemplates, onUse, onClose }) {
 export default function SurveyBuilder({ mode = 'create' }) {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, surveys, projects, experts, templates, categories, orgTimezone, addToast, createSurvey, updateSurvey, saveTemplate, resolveAmendments } = useApp();
+  const location = useLocation();
+  const { currentUser, surveys, projects, experts, templates, categories, typologyConfig, orgTimezone, addToast, createSurvey, updateSurvey, saveTemplate, resolveAmendments } = useApp();
   const myTemplates = templates.filter(t => t.ownerId === currentUser.id);
   const projectTemplates = templates.filter(t => t.visibility === 'project' && t.projectId === projectId && t.ownerId !== currentUser.id);
+  const orgWideTemplates = templates.filter(t => t.visibility === 'org_wide');
 
   const project = projects.find(p => p.id === projectId);
   const existingSurvey = surveys.find(s => s.id === surveyId);
@@ -703,13 +883,26 @@ export default function SurveyBuilder({ mode = 'create' }) {
 
   const activeCategories = (categories || []).filter(c => c.active);
   const [surveyName, setSurveyName] = useState(
-    mode === 'edit' && existingSurvey ? existingSurvey.name : ''
+    mode === 'edit' && existingSurvey
+      ? existingSurvey.name
+      : (location.state?.surveyName || '')
   );
   const [surveyCategory, setSurveyCategory] = useState(
     mode === 'edit' && existingSurvey?.category
       ? existingSurvey.category
       : (activeCategories[0]?.name || '')
   );
+  const [surveyTypology, setSurveyTypology] = useState(
+    mode === 'edit' && existingSurvey?.typology
+      ? existingSurvey.typology
+      : (location.state?.typology || 'market_signal_report')
+  );
+  // Compute allowed question types for this survey's typology
+  const typologyTypes = typologyConfig?.[surveyTypology] || {};
+  const allowedTypeValues = QUESTION_TYPES
+    .filter(t => typologyTypes[t.value] !== false)
+    .map(t => t.value);
+
   const [questions, setQuestions] = useState(
     mode === 'edit' && existingSurvey ? existingSurvey.questions : [newQuestion()]
   );
@@ -868,7 +1061,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
     if (mode === 'edit' && surveyId) {
       updateSurvey({ surveyId, name: surveyName, category: surveyCategory, questions, waveConfig });
     } else {
-      const saved = createSurvey({ projectId, name: surveyName, category: surveyCategory, questions, status: 'Draft', waveConfig });
+      const saved = createSurvey({ projectId, name: surveyName, category: surveyCategory, typology: surveyTypology, questions, status: 'Draft', waveConfig });
       navigate(`/projects/${projectId}/surveys/${saved.id}/builder`, { replace: true });
     }
     setIsDirty(false);
@@ -896,22 +1089,29 @@ export default function SurveyBuilder({ mode = 'create' }) {
     if (mode === 'edit' && surveyId) {
       updateSurvey({ surveyId, name: surveyName, category: surveyCategory, questions, status: 'Submitted', waveConfig });
     } else {
-      createSurvey({ projectId, name: surveyName, category: surveyCategory, questions, status: 'Submitted', waveConfig });
+      createSurvey({ projectId, name: surveyName, category: surveyCategory, typology: surveyTypology, questions, status: 'Submitted', waveConfig });
     }
     setIsDirty(false);
     navigate(`/projects/${projectId}`);
   };
 
-  const handleSaveTemplate = (name, visibility) => {
-    saveTemplate(name, questions, visibility, projectId);
+  const handleSaveTemplate = (name, visibility, selectedCategories) => {
+    saveTemplate(name, questions, visibility, projectId, selectedCategories);
     setShowSaveTemplateModal(false);
   };
 
   const handleUseTemplate = (template) => {
     if (questions.length > 0 && !window.confirm(`Applying this template will replace the ${questions.length} existing question${questions.length !== 1 ? 's' : ''}. Continue?`)) return;
-    setQuestions(template.questions.map(q => ({ ...q, id: `q${Date.now()}_${Math.random().toString(36).slice(2, 6)}` })));
+    // Filter out question types not allowed for this survey's typology
+    const compatibleQs = template.questions.filter(q => allowedTypeValues.includes(q.type));
+    const excluded = template.questions.length - compatibleQs.length;
+    setQuestions(compatibleQs.map(q => ({ ...q, id: `q${Date.now()}_${Math.random().toString(36).slice(2, 6)}` })));
     setShowUseTemplateModal(false);
-    addToast(`Template "${template.name}" loaded`);
+    if (excluded > 0) {
+      addToast(`Template applied — ${excluded} question(s) excluded (not available in this typology)`, 'warning');
+    } else {
+      addToast(`Template "${template.name}" applied`);
+    }
     triggerAutoSave();
   };
 
@@ -1125,7 +1325,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
       {activeTab === 'questions' && <div className="flex-1 flex overflow-hidden">
         {/* Left: Editor */}
         <div className="flex-1 overflow-y-auto p-6" style={{ minWidth: 0 }}>
-          {/* Survey name + category */}
+          {/* Survey name + category + typology */}
           <div className="mb-5 space-y-3">
             <input
               type="text"
@@ -1134,18 +1334,30 @@ export default function SurveyBuilder({ mode = 'create' }) {
               placeholder="Enter survey name..."
               className="w-full text-xl font-bold text-gray-900 border-0 border-b-2 border-gray-100 pb-2 bg-transparent focus:border-purple-400 focus:outline-none transition-colors placeholder-gray-300"
             />
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-gray-500 flex-shrink-0">Category</label>
-              <select
-                value={surveyCategory}
-                onChange={e => { setSurveyCategory(e.target.value); setIsDirty(true); }}
-                className="border border-gray-200 rounded-lg px-2.5 py-1 text-sm bg-white focus:border-purple-400 focus:outline-none transition-colors text-gray-700"
-              >
-                {activeCategories.length === 0 && <option value="">No categories available</option>}
-                {activeCategories.map(c => (
-                  <option key={c.id} value={c.name}>{c.name}</option>
-                ))}
-              </select>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-500 flex-shrink-0">Category</label>
+                <select
+                  value={surveyCategory}
+                  onChange={e => { setSurveyCategory(e.target.value); setIsDirty(true); }}
+                  className="border border-gray-200 rounded-lg px-2.5 py-1 text-sm bg-white focus:border-purple-400 focus:outline-none transition-colors text-gray-700"
+                >
+                  {activeCategories.length === 0 && <option value="">No categories available</option>}
+                  {activeCategories.map(c => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Globe size={12} className="text-gray-400 flex-shrink-0" />
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                  surveyTypology === 'standard_intelligence_survey'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                    : 'bg-purple-50 border border-purple-100'
+                }`} style={surveyTypology === 'market_signal_report' ? { color: '#4A00F8' } : {}}>
+                  {surveyTypology === 'market_signal_report' ? 'Market Signal Report' : 'Standard Intelligence Survey'}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -1171,6 +1383,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
                       onDragStart: () => handleDragStart(i),
                       onDragEnd: handleDragEnd,
                     }}
+                    allowedTypes={allowedTypeValues}
                   />
                 </div>
               </div>
@@ -1190,7 +1403,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
             {showTypeMenu && (
               <div className="fade-in absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-xl z-20 p-2">
                 <div className="grid grid-cols-3 gap-1">
-                  {QUESTION_TYPES.map(t => {
+                  {QUESTION_TYPES.filter(t => allowedTypeValues.includes(t.value)).map(t => {
                     const Icon = t.icon;
                     return (
                       <button
@@ -1526,6 +1739,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
           onSave={handleSaveTemplate}
           onClose={() => setShowSaveTemplateModal(false)}
           projectName={project?.name}
+          activeCategories={activeCategories}
         />
       )}
 
@@ -1534,8 +1748,12 @@ export default function SurveyBuilder({ mode = 'create' }) {
         <UseTemplateModal
           myTemplates={myTemplates}
           projectTemplates={projectTemplates}
+          orgWideTemplates={orgWideTemplates}
           onUse={handleUseTemplate}
           onClose={() => setShowUseTemplateModal(false)}
+          categories={categories}
+          surveyTypology={surveyTypology}
+          allowedTypeValues={allowedTypeValues}
         />
       )}
     </div>

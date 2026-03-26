@@ -9,6 +9,20 @@ const DEFAULT_CATEGORIES = [
   { id: 'cat5', name: 'Agriculture', active: false },
 ];
 
+// Default question type availability per typology (P1-F-83)
+const DEFAULT_TYPOLOGY_CONFIG = {
+  market_signal_report: {
+    single_choice: true, multi_choice: true, rating_scale: true, open_text: true,
+    short_text: true, long_text: true, ranking: true, date_picker: true, number: true,
+    file_attachment: false,
+  },
+  standard_intelligence_survey: {
+    single_choice: true, multi_choice: true, rating_scale: true, open_text: true,
+    short_text: true, long_text: true, ranking: true, date_picker: true, number: true,
+    file_attachment: true,
+  },
+};
+
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
@@ -24,6 +38,8 @@ export function AppProvider({ children }) {
   const [orgTimezone, setOrgTimezone] = useState('IST');
   const [proposals, setProposals] = useState(PROPOSALS);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [typologyConfig, setTypologyConfig] = useState(DEFAULT_TYPOLOGY_CONFIG);
+  const [orgWideProposals, setOrgWideProposals] = useState([]);
   const [notificationPrefs, setNotificationPrefs] = useState(() => {
     const events = [
       'survey_approved', 'survey_rejected', 'proposal_approved', 'proposal_rejected',
@@ -114,13 +130,14 @@ export function AppProvider({ children }) {
     addToast('Expert deactivated', 'warning');
   };
 
-  const createSurvey = ({ projectId, name, category = '', questions, status = 'Draft', waveConfig = null }) => {
+  const createSurvey = ({ projectId, name, category = '', typology = 'market_signal_report', questions, status = 'Draft', waveConfig = null }) => {
     const wave = surveys.filter(s => s.projectId === projectId).length + 1;
     const newSurvey = {
       id: `s${Date.now()}`,
       projectId,
       name,
       category,
+      typology,
       status,
       wave,
       createdBy: currentUser.name,
@@ -255,7 +272,7 @@ export function AppProvider({ children }) {
     return newSurvey;
   };
 
-  const saveTemplate = (name, questions, visibility = 'private', projectId = null) => {
+  const saveTemplate = (name, questions, visibility = 'private', projectId = null, categories = []) => {
     const template = {
       id: `tpl${Date.now()}`,
       name,
@@ -265,6 +282,8 @@ export function AppProvider({ children }) {
       ownerId: currentUser.id,
       createdBy: currentUser.name,
       createdAt: new Date().toISOString().split('T')[0],
+      categories,
+      versionCount: 1,
     };
     setTemplates(prev => [...prev, template]);
     addToast(`Template "${name}" saved`);
@@ -284,17 +303,71 @@ export function AppProvider({ children }) {
 
   const updateTemplateQuestions = (templateId, updatedQuestions) => {
     const tpl = templates.find(t => t.id === templateId);
-    setTemplates(prev => prev.map(t => t.id === templateId ? { ...t, questions: updatedQuestions } : t));
+    setTemplates(prev => prev.map(t => t.id === templateId
+      ? { ...t, questions: updatedQuestions, versionCount: (t.versionCount || 1) + 1 }
+      : t
+    ));
     addAuditEvent('Template questions updated', tpl?.name || templateId, 'template', `Questions edited by ${currentUser.name}`);
     addToast('Template questions updated');
   };
 
-  // Super Admin only — revert a public template back to private
+  // Super Admin only — revert any template back to private
   const revertTemplateToPrivate = (templateId) => {
     const tpl = templates.find(t => t.id === templateId);
     setTemplates(prev => prev.map(t => t.id === templateId ? { ...t, visibility: 'private', projectId: null } : t));
+    // Remove any pending org-wide proposal for this template
+    setOrgWideProposals(prev => prev.filter(p => p.templateId !== templateId));
     addAuditEvent('Template reverted to private', tpl?.name || templateId, 'template', `Visibility reverted to private by Super Admin`);
     addToast(`"${tpl?.name}" reverted to private`);
+  };
+
+  // Any editor — propose a template for Org-Wide visibility (SA must approve)
+  const proposeOrgWide = (templateId) => {
+    const tpl = templates.find(t => t.id === templateId);
+    const alreadyPending = orgWideProposals.some(p => p.templateId === templateId);
+    if (alreadyPending) { addToast('Proposal already pending', 'warning'); return; }
+    const proposal = {
+      id: `owp${Date.now()}`,
+      templateId,
+      templateName: tpl?.name || templateId,
+      proposedBy: currentUser.name,
+      proposedAt: new Date().toISOString().split('T')[0],
+    };
+    setOrgWideProposals(prev => [...prev, proposal]);
+    addAuditEvent('Org-Wide proposal submitted', tpl?.name || templateId, 'template', `Proposed by ${currentUser.name}`);
+    addToast(`Org-Wide proposal submitted for "${tpl?.name}" — pending Super Admin approval`);
+  };
+
+  // Super Admin — approve an org-wide proposal
+  const approveOrgWide = (proposalId) => {
+    const proposal = orgWideProposals.find(p => p.id === proposalId);
+    if (!proposal) return;
+    setTemplates(prev => prev.map(t => t.id === proposal.templateId
+      ? { ...t, visibility: 'org_wide', projectId: null }
+      : t
+    ));
+    setOrgWideProposals(prev => prev.filter(p => p.id !== proposalId));
+    addAuditEvent('Org-Wide promotion approved', proposal.templateName, 'template', `Approved by ${currentUser.name}`);
+    addToast(`Template "${proposal.templateName}" promoted to Org-Wide`);
+  };
+
+  // Super Admin — reject an org-wide proposal
+  const rejectOrgWide = (proposalId) => {
+    const proposal = orgWideProposals.find(p => p.id === proposalId);
+    if (!proposal) return;
+    setOrgWideProposals(prev => prev.filter(p => p.id !== proposalId));
+    addAuditEvent('Org-Wide promotion rejected', proposal.templateName, 'template', `Rejected by ${currentUser.name}`);
+    addToast(`Org-Wide proposal for "${proposal.templateName}" rejected`);
+  };
+
+  // Super Admin — update a question type's availability for a typology
+  const updateTypologyConfig = (typology, questionType, enabled) => {
+    setTypologyConfig(prev => ({
+      ...prev,
+      [typology]: { ...prev[typology], [questionType]: enabled },
+    }));
+    addAuditEvent('Typology config updated', typology, 'settings', `${questionType} ${enabled ? 'enabled' : 'disabled'} for ${typology}`);
+    addToast('Question type configuration saved');
   };
 
   const toggleExclusion = (surveyId, expertId) => {
@@ -580,6 +653,8 @@ export function AppProvider({ children }) {
       createSurvey, updateSurvey, deleteSurvey,
       approveSurvey, rejectSurvey, saveWaveSetup, launchSurvey, launchSurveyWithConfig, closeSurvey,
       cloneSurvey, saveTemplate, deleteTemplate, renameTemplate, updateTemplateQuestions, revertTemplateToPrivate,
+      proposeOrgWide, approveOrgWide, rejectOrgWide, orgWideProposals,
+      typologyConfig, updateTypologyConfig,
       submitChangeRequest, resolveChangeRequest,
       createProposal, addUserToProject,
       deactivateUser, updateUserRole,

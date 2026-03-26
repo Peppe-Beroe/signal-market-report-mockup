@@ -35,6 +35,7 @@ export const PROJECTS = [
 export const SURVEYS = [
   {
     id: 's1', projectId: 'p1', name: 'Steel Price Outlook', category: 'Metals & Mining',
+    typology: 'market_signal_report',
     status: 'Running', wave: 1,
     createdBy: 'Marco Rossi', approvedBy: 'Sarah Chen',
     sendDate: '2026-03-05', closeDate: '2026-03-20',
@@ -84,6 +85,7 @@ export const SURVEYS = [
   },
   {
     id: 's2', projectId: 'p1', name: 'Steel Supply Chain Risk', category: 'Metals & Mining',
+    typology: 'market_signal_report',
     status: 'Submitted', wave: 1,
     createdBy: 'Marco Rossi', approvedBy: null,
     sendDate: '2026-03-28', closeDate: '2026-04-12',
@@ -126,6 +128,7 @@ export const SURVEYS = [
   },
   {
     id: 's3', projectId: 'p2', name: 'Polypropylene Supply Outlook', category: 'Chemicals',
+    typology: 'market_signal_report',
     status: 'Review', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: 'Maria Santos',
     sendDate: '2026-02-20', closeDate: '2026-03-08',
@@ -151,6 +154,7 @@ export const SURVEYS = [
   },
   {
     id: 's4', projectId: 'p3', name: 'Packaging Cost Index', category: 'Packaging',
+    typology: 'standard_intelligence_survey',
     status: 'Draft', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: null,
     sendDate: null, closeDate: null,
@@ -168,6 +172,7 @@ export const SURVEYS = [
   },
   {
     id: 's5', projectId: 'p3', name: 'Packaging Sustainability Practices', category: 'Packaging',
+    typology: 'market_signal_report',
     status: 'Running', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: 'Sarah Chen',
     sendDate: '2026-03-10', closeDate: '2026-03-28',
@@ -210,6 +215,7 @@ export const SURVEYS = [
   },
   {
     id: 's6', projectId: 'p3', name: 'Flexible Packaging Demand Outlook', category: 'Packaging',
+    typology: 'market_signal_report',
     status: 'Submitted', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: null,
     sendDate: '2026-04-02', closeDate: '2026-04-18',
@@ -244,6 +250,7 @@ export const SURVEYS = [
   {
     // s7 — APPROVED: approved, locked, awaiting scheduled send (Steel Trade Flow Analysis)
     id: 's7', projectId: 'p1', name: 'Steel Trade Flow Analysis', category: 'Metals & Mining',
+    typology: 'market_signal_report',
     status: 'Approved', wave: 1,
     createdBy: 'Marco Rossi', approvedBy: 'Sarah Chen',
     sendDate: '2026-03-30', closeDate: '2026-04-15',
@@ -414,6 +421,8 @@ export const TEMPLATES = [
     projectId: null,
     ownerId: 'u2',
     createdAt: '2026-01-15',
+    categories: ['cat1'],
+    versionCount: 2,
     questions: [
       { id: 'q1', type: 'single_choice', required: true, text: 'How do you expect prices to trend over the next quarter?', options: ['Increase >10%', 'Increase 5–10%', 'Stay flat (±5%)', 'Decrease 5–10%', 'Decrease >10%'] },
       { id: 'q2', type: 'single_choice', required: true, text: 'What is your primary procurement region?', options: ['North America', 'Europe', 'Asia-Pacific', 'Latin America', 'Middle East & Africa'] },
@@ -429,6 +438,8 @@ export const TEMPLATES = [
     projectId: 'p1',
     ownerId: 'u3',
     createdAt: '2026-02-03',
+    categories: ['cat1'],
+    versionCount: 1,
     questions: [
       { id: 'q1', type: 'single_choice', required: true, text: 'How would you rate the overall supply chain risk level for your category?', options: ['Critical', 'High', 'Medium', 'Low', 'Minimal'] },
       { id: 'q2', type: 'multi_choice', required: true, text: 'Which supply chain risks are most critical to your organisation? (select all that apply)', options: ['Supplier concentration', 'Port congestion', 'Raw material shortages', 'Quality inconsistency', 'Lead time volatility', 'Regulatory changes', 'Single-source dependency'] },
@@ -444,6 +455,8 @@ export const TEMPLATES = [
     projectId: null,
     ownerId: 'u1',
     createdAt: '2026-01-28',
+    categories: ['cat1', 'cat4'],
+    versionCount: 1,
     questions: [
       { id: 'q1', type: 'single_choice', required: true, text: 'How do you expect overall demand for this category to change over the next 6 months?', options: ['Increase significantly (>10%)', 'Increase moderately (5–10%)', 'Remain stable', 'Decrease moderately (5–10%)', 'Decrease significantly (>10%)'] },
       { id: 'q2', type: 'multi_choice', required: true, text: 'Which procurement strategies are you actively adopting? (select all that apply)', options: ['Long-term contracts', 'Spot buying', 'Dual sourcing', 'Nearshoring / reshoring', 'Index-linked pricing', 'Inventory build-up', 'Category consolidation'] },
@@ -459,6 +472,8 @@ export const TEMPLATES = [
     projectId: 'p3',
     ownerId: 'u2',
     createdAt: '2026-02-10',
+    categories: ['cat3'],
+    versionCount: 1,
     questions: [
       { id: 'q1', type: 'rating_scale', required: true, text: 'How important is sustainability performance in your supplier selection for this category?', scale: 5, labels: ['Not a factor', 'Top priority'] },
       { id: 'q2', type: 'multi_choice', required: true, text: 'Which ESG criteria does your organisation formally evaluate in supplier assessments? (select all that apply)', options: ['Carbon emissions / Scope 3', 'Water usage', 'Waste & recycled content', 'Labour standards', 'Diversity & inclusion', 'Certifications (ISO, EcoVadis, etc.)', 'None currently'] },
@@ -474,12 +489,30 @@ export const TEMPLATES = [
     projectId: 'p2',
     ownerId: 'u5',
     createdAt: '2026-02-20',
+    categories: ['cat2'],
+    versionCount: 1,
     questions: [
       { id: 'q1', type: 'single_choice', required: true, text: 'How would you characterise current market capacity utilisation for this category?', options: ['Overcapacity (>15% surplus)', 'Mild surplus (5–15%)', 'Balanced', 'Mild tightness (5–15% below need)', 'Severe tightness (>15% below need)'] },
       { id: 'q2', type: 'single_choice', required: true, text: 'How have average lead times changed compared to 6 months ago?', options: ['Decreased significantly', 'Decreased slightly', 'No change', 'Increased slightly', 'Increased significantly'] },
       { id: 'q3', type: 'rating_scale', required: true, text: 'How reliable are lead time commitments from your primary suppliers?', scale: 5, labels: ['Very unreliable', 'Always on time'] },
       { id: 'q4', type: 'multi_choice', required: false, text: 'Which capacity constraints are most acute in the market right now? (select all that apply)', options: ['Production capacity', 'Skilled labour', 'Raw material inputs', 'Logistics / freight', 'Energy availability', 'Equipment / machinery', 'No major constraints'] },
       { id: 'q5', type: 'open_text', required: false, text: 'Do you expect capacity conditions to change materially over the next 12 months? If so, how?' },
+    ],
+  },
+  {
+    id: 'tpl6',
+    name: 'Expert Intelligence Intake — Standard',
+    visibility: 'org_wide',
+    projectId: null,
+    ownerId: 'u1',
+    createdAt: '2026-01-05',
+    categories: ['cat1', 'cat2', 'cat3'],
+    versionCount: 3,
+    questions: [
+      { id: 'q1', type: 'single_choice', required: true, text: 'How would you characterise current market conditions in your category?', options: ['Highly favourable', 'Moderately favourable', 'Neutral', 'Moderately unfavourable', 'Highly unfavourable'] },
+      { id: 'q2', type: 'rating_scale', required: true, text: 'How confident are you in your market outlook for the next 6 months?', scale: 5, labels: ['No confidence', 'Very confident'] },
+      { id: 'q3', type: 'multi_choice', required: false, text: 'Which macro factors are most influencing your category right now? (select all that apply)', options: ['Energy cost volatility', 'Geopolitical disruption', 'Currency movements', 'Labour shortages', 'Demand shifts', 'Raw material scarcity'] },
+      { id: 'q4', type: 'open_text', required: false, text: 'What is the single most important development in your market over the past 90 days?' },
     ],
   },
 ];

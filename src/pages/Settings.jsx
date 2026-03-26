@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Bell, Sliders, Save, CheckCircle, Globe, List, Mail, Plus, X, Edit2, Info, BookTemplate, Trash2, Lock, Users, Eye } from 'lucide-react';
+import { User, Bell, Sliders, Save, CheckCircle, Globe, List, Mail, Plus, X, Edit2, Info, BookTemplate, Trash2, Lock, Users, Eye, ThumbsUp, ThumbsDown, Paperclip, ToggleLeft, ToggleRight, ArrowUpRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -64,11 +64,12 @@ Thank you,
 Beroe Research Team`;
 
 function TemplateTable({
-  templates, showOwner, showMakePrivate,
+  templates, showOwner, showMakePrivate, showProposeOrgWide, pendingProposalTemplateIds,
   renamingTplId, renameTplValue, onStartRename, onSaveRename, onCancelRename, onRenameChange,
   expandedTplId, onToggleExpand,
-  onEditQuestions, onDelete, onMakePrivate, getProjectName,
+  onEditQuestions, onDelete, onMakePrivate, onProposeOrgWide, getProjectName, categories,
 }) {
+  const getCatNames = (tpl) => (tpl.categories || []).map(cid => categories.find(c => c.id === cid)?.name).filter(Boolean);
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -76,8 +77,9 @@ function TemplateTable({
           <tr className="border-b border-gray-100">
             <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
             <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Visibility</th>
-            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Project</th>
-            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider w-16">Qs</th>
+            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Categories</th>
+            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">Qs</th>
+            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">Vers.</th>
             {showOwner && <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Owner</th>}
             <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
             <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
@@ -128,24 +130,36 @@ function TemplateTable({
                 </td>
                 {/* Visibility */}
                 <td className="py-3 px-3"><VisibilityBadge visibility={tpl.visibility} /></td>
-                {/* Project */}
-                <td className="py-3 px-3 text-xs text-gray-500">
-                  {tpl.projectId ? getProjectName(tpl.projectId) : <span className="text-gray-300">—</span>}
+                {/* Categories */}
+                <td className="py-3 px-3">
+                  <div className="flex flex-wrap gap-1">
+                    {getCatNames(tpl).length > 0
+                      ? getCatNames(tpl).map(n => <span key={n} className="px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-500">{n}</span>)
+                      : <span className="text-gray-300 text-xs">—</span>
+                    }
+                  </div>
                 </td>
                 {/* Questions count */}
                 <td className="py-3 px-3 text-xs text-gray-500">{tpl.questions?.length ?? 0}</td>
+                {/* Version count */}
+                <td className="py-3 px-3 text-xs text-gray-400">v{tpl.versionCount || 1}</td>
                 {/* Owner (conditional) */}
                 {showOwner && <td className="py-3 px-3 text-xs text-gray-500">{tpl.ownerName || tpl.ownerId || '—'}</td>}
                 {/* Created */}
                 <td className="py-3 px-3 text-xs text-gray-400 whitespace-nowrap">{createdDate}</td>
                 {/* Actions */}
                 <td className="py-3 px-3">
-                  <div className="flex items-center gap-1 justify-end">
+                  <div className="flex items-center gap-1 justify-end flex-wrap">
                     <Button variant="ghost" size="xs" onClick={() => onStartRename(tpl)}><Edit2 size={11} /> Rename</Button>
                     <Button variant="ghost" size="xs" onClick={() => onEditQuestions(tpl)}><Eye size={11} /> Edit</Button>
                     <Button variant="ghost" size="xs" className="text-red-400 hover:text-red-600" onClick={() => onDelete(tpl.id)}><Trash2 size={11} /> Delete</Button>
-                    {showMakePrivate && tpl.visibility === 'project' && (
+                    {showMakePrivate && (tpl.visibility === 'project' || tpl.visibility === 'org_wide') && (
                       <Button variant="ghost" size="xs" className="text-amber-600 hover:text-amber-800" onClick={() => onMakePrivate(tpl.id)}><Lock size={11} /> Make private</Button>
+                    )}
+                    {showProposeOrgWide && tpl.visibility !== 'org_wide' && (
+                      pendingProposalTemplateIds?.includes(tpl.id)
+                        ? <span className="text-xs text-violet-500 font-medium px-1">Pending…</span>
+                        : <Button variant="ghost" size="xs" className="text-violet-600 hover:text-violet-800" onClick={() => onProposeOrgWide(tpl.id)}><ArrowUpRight size={11} /> Propose Org-Wide</Button>
                     )}
                   </div>
                 </td>
@@ -196,13 +210,13 @@ function EditQuestionsModal({ template, onSave, onClose }) {
 }
 
 function VisibilityBadge({ visibility }) {
-  return visibility === 'project'
-    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100"><Users size={10} /> Public</span>
-    : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><Lock size={10} /> Private</span>;
+  if (visibility === 'org_wide') return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700 border border-violet-100"><Globe size={10} /> Org-Wide</span>;
+  if (visibility === 'project') return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100"><Users size={10} /> Project</span>;
+  return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><Lock size={10} /> Private</span>;
 }
 
 export default function Settings() {
-  const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs, categories, setCategories, templates, deleteTemplate, renameTemplate, updateTemplateQuestions, revertTemplateToPrivate, projects, internalUsers } = useApp();
+  const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs, categories, setCategories, templates, deleteTemplate, renameTemplate, updateTemplateQuestions, revertTemplateToPrivate, proposeOrgWide, approveOrgWide, rejectOrgWide, orgWideProposals, typologyConfig, updateTypologyConfig, projects, internalUsers } = useApp();
   const isSuperAdmin = currentUser.role === 'Super Admin';
   const isStandardUser = currentUser.role === 'Standard User';
   const profileReadOnly = !isSuperAdmin; // Admin and Standard User see read-only profile
@@ -517,7 +531,7 @@ export default function Settings() {
       {/* My Templates — all users */}
       {!isSuperAdmin && (
         <Card className="p-6">
-          <SectionHeader icon={BookTemplate} title="My Templates" description="Templates you have created — Private (only you) or Public (shared with a project)" />
+          <SectionHeader icon={BookTemplate} title="My Templates" description="Templates you have created — Private or Project-shared. Propose any for Org-Wide via the action button." />
           {myTemplates.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-4">No templates yet. Save a survey as a template from the survey builder.</p>
           ) : (
@@ -525,6 +539,8 @@ export default function Settings() {
               templates={myTemplates}
               showOwner={false}
               showMakePrivate={false}
+              showProposeOrgWide={true}
+              pendingProposalTemplateIds={(orgWideProposals || []).map(p => p.templateId)}
               renamingTplId={renamingTplId} renameTplValue={renameTplValue}
               onStartRename={startRenameTpl} onSaveRename={saveRenameTpl}
               onCancelRename={() => setRenamingTplId(null)}
@@ -533,20 +549,24 @@ export default function Settings() {
               onEditQuestions={tpl => setEditingTpl(tpl)}
               onDelete={deleteTemplate}
               onMakePrivate={null}
+              onProposeOrgWide={proposeOrgWide}
               getProjectName={getProjectName}
+              categories={categories}
             />
           )}
         </Card>
       )}
 
-      {/* Shared with me — public templates from my projects (non-SA, non-owner) */}
+      {/* Shared with me — project templates from my projects (non-SA, non-owner) */}
       {!isSuperAdmin && sharedWithMeTemplates.length > 0 && (
         <Card className="p-6">
-          <SectionHeader icon={Users} title="Project Templates" description="Public templates shared with your projects by other editors — you can edit, rename, or delete them" />
+          <SectionHeader icon={Users} title="Project Templates" description="Project-shared templates from projects you belong to — you can edit, rename, delete, or propose for Org-Wide." />
           <TemplateTable
             templates={sharedWithMeTemplates}
             showOwner={true}
             showMakePrivate={false}
+            showProposeOrgWide={true}
+            pendingProposalTemplateIds={(orgWideProposals || []).map(p => p.templateId)}
             renamingTplId={renamingTplId} renameTplValue={renameTplValue}
             onStartRename={startRenameTpl} onSaveRename={saveRenameTpl}
             onCancelRename={() => setRenamingTplId(null)}
@@ -555,7 +575,9 @@ export default function Settings() {
             onEditQuestions={tpl => setEditingTpl(tpl)}
             onDelete={deleteTemplate}
             onMakePrivate={null}
+            onProposeOrgWide={proposeOrgWide}
             getProjectName={getProjectName}
+            categories={categories}
           />
         </Card>
       )}
@@ -563,7 +585,33 @@ export default function Settings() {
       {/* All Templates — Super Admin only */}
       {isSuperAdmin && (
         <Card className="p-6">
-          <SectionHeader icon={Eye} title="All Templates" description="Org-wide view of every template — you can edit, rename, delete any template, and revert Public templates to Private" />
+          <SectionHeader icon={Eye} title="All Templates" description="Org-wide view of every template. Approve or reject Org-Wide proposals, revert any template to Private." />
+          {/* Pending Org-Wide proposals */}
+          {(orgWideProposals || []).length > 0 && (
+            <div className="mb-5">
+              <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <ArrowUpRight size={15} className="text-violet-500" />
+                Pending Org-Wide Proposals ({orgWideProposals.length})
+              </p>
+              <div className="space-y-2">
+                {orgWideProposals.map(p => (
+                  <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl border border-violet-200 bg-violet-50">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{p.templateName}</p>
+                      <p className="text-xs text-gray-500">Proposed by {p.proposedBy} · {p.proposedAt}</p>
+                    </div>
+                    <Button variant="ghost" size="xs" className="text-green-600 hover:text-green-800 border border-green-200" onClick={() => approveOrgWide(p.id)}>
+                      <ThumbsUp size={11} /> Approve
+                    </Button>
+                    <Button variant="ghost" size="xs" className="text-red-400 hover:text-red-600 border border-red-100" onClick={() => rejectOrgWide(p.id)}>
+                      <ThumbsDown size={11} /> Reject
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-gray-100 mt-4 mb-4" />
+            </div>
+          )}
           {allTemplates.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-4">No templates have been created in the organisation yet.</p>
           ) : (
@@ -571,6 +619,8 @@ export default function Settings() {
               templates={allTemplates}
               showOwner={true}
               showMakePrivate={true}
+              showProposeOrgWide={false}
+              pendingProposalTemplateIds={[]}
               renamingTplId={renamingTplId} renameTplValue={renameTplValue}
               onStartRename={startRenameTpl} onSaveRename={saveRenameTpl}
               onCancelRename={() => setRenamingTplId(null)}
@@ -579,7 +629,9 @@ export default function Settings() {
               onEditQuestions={tpl => setEditingTpl(tpl)}
               onDelete={deleteTemplate}
               onMakePrivate={revertTemplateToPrivate}
+              onProposeOrgWide={null}
               getProjectName={getProjectName}
+              categories={categories}
             />
           )}
         </Card>
@@ -592,6 +644,70 @@ export default function Settings() {
           onSave={(qs) => { updateTemplateQuestions(editingTpl.id, qs); setEditingTpl(null); }}
           onClose={() => setEditingTpl(null)}
         />
+      )}
+
+      {/* Survey Configuration — Super Admin only */}
+      {isSuperAdmin && typologyConfig && (
+        <Card className="p-6">
+          <SectionHeader icon={Sliders} title="Survey Configuration" description="Configure which question types are available per survey typology. Changes apply to all new surveys immediately." />
+          {(() => {
+            const TYPOLOGIES = [
+              { key: 'market_signal_report', label: 'Market Signal Report' },
+              { key: 'standard_intelligence_survey', label: 'Standard Intelligence Survey' },
+            ];
+            const QT_LABELS = {
+              single_choice: 'Single Choice', multi_choice: 'Multiple Choice', rating_scale: 'Rating Scale',
+              open_text: 'Open Text', short_text: 'Short Text', long_text: 'Long Text',
+              ranking: 'Ranking', date_picker: 'Date Picker', number: 'Number', file_attachment: 'File Attachment',
+            };
+            const allQTypes = Object.keys(QT_LABELS);
+            return (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Question Type</th>
+                      {TYPOLOGIES.map(t => (
+                        <th key={t.key} className="text-center py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{t.label}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {allQTypes.map(qt => (
+                      <tr key={qt} className="hover:bg-gray-50 transition-colors">
+                        <td className="py-3 px-3 text-sm font-medium text-gray-700 flex items-center gap-2">
+                          {qt === 'file_attachment' && <Paperclip size={13} className="text-violet-500" />}
+                          {QT_LABELS[qt]}
+                        </td>
+                        {TYPOLOGIES.map(t => {
+                          const enabled = typologyConfig[t.key]?.[qt] !== false;
+                          // Count enabled types for this typology — must keep at least 1
+                          const enabledCount = Object.values(typologyConfig[t.key] || {}).filter(Boolean).length;
+                          const canDisable = enabled ? enabledCount > 1 : true;
+                          return (
+                            <td key={t.key} className="py-3 px-3 text-center">
+                              <button
+                                onClick={() => canDisable && updateTypologyConfig(t.key, qt, !enabled)}
+                                className={`transition-colors ${canDisable ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+                                title={!canDisable ? 'At least one question type must remain enabled' : (enabled ? 'Click to disable' : 'Click to enable')}
+                              >
+                                {enabled
+                                  ? <ToggleRight size={22} style={{ color: '#4A00F8' }} />
+                                  : <ToggleLeft size={22} className="text-gray-300" />
+                                }
+                              </button>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="text-xs text-gray-400 mt-3">Changes take effect immediately for all new surveys. Existing surveys in any lifecycle state are unaffected.</p>
+              </div>
+            );
+          })()}
+        </Card>
       )}
 
       {/* Survey Defaults */}

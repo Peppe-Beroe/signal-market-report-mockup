@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Play, BarChart2, Eye, ExternalLink, Users, Calendar, ChevronRight, Mail, Shield, UserCheck, Archive, ArchiveRestore, StopCircle, X, AlertTriangle, UserPlus } from 'lucide-react';
+import { Plus, Edit2, Trash2, Play, BarChart2, Eye, ExternalLink, Users, Calendar, ChevronRight, Mail, Shield, UserCheck, Archive, ArchiveRestore, StopCircle, X, AlertTriangle, UserPlus, FileText, Globe } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { USERS } from '../data/mockData';
 import Card from '../components/ui/Card';
@@ -138,6 +138,87 @@ const MOCK_TEAM = [
   { ...USERS.researcher, projectRole: 'Editor' },
 ];
 
+// Modal to select survey name + typology before opening the builder (P1-F-82)
+function CreateSurveyModal({ onConfirm, onClose }) {
+  const [surveyName, setSurveyName] = useState('');
+  const [typology, setTypology] = useState('market_signal_report');
+  const canCreate = surveyName.trim().length > 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+            <Plus size={16} className="text-purple-600" /> New Survey
+          </h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            <X size={16} className="text-gray-500" />
+          </button>
+        </div>
+        <div className="px-6 py-5 space-y-5">
+          {/* Survey name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Survey name <span className="text-red-500">*</span></label>
+            <input
+              type="text"
+              value={surveyName}
+              onChange={e => setSurveyName(e.target.value)}
+              placeholder="e.g. Steel Price Outlook Q3"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && canCreate && onConfirm(surveyName.trim(), typology)}
+            />
+          </div>
+          {/* Typology selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Survey typology <span className="text-red-500">*</span></label>
+            <p className="text-xs text-gray-400 mb-3">Determines which question types are available. Cannot be changed after creation.</p>
+            <div className="space-y-2">
+              <label
+                className="flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors hover:border-purple-300"
+                style={typology === 'market_signal_report' ? { borderColor: '#4A00F8', backgroundColor: '#f5f3ff' } : { borderColor: '#E5E7EB' }}
+              >
+                <input type="radio" name="typology" value="market_signal_report" checked={typology === 'market_signal_report'} onChange={() => setTypology('market_signal_report')} className="mt-0.5 accent-purple-600" />
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <Globe size={13} className="text-purple-500" />
+                    <p className="text-sm font-semibold text-gray-800">Market Signal Report</p>
+                  </div>
+                  <p className="text-xs text-gray-500">Standard Beroe intelligence surveys. Base question type set.</p>
+                </div>
+              </label>
+              <label
+                className="flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors hover:border-purple-300"
+                style={typology === 'standard_intelligence_survey' ? { borderColor: '#4A00F8', backgroundColor: '#f5f3ff' } : { borderColor: '#E5E7EB' }}
+              >
+                <input type="radio" name="typology" value="standard_intelligence_survey" checked={typology === 'standard_intelligence_survey'} onChange={() => setTypology('standard_intelligence_survey')} className="mt-0.5 accent-purple-600" />
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <FileText size={13} className="text-blue-500" />
+                    <p className="text-sm font-semibold text-gray-800">Standard Intelligence Survey</p>
+                  </div>
+                  <p className="text-xs text-gray-500">General-purpose surveys. Includes File Attachment question type.</p>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 px-6 pb-5">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+          <button
+            onClick={() => canCreate && onConfirm(surveyName.trim(), typology)}
+            disabled={!canCreate}
+            className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-opacity disabled:opacity-40"
+            style={{ backgroundColor: '#4A00F8' }}
+          >
+            Create Survey
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectDetail() {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -146,6 +227,7 @@ export default function ProjectDetail() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showArchivedSurveys, setShowArchivedSurveys] = useState(false);
   const [showMemberModal, setShowMemberModal] = useState(false);
+  const [showCreateSurveyModal, setShowCreateSurveyModal] = useState(false);
 
   const project = projects.find(p => p.id === projectId);
   if (!project) return (
@@ -376,7 +458,7 @@ export default function ProjectDetail() {
               )}
             </div>
             {!showArchivedSurveys && (
-              <Button onClick={() => navigate(`/projects/${projectId}/surveys/new`)}>
+              <Button onClick={() => setShowCreateSurveyModal(true)}>
                 <Plus size={16} />
                 New Survey
               </Button>
@@ -526,6 +608,17 @@ export default function ProjectDetail() {
           canDirectAdd={canDirectAdd}
           onConfirm={handleMemberModalConfirm}
           onClose={() => setShowMemberModal(false)}
+        />
+      )}
+
+      {/* Create Survey modal — name + typology selector (P1-F-82) */}
+      {showCreateSurveyModal && (
+        <CreateSurveyModal
+          onConfirm={(name, typology) => {
+            setShowCreateSurveyModal(false);
+            navigate(`/projects/${projectId}/surveys/new`, { state: { typology, surveyName: name } });
+          }}
+          onClose={() => setShowCreateSurveyModal(false)}
         />
       )}
     </div>
