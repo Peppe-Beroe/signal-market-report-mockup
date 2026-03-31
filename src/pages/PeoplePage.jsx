@@ -850,6 +850,9 @@ export default function PeoplePage() {
   const [showInviteRequestModal, setShowInviteRequestModal] = useState(false);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
+  const [domainFilter, setDomainFilter] = useState('All');
+  const [spendingPoolFilter, setSpendingPoolFilter] = useState('All');
+  const [categoryFilter, setCategoryFilter] = useState('All');
   const [showDeactivated, setShowDeactivated] = useState(false);
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
@@ -861,10 +864,29 @@ export default function PeoplePage() {
 
   const roleOptions = ['All', 'Super Admin', 'Admin', 'Standard User'];
 
+  // Cascading taxonomy options
+  const allDomains = useMemo(() => [...new Set(internalUsers.map(u => u.domain).filter(Boolean))].sort(), [internalUsers]);
+  const availableSpendingPools = useMemo(() => {
+    const base = domainFilter === 'All' ? internalUsers : internalUsers.filter(u => u.domain === domainFilter);
+    return [...new Set(base.map(u => u.spendingPool).filter(Boolean))].sort();
+  }, [internalUsers, domainFilter]);
+  const availableCategories = useMemo(() => {
+    let base = internalUsers;
+    if (domainFilter !== 'All') base = base.filter(u => u.domain === domainFilter);
+    if (spendingPoolFilter !== 'All') base = base.filter(u => u.spendingPool === spendingPoolFilter);
+    return [...new Set(base.map(u => u.category).filter(Boolean))].sort();
+  }, [internalUsers, domainFilter, spendingPoolFilter]);
+
+  const handleDomainChange = (val) => { setDomainFilter(val); setSpendingPoolFilter('All'); setCategoryFilter('All'); setPage(1); };
+  const handleSpendingPoolChange = (val) => { setSpendingPoolFilter(val); setCategoryFilter('All'); setPage(1); };
+
   const filtered = useMemo(() => {
     let list = internalUsers.filter(u => {
       if (!showDeactivated && u.status === 'Deactivated') return false;
       if (roleFilter !== 'All' && u.role !== roleFilter) return false;
+      if (domainFilter !== 'All' && u.domain !== domainFilter) return false;
+      if (spendingPoolFilter !== 'All' && u.spendingPool !== spendingPoolFilter) return false;
+      if (categoryFilter !== 'All' && u.category !== categoryFilter) return false;
       const q = search.toLowerCase();
       if (q && !`${u.firstName} ${u.lastName}`.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
       return true;
@@ -1019,6 +1041,27 @@ export default function PeoplePage() {
               </div>
               Show deactivated
             </label>
+          </div>
+
+          {/* Taxonomy filters row */}
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
+            {[
+              { label: 'Domain', value: domainFilter, options: allDomains, onChange: handleDomainChange },
+              { label: 'Spending Pool', value: spendingPoolFilter, options: availableSpendingPools, onChange: handleSpendingPoolChange },
+              { label: 'Category', value: categoryFilter, options: availableCategories, onChange: (val) => { setCategoryFilter(val); setPage(1); } },
+            ].map(({ label, value, options, onChange }) => (
+              <div key={label} className="relative">
+                <select
+                  value={value}
+                  onChange={e => onChange(e.target.value)}
+                  className="appearance-none pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-purple-400 transition-colors cursor-pointer"
+                >
+                  <option value="All">All {label}s</option>
+                  {options.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+            ))}
           </div>
 
           {/* Table */}

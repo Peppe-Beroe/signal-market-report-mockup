@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Mail, Building2, Tag, X, Upload, FileText, Check, AlertTriangle, ChevronRight, Bell, Clock, CheckCircle2, Users } from 'lucide-react';
+import { Search, Plus, Mail, Building2, Tag, X, Upload, FileText, Check, AlertTriangle, ChevronRight, ChevronDown, Bell, Clock, CheckCircle2, Users } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -305,6 +305,11 @@ export default function ExpertDatabase() {
   const { experts, currentUser, changeRequests, createExpert, addToast, submitChangeRequest, resolveChangeRequest } = useApp();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [spendingPoolFilter, setSpendingPoolFilter] = useState('All');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [companyFilter, setCompanyFilter] = useState('All');
+  const [designationFilter, setDesignationFilter] = useState('All');
+  const [geographyFilter, setGeographyFilter] = useState('All');
   const [showModal, setShowModal] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -315,13 +320,30 @@ export default function ExpertDatabase() {
   const isAdminOrResearcher = currentUser.role !== 'Super Admin';
   const pendingRequestCount = isSuperAdmin ? changeRequests.filter(r => r.status === 'Pending').length : 0;
 
-  const filtered = experts.filter(e => {
+  // Derived filter options
+  const allSpendingPools = useMemo(() => [...new Set(experts.map(e => e.spendingPool).filter(Boolean))].sort(), [experts]);
+  const availableCategories = useMemo(() => {
+    const base = spendingPoolFilter === 'All' ? experts : experts.filter(e => e.spendingPool === spendingPoolFilter);
+    return [...new Set(base.map(e => e.category).filter(Boolean))].sort();
+  }, [experts, spendingPoolFilter]);
+  const allCompanies = useMemo(() => [...new Set(experts.map(e => e.company).filter(Boolean))].sort(), [experts]);
+  const allDesignations = useMemo(() => [...new Set(experts.map(e => e.title).filter(Boolean))].sort(), [experts]);
+  const allGeographies = useMemo(() => [...new Set(experts.map(e => e.geography).filter(Boolean))].sort(), [experts]);
+
+  const handleSpendingPoolChange = (val) => { setSpendingPoolFilter(val); setCategoryFilter('All'); };
+
+  const filtered = useMemo(() => experts.filter(e => {
+    if (spendingPoolFilter !== 'All' && e.spendingPool !== spendingPoolFilter) return false;
+    if (categoryFilter !== 'All' && e.category !== categoryFilter) return false;
+    if (companyFilter !== 'All' && e.company !== companyFilter) return false;
+    if (designationFilter !== 'All' && e.title !== designationFilter) return false;
+    if (geographyFilter !== 'All' && e.geography !== geographyFilter) return false;
     const matchSearch = e.name.toLowerCase().includes(search.toLowerCase()) ||
       e.company.toLowerCase().includes(search.toLowerCase()) ||
       e.expertise.some(x => x.toLowerCase().includes(search.toLowerCase()));
     const matchStatus = statusFilter === 'All' || e.status === statusFilter;
     return matchSearch && matchStatus;
-  });
+  }), [experts, search, statusFilter, spendingPoolFilter, categoryFilter, companyFilter, designationFilter, geographyFilter]);
 
   const validate = () => {
     const errs = {};
@@ -401,7 +423,8 @@ export default function ExpertDatabase() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 mb-5">
+      {/* Row 1: search + status */}
+      <div className="flex items-center gap-3 mb-3">
         <div className="relative flex-1 max-w-xs">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -426,6 +449,29 @@ export default function ExpertDatabase() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Row 2: taxonomy + attribute filters */}
+      <div className="flex items-center gap-2 mb-5 flex-wrap">
+        {[
+          { label: 'Spending Pool', value: spendingPoolFilter, options: allSpendingPools, onChange: handleSpendingPoolChange },
+          { label: 'Category', value: categoryFilter, options: availableCategories, onChange: setCategoryFilter },
+          { label: 'Company', value: companyFilter, options: allCompanies, onChange: setCompanyFilter },
+          { label: 'Designation', value: designationFilter, options: allDesignations, onChange: setDesignationFilter },
+          { label: 'Geography', value: geographyFilter, options: allGeographies, onChange: setGeographyFilter },
+        ].map(({ label, value, options, onChange }) => (
+          <div key={label} className="relative">
+            <select
+              value={value}
+              onChange={e => onChange(e.target.value)}
+              className="appearance-none pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-purple-400 transition-colors cursor-pointer"
+            >
+              <option value="All">All {label}s</option>
+              {options.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+            <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          </div>
+        ))}
       </div>
 
       <Card>
