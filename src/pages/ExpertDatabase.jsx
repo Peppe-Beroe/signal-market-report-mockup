@@ -433,11 +433,12 @@ export default function ExpertDatabase() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-5 py-3">Expert</th>
+                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Spending Pool</th>
+                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Name</th>
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Company</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Expertise</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Tags</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Waves</th>
+                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Designation</th>
+                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Email</th>
+                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Geography</th>
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Status</th>
               </tr>
             </thead>
@@ -459,7 +460,10 @@ export default function ExpertDatabase() {
                     className="hover:bg-purple-50/40 transition-colors cursor-pointer"
                     onClick={() => navigate(`/experts/${expert.id}`)}
                   >
-                    <td className="px-5 py-4">
+                    <td className="px-4 py-4">
+                      <span className="text-sm text-gray-700">{expert.spendingPool || '—'}</span>
+                    </td>
+                    <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
@@ -467,44 +471,26 @@ export default function ExpertDatabase() {
                         >
                           {expert.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-800 hover:text-purple-700 transition-colors">{expert.name}</p>
-                          <div className="flex items-center gap-1 text-xs text-gray-400">
-                            <Mail size={10} />
-                            {expert.email}
-                          </div>
-                        </div>
+                        <p className="text-sm font-semibold text-gray-800 hover:text-purple-700 transition-colors">{expert.name}</p>
                       </div>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-1.5 text-sm text-gray-700">
-                        <Building2 size={13} className="text-gray-400" />
-                        <div>
-                          <p className="font-medium">{expert.company}</p>
-                          <p className="text-xs text-gray-400">{expert.title}</p>
-                        </div>
+                        <Building2 size={13} className="text-gray-400 flex-shrink-0" />
+                        <span className="font-medium">{expert.company}</span>
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {expert.expertise.map(e => (
-                          <Badge key={e} color="purple" size="xs">{e}</Badge>
-                        ))}
+                      <span className="text-sm text-gray-700">{expert.title}</span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <Mail size={10} className="text-gray-400 flex-shrink-0" />
+                        {expert.email}
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {expert.tags.map(t => (
-                          <span key={t} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded flex items-center gap-1">
-                            <Tag size={9} />
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="text-sm font-semibold text-gray-800">{expert.waves}</span>
-                      <span className="text-xs text-gray-400 ml-1">wave{expert.waves !== 1 ? 's' : ''}</span>
+                      <span className="text-sm text-gray-700">{expert.geography || '—'}</span>
                     </td>
                     <td className="px-4 py-4">
                       <StatusBadge status={expert.status} size="xs" />

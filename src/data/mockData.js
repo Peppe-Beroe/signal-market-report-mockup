@@ -5,12 +5,12 @@ export const USERS = {
 };
 
 export const EXPERTS = [
-  { id: 'e1', name: 'Dr. James Wright', email: 'j.wright@steelcorp.com', company: 'SteelCorp', title: 'VP Procurement', expertise: ['Steel', 'Metals'], status: 'Active', tags: ['Tier 1', 'NA Region'], waves: 4 },
-  { id: 'e2', name: 'Anna Kowalski', email: 'a.kowalski@mfg.pl', company: 'EuroMfg', title: 'Category Manager', expertise: ['Steel', 'Raw Materials'], status: 'Active', tags: ['EU Region'], waves: 2 },
-  { id: 'e3', name: 'Raj Patel', email: 'r.patel@tata.com', company: 'Tata Steel', title: 'Head of Sourcing', expertise: ['Steel', 'APAC Markets'], status: 'Active', tags: ['APAC Region', 'Tier 1'], waves: 3 },
-  { id: 'e4', name: 'Sophie Dubois', email: 's.dubois@arcelormittal.com', company: 'ArcelorMittal', title: 'Market Analyst', expertise: ['Steel', 'Flat Products'], status: 'Active', tags: ['EU Region'], waves: 1 },
-  { id: 'e5', name: 'Carlos Mendez', email: 'c.mendez@ternium.com', company: 'Ternium', title: 'Procurement Director', expertise: ['Steel', 'LATAM'], status: 'Active', tags: ['LATAM Region', 'Tier 1'], waves: 2 },
-  { id: 'e6', name: 'Linda Park', email: 'l.park@posco.com', company: 'POSCO', title: 'Strategic Buyer', expertise: ['Steel', 'APAC Markets'], status: 'Opted-out', tags: ['APAC Region'], waves: 1 },
+  { id: 'e1', name: 'Dr. James Wright', email: 'j.wright@steelcorp.com', company: 'SteelCorp', title: 'VP Procurement', spendingPool: 'Metals & Mining', geography: 'North America', expertise: ['Steel', 'Metals'], status: 'Active', tags: ['Tier 1', 'NA Region'], waves: 4 },
+  { id: 'e2', name: 'Anna Kowalski', email: 'a.kowalski@mfg.pl', company: 'EuroMfg', title: 'Category Manager', spendingPool: 'Metals & Mining', geography: 'Europe', expertise: ['Steel', 'Raw Materials'], status: 'Active', tags: ['EU Region'], waves: 2 },
+  { id: 'e3', name: 'Raj Patel', email: 'r.patel@tata.com', company: 'Tata Steel', title: 'Head of Sourcing', spendingPool: 'Metals & Mining', geography: 'Asia-Pacific', expertise: ['Steel', 'APAC Markets'], status: 'Active', tags: ['APAC Region', 'Tier 1'], waves: 3 },
+  { id: 'e4', name: 'Sophie Dubois', email: 's.dubois@arcelormittal.com', company: 'ArcelorMittal', title: 'Market Analyst', spendingPool: 'Metals & Mining', geography: 'Europe', expertise: ['Steel', 'Flat Products'], status: 'Active', tags: ['EU Region'], waves: 1 },
+  { id: 'e5', name: 'Carlos Mendez', email: 'c.mendez@ternium.com', company: 'Ternium', title: 'Procurement Director', spendingPool: 'Metals & Mining', geography: 'Latin America', expertise: ['Steel', 'LATAM'], status: 'Active', tags: ['LATAM Region', 'Tier 1'], waves: 2 },
+  { id: 'e6', name: 'Linda Park', email: 'l.park@posco.com', company: 'POSCO', title: 'Strategic Buyer', spendingPool: 'Metals & Mining', geography: 'Asia-Pacific', expertise: ['Steel', 'APAC Markets'], status: 'Opted-out', tags: ['APAC Region'], waves: 1 },
 ];
 
 export const PROJECTS = [
@@ -391,12 +391,12 @@ export const AUDIT_EVENTS = [
 ];
 
 export const INTERNAL_USERS = [
-  { id: 'u1', firstName: 'Maria', lastName: 'Santos', email: 'maria.santos@beroe.com', role: 'Super Admin', status: 'Active', projects: [{ id: 'p1', name: 'Q2 2026 Steel Market Signal', projectRole: 'Owner' }, { id: 'p2', name: 'H1 2026 Chemical Feedstocks', projectRole: 'Viewer' }] },
-  { id: 'u2', firstName: 'Sarah', lastName: 'Chen', email: 'sarah.chen@beroe.com', role: 'Admin', status: 'Active', projects: [{ id: 'p1', name: 'Q2 2026 Steel Market Signal', projectRole: 'Owner' }, { id: 'p3', name: 'Q1 2026 Packaging Trends', projectRole: 'Owner' }] },
-  { id: 'u3', firstName: 'Marco', lastName: 'Rossi', email: 'm.rossi@beroe.com', role: 'Standard User', status: 'Active', projects: [{ id: 'p1', name: 'Q2 2026 Steel Market Signal', projectRole: 'Editor' }] },
-  { id: 'u4', firstName: 'Priya', lastName: 'Mehta', email: 'p.mehta@beroe.com', role: 'Admin', status: 'Active', projects: [] },
-  { id: 'u5', firstName: 'Tom', lastName: 'Baker', email: 't.baker@beroe.com', role: 'Standard User', status: 'Active', projects: [{ id: 'p2', name: 'H1 2026 Chemical Feedstocks', projectRole: 'Editor' }] },
-  { id: 'u6', firstName: 'Jin', lastName: 'Park', email: 'j.park@beroe.com', role: 'Standard User', status: 'Deactivated', projects: [] },
+  { id: 'u1', firstName: 'Maria', lastName: 'Santos', email: 'maria.santos@beroe.com', role: 'Super Admin', status: 'Active', spendingPool: 'Metals & Mining', category: 'Steel', projects: [{ id: 'p1', name: 'Q2 2026 Steel Market Signal', projectRole: 'Owner' }, { id: 'p2', name: 'H1 2026 Chemical Feedstocks', projectRole: 'Viewer' }] },
+  { id: 'u2', firstName: 'Sarah', lastName: 'Chen', email: 'sarah.chen@beroe.com', role: 'Admin', status: 'Active', spendingPool: 'Metals & Mining', category: 'Steel', projects: [{ id: 'p1', name: 'Q2 2026 Steel Market Signal', projectRole: 'Owner' }, { id: 'p3', name: 'Q1 2026 Packaging Trends', projectRole: 'Owner' }] },
+  { id: 'u3', firstName: 'Marco', lastName: 'Rossi', email: 'm.rossi@beroe.com', role: 'Standard User', status: 'Active', spendingPool: 'Metals & Mining', category: 'Steel', projects: [{ id: 'p1', name: 'Q2 2026 Steel Market Signal', projectRole: 'Editor' }] },
+  { id: 'u4', firstName: 'Priya', lastName: 'Mehta', email: 'p.mehta@beroe.com', role: 'Admin', status: 'Active', spendingPool: 'Chemicals', category: 'Polypropylene', projects: [] },
+  { id: 'u5', firstName: 'Tom', lastName: 'Baker', email: 't.baker@beroe.com', role: 'Standard User', status: 'Active', spendingPool: 'Chemicals', category: 'Feedstocks', projects: [{ id: 'p2', name: 'H1 2026 Chemical Feedstocks', projectRole: 'Editor' }] },
+  { id: 'u6', firstName: 'Jin', lastName: 'Park', email: 'j.park@beroe.com', role: 'Standard User', status: 'Deactivated', spendingPool: 'Packaging', category: 'Flexible Packaging', projects: [] },
 ];
 
 export const PROPOSALS = [

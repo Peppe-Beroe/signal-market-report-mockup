@@ -1027,11 +1027,13 @@ export default function PeoplePage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50">
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Spending Pool</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
                     <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 select-none">
                       Name ↕
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Org Role</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
                     <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Projects</th>
                     <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
@@ -1040,7 +1042,7 @@ export default function PeoplePage() {
                 <tbody>
                   {paginated.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="text-center py-12">
+                      <td colSpan={8} className="text-center py-12">
                         <Users size={32} className="text-gray-300 mx-auto mb-2" />
                         <p className="text-sm text-gray-500">No users match your search</p>
                       </td>
@@ -1052,6 +1054,8 @@ export default function PeoplePage() {
                       className={`border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${user.status === 'Deactivated' ? 'opacity-50' : ''}`}
                       onClick={() => setSelectedUser(user)}
                     >
+                      <td className="py-3 px-4 text-sm text-gray-600">{user.spendingPool || '—'}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600">{user.category || '—'}</td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <div
