@@ -434,18 +434,19 @@ export default function ExpertDatabase() {
             <thead>
               <tr className="border-b border-gray-100">
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Spending Pool</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Name</th>
+                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Category</th>
+                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-5 py-3">Name</th>
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Company</th>
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Designation</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Email</th>
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Geography</th>
+                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Email</th>
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12">
+                  <td colSpan={8} className="text-center py-12">
                     <Users size={32} className="text-gray-300 mx-auto mb-2" />
                     <p className="text-sm text-gray-500 mb-3">No experts match your search</p>
                     {isSuperAdmin && (
@@ -464,6 +465,9 @@ export default function ExpertDatabase() {
                       <span className="text-sm text-gray-700">{expert.spendingPool || '—'}</span>
                     </td>
                     <td className="px-4 py-4">
+                      <span className="text-sm text-gray-700">{expert.category || '—'}</span>
+                    </td>
+                    <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
@@ -484,13 +488,13 @@ export default function ExpertDatabase() {
                       <span className="text-sm text-gray-700">{expert.title}</span>
                     </td>
                     <td className="px-4 py-4">
+                      <span className="text-sm text-gray-700">{expert.geography || '—'}</span>
+                    </td>
+                    <td className="px-4 py-4">
                       <div className="flex items-center gap-1 text-xs text-gray-500">
                         <Mail size={10} className="text-gray-400 flex-shrink-0" />
                         {expert.email}
                       </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="text-sm text-gray-700">{expert.geography || '—'}</span>
                     </td>
                     <td className="px-4 py-4">
                       <StatusBadge status={expert.status} size="xs" />

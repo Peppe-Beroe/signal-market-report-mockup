@@ -5,12 +5,12 @@ export const USERS = {
 };
 
 export const EXPERTS = [
-  { id: 'e1', name: 'Dr. James Wright', email: 'j.wright@steelcorp.com', company: 'SteelCorp', title: 'VP Procurement', spendingPool: 'Metals & Mining', geography: 'North America', expertise: ['Steel', 'Metals'], status: 'Active', tags: ['Tier 1', 'NA Region'], waves: 4 },
-  { id: 'e2', name: 'Anna Kowalski', email: 'a.kowalski@mfg.pl', company: 'EuroMfg', title: 'Category Manager', spendingPool: 'Metals & Mining', geography: 'Europe', expertise: ['Steel', 'Raw Materials'], status: 'Active', tags: ['EU Region'], waves: 2 },
-  { id: 'e3', name: 'Raj Patel', email: 'r.patel@tata.com', company: 'Tata Steel', title: 'Head of Sourcing', spendingPool: 'Metals & Mining', geography: 'Asia-Pacific', expertise: ['Steel', 'APAC Markets'], status: 'Active', tags: ['APAC Region', 'Tier 1'], waves: 3 },
-  { id: 'e4', name: 'Sophie Dubois', email: 's.dubois@arcelormittal.com', company: 'ArcelorMittal', title: 'Market Analyst', spendingPool: 'Metals & Mining', geography: 'Europe', expertise: ['Steel', 'Flat Products'], status: 'Active', tags: ['EU Region'], waves: 1 },
-  { id: 'e5', name: 'Carlos Mendez', email: 'c.mendez@ternium.com', company: 'Ternium', title: 'Procurement Director', spendingPool: 'Metals & Mining', geography: 'Latin America', expertise: ['Steel', 'LATAM'], status: 'Active', tags: ['LATAM Region', 'Tier 1'], waves: 2 },
-  { id: 'e6', name: 'Linda Park', email: 'l.park@posco.com', company: 'POSCO', title: 'Strategic Buyer', spendingPool: 'Metals & Mining', geography: 'Asia-Pacific', expertise: ['Steel', 'APAC Markets'], status: 'Opted-out', tags: ['APAC Region'], waves: 1 },
+  { id: 'e1', name: 'Dr. James Wright', email: 'j.wright@steelcorp.com', company: 'SteelCorp', title: 'VP Procurement', spendingPool: 'Metals & Mining', category: 'Steel', geography: 'North America', expertise: ['Steel', 'Metals'], status: 'Active', tags: ['Tier 1', 'NA Region'], waves: 4 },
+  { id: 'e2', name: 'Anna Kowalski', email: 'a.kowalski@mfg.pl', company: 'EuroMfg', title: 'Category Manager', spendingPool: 'Metals & Mining', category: 'Steel', geography: 'Europe', expertise: ['Steel', 'Raw Materials'], status: 'Active', tags: ['EU Region'], waves: 2 },
+  { id: 'e3', name: 'Raj Patel', email: 'r.patel@tata.com', company: 'Tata Steel', title: 'Head of Sourcing', spendingPool: 'Metals & Mining', category: 'Steel', geography: 'Asia-Pacific', expertise: ['Steel', 'APAC Markets'], status: 'Active', tags: ['APAC Region', 'Tier 1'], waves: 3 },
+  { id: 'e4', name: 'Sophie Dubois', email: 's.dubois@arcelormittal.com', company: 'ArcelorMittal', title: 'Market Analyst', spendingPool: 'Metals & Mining', category: 'Flat Steel', geography: 'Europe', expertise: ['Steel', 'Flat Products'], status: 'Active', tags: ['EU Region'], waves: 1 },
+  { id: 'e5', name: 'Carlos Mendez', email: 'c.mendez@ternium.com', company: 'Ternium', title: 'Procurement Director', spendingPool: 'Metals & Mining', category: 'Steel', geography: 'Latin America', expertise: ['Steel', 'LATAM'], status: 'Active', tags: ['LATAM Region', 'Tier 1'], waves: 2 },
+  { id: 'e6', name: 'Linda Park', email: 'l.park@posco.com', company: 'POSCO', title: 'Strategic Buyer', spendingPool: 'Metals & Mining', category: 'Steel', geography: 'Asia-Pacific', expertise: ['Steel', 'APAC Markets'], status: 'Opted-out', tags: ['APAC Region'], waves: 1 },
 ];
 
 export const PROJECTS = [
