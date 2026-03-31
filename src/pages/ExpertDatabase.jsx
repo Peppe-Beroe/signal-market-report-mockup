@@ -310,6 +310,8 @@ export default function ExpertDatabase() {
   const [companyFilter, setCompanyFilter] = useState('All');
   const [designationFilter, setDesignationFilter] = useState('All');
   const [geographyFilter, setGeographyFilter] = useState('All');
+  const [sortCol, setSortCol] = useState(null); // 'reactionRate' | 'acceptanceRate'
+  const [sortDir, setSortDir] = useState('desc');
   const [showModal, setShowModal] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -332,18 +334,55 @@ export default function ExpertDatabase() {
 
   const handleSpendingPoolChange = (val) => { setSpendingPoolFilter(val); setCategoryFilter('All'); };
 
-  const filtered = useMemo(() => experts.filter(e => {
-    if (spendingPoolFilter !== 'All' && e.spendingPool !== spendingPoolFilter) return false;
-    if (categoryFilter !== 'All' && e.category !== categoryFilter) return false;
-    if (companyFilter !== 'All' && e.company !== companyFilter) return false;
-    if (designationFilter !== 'All' && e.title !== designationFilter) return false;
-    if (geographyFilter !== 'All' && e.geography !== geographyFilter) return false;
-    const matchSearch = e.name.toLowerCase().includes(search.toLowerCase()) ||
-      e.company.toLowerCase().includes(search.toLowerCase()) ||
-      e.expertise.some(x => x.toLowerCase().includes(search.toLowerCase()));
-    const matchStatus = statusFilter === 'All' || e.status === statusFilter;
-    return matchSearch && matchStatus;
-  }), [experts, search, statusFilter, spendingPoolFilter, categoryFilter, companyFilter, designationFilter, geographyFilter]);
+  const MIN_DATA_POINTS = 3;
+
+  const reactionRate = (e) =>
+    e.surveysSent >= MIN_DATA_POINTS
+      ? Math.round((e.surveysResponded / e.surveysSent) * 100)
+      : null;
+
+  const acceptanceRate = (e) =>
+    e.surveysResponded >= MIN_DATA_POINTS
+      ? Math.round((e.responsesAccepted / e.surveysResponded) * 100)
+      : null;
+
+  const handleSort = (col) => {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('desc'); }
+  };
+
+  const kpiColor = (pct) => {
+    if (pct >= 75) return '#16A34A'; // green
+    if (pct >= 50) return '#D97706'; // amber
+    return '#DC2626'; // red
+  };
+
+  const filtered = useMemo(() => {
+    const list = experts.filter(e => {
+      if (spendingPoolFilter !== 'All' && e.spendingPool !== spendingPoolFilter) return false;
+      if (categoryFilter !== 'All' && e.category !== categoryFilter) return false;
+      if (companyFilter !== 'All' && e.company !== companyFilter) return false;
+      if (designationFilter !== 'All' && e.title !== designationFilter) return false;
+      if (geographyFilter !== 'All' && e.geography !== geographyFilter) return false;
+      const matchSearch = e.name.toLowerCase().includes(search.toLowerCase()) ||
+        e.company.toLowerCase().includes(search.toLowerCase()) ||
+        e.expertise.some(x => x.toLowerCase().includes(search.toLowerCase()));
+      const matchStatus = statusFilter === 'All' || e.status === statusFilter;
+      return matchSearch && matchStatus;
+    });
+
+    if (!sortCol) return list;
+
+    return [...list].sort((a, b) => {
+      const valA = sortCol === 'reactionRate' ? reactionRate(a) : acceptanceRate(a);
+      const valB = sortCol === 'reactionRate' ? reactionRate(b) : acceptanceRate(b);
+      // N/A always to the bottom
+      if (valA === null && valB === null) return 0;
+      if (valA === null) return 1;
+      if (valB === null) return -1;
+      return sortDir === 'asc' ? valA - valB : valB - valA;
+    });
+  }, [experts, search, statusFilter, spendingPoolFilter, categoryFilter, companyFilter, designationFilter, geographyFilter, sortCol, sortDir]);
 
   const validate = () => {
     const errs = {};
@@ -485,6 +524,19 @@ export default function ExpertDatabase() {
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Company</th>
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Designation</th>
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Geography</th>
+                {[
+                  { col: 'reactionRate', label: 'Reaction Rate' },
+                  { col: 'acceptanceRate', label: 'Data Acceptance Rate' },
+                ].map(({ col, label }) => (
+                  <th
+                    key={col}
+                    className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 cursor-pointer select-none hover:text-gray-700 whitespace-nowrap"
+                    onClick={() => handleSort(col)}
+                  >
+                    {label}
+                    {sortCol === col ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕'}
+                  </th>
+                ))}
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Email</th>
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Status</th>
               </tr>
@@ -492,7 +544,7 @@ export default function ExpertDatabase() {
             <tbody className="divide-y divide-gray-50">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12">
+                  <td colSpan={10} className="text-center py-12">
                     <Users size={32} className="text-gray-300 mx-auto mb-2" />
                     <p className="text-sm text-gray-500 mb-3">No experts match your search</p>
                     {isSuperAdmin && (
@@ -536,6 +588,20 @@ export default function ExpertDatabase() {
                     <td className="px-4 py-4">
                       <span className="text-sm text-gray-700">{expert.geography || '—'}</span>
                     </td>
+                    {[reactionRate(expert), acceptanceRate(expert)].map((pct, i) => (
+                      <td key={i} className="px-4 py-4">
+                        {pct === null ? (
+                          <span className="text-xs text-gray-400 italic">N/A</span>
+                        ) : (
+                          <span
+                            className="text-sm font-semibold"
+                            style={{ color: kpiColor(pct) }}
+                          >
+                            {pct}%
+                          </span>
+                        )}
+                      </td>
+                    ))}
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-1 text-xs text-gray-500">
                         <Mail size={10} className="text-gray-400 flex-shrink-0" />
