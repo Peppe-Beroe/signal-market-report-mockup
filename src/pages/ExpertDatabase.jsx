@@ -13,7 +13,7 @@ import Badge from '../components/ui/Badge';
 import StatusBadge from '../components/ui/StatusBadge';
 import Button from '../components/ui/Button';
 
-const EMPTY_FORM = { name: '', email: '', company: '', title: '', expertise: '', tags: '' };
+const EMPTY_FORM = { name: '', email: '', company: '', title: '', domain: '', spendingPool: '', category: '', geography: '', expertise: '', tags: '' };
 
 // Mock CSV rows demonstrating all data quality scenarios
 const MOCK_PREFLIGHT = [
@@ -392,7 +392,7 @@ function CSVImportModal({ onClose, onImport, addToast, createExpert }) {
 
 export default function ExpertDatabase() {
   const navigate = useNavigate();
-  const { experts, currentUser, changeRequests, createExpert, addToast, submitChangeRequest, resolveChangeRequest } = useApp();
+  const { experts, currentUser, taxonomy, changeRequests, createExpert, addToast, submitChangeRequest, resolveChangeRequest } = useApp();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [spendingPoolFilter, setSpendingPoolFilter] = useState('All');
@@ -424,6 +424,17 @@ export default function ExpertDatabase() {
   const allGeographies = useMemo(() => [...new Set(experts.map(e => e.geography).filter(Boolean))].sort(), [experts]);
 
   const handleSpendingPoolChange = (val) => { setSpendingPoolFilter(val); setCategoryFilter('All'); };
+
+  // Taxonomy cascade for Add Expert form
+  const activeTaxDomains = useMemo(() => (taxonomy || []).filter(d => d.active), [taxonomy]);
+  const formAvailablePools = useMemo(() =>
+    activeTaxDomains.find(d => d.name === form.domain)?.spendingPools.filter(sp => sp.active) || [],
+    [activeTaxDomains, form.domain]);
+  const formAvailableCats = useMemo(() =>
+    formAvailablePools.find(sp => sp.name === form.spendingPool)?.categories.filter(c => c.active) || [],
+    [formAvailablePools, form.spendingPool]);
+  const handleFormDomainChange = (val) => setForm(f => ({ ...f, domain: val, spendingPool: '', category: '' }));
+  const handleFormPoolChange = (val) => setForm(f => ({ ...f, spendingPool: val, category: '' }));
 
   const MIN_DATA_POINTS = 3;
 
@@ -859,6 +870,61 @@ export default function ExpertDatabase() {
               {field('email', 'Email address', 'jane.smith@company.com', true)}
               {field('company', 'Company', 'Acme Corp', true)}
               {field('title', 'Job title', 'VP Procurement', true)}
+            </div>
+
+            {/* Taxonomy cascade */}
+            <div className="mt-4 space-y-3">
+              <p className="text-sm font-semibold text-gray-700">Category assignment</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Domain</label>
+                  <select
+                    value={form.domain}
+                    onChange={e => handleFormDomainChange(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none transition-colors"
+                  >
+                    <option value="">Select domain…</option>
+                    {activeTaxDomains.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Spending Pool</label>
+                  <select
+                    value={form.spendingPool}
+                    onChange={e => handleFormPoolChange(e.target.value)}
+                    disabled={!form.domain}
+                    className="w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none transition-colors disabled:opacity-40"
+                  >
+                    <option value="">Select pool…</option>
+                    {formAvailablePools.map(sp => <option key={sp.id} value={sp.name}>{sp.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                  <select
+                    value={form.category}
+                    onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    disabled={!form.spendingPool}
+                    className="w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none transition-colors disabled:opacity-40"
+                  >
+                    <option value="">Select category…</option>
+                    {formAvailableCats.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Geography</label>
+                <input
+                  type="text"
+                  value={form.geography}
+                  onChange={e => setForm(f => ({ ...f, geography: e.target.value }))}
+                  placeholder="North America, Europe…"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors"
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Expertise areas</label>
                 <input
@@ -868,9 +934,9 @@ export default function ExpertDatabase() {
                   placeholder="Steel, Metals (comma-separated)"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors"
                 />
-                <p className="text-xs text-gray-400 mt-1">Separate multiple values with commas</p>
+                <p className="text-xs text-gray-400 mt-1">Separate with commas</p>
               </div>
-              <div>
+              <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Tags</label>
                 <input
                   type="text"
@@ -879,7 +945,7 @@ export default function ExpertDatabase() {
                   placeholder="Tier 1, EU Region (comma-separated)"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors"
                 />
-                <p className="text-xs text-gray-400 mt-1">Separate multiple values with commas</p>
+                <p className="text-xs text-gray-400 mt-1">Separate with commas</p>
               </div>
             </div>
             <div className="flex gap-2 mt-6">

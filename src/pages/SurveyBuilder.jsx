@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Save,
@@ -6,7 +6,7 @@ import {
   AlignLeft, List, CheckSquare, Star, Type, AlignJustify,
   BarChart2, Calendar, Hash, BookTemplate, ChevronUp as Up, ChevronDown as Down,
   Mail, Bell, AlertTriangle, Search, Tag, Users, Edit3, GitCompare, XCircle,
-  Paperclip, FileText, Globe
+  Paperclip, FileText, Globe, ChevronRight
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Button from '../components/ui/Button';
@@ -1019,7 +1019,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser, surveys, projects, experts, templates, categories, typologyConfig, orgTimezone, addToast, createSurvey, updateSurvey, saveTemplate, resolveAmendments } = useApp();
+  const { currentUser, surveys, projects, experts, templates, categories, taxonomy, typologyConfig, orgTimezone, addToast, createSurvey, updateSurvey, saveTemplate, resolveAmendments } = useApp();
   const myTemplates = templates.filter(t => t.ownerId === currentUser.id);
   const projectTemplates = templates.filter(t => t.visibility === 'project' && t.projectId === projectId && t.ownerId !== currentUser.id);
   const orgWideTemplates = templates.filter(t => t.visibility === 'org_wide');
@@ -1029,16 +1029,52 @@ export default function SurveyBuilder({ mode = 'create' }) {
   const existingWaveConfig = mode === 'edit' ? existingSurvey?.waveConfig : null;
 
   const activeCategories = (categories || []).filter(c => c.active);
+
+  // Taxonomy cascade helpers
+  const activeTaxDomains = useMemo(() => (taxonomy || []).filter(d => d.active), [taxonomy]);
+  const allTaxLeafCats = useMemo(() =>
+    activeTaxDomains.flatMap(d =>
+      d.spendingPools.filter(sp => sp.active).flatMap(sp =>
+        sp.categories.filter(c => c.active).map(c => ({ id: c.id, name: c.name, domain: d.name, domainId: d.id, pool: sp.name, poolId: sp.id }))
+      )
+    ), [activeTaxDomains]);
+
+  // Find domain+pool path for an existing category name
+  const findTaxPath = (catName) => {
+    if (!catName) return { domain: '', pool: '' };
+    const match = allTaxLeafCats.find(c => c.name === catName);
+    return match ? { domain: match.domain, pool: match.pool } : { domain: '', pool: '' };
+  };
+
   const [surveyName, setSurveyName] = useState(
     mode === 'edit' && existingSurvey
       ? existingSurvey.name
       : (location.state?.surveyName || '')
   );
-  const [surveyCategory, setSurveyCategory] = useState(
-    mode === 'edit' && existingSurvey?.category
-      ? existingSurvey.category
-      : (activeCategories[0]?.name || '')
-  );
+
+  const initCatName = mode === 'edit' && existingSurvey?.category ? existingSurvey.category : '';
+  const initPath = findTaxPath(initCatName);
+  const [surveyDomain, setSurveyDomain] = useState(initPath.domain);
+  const [surveyPool, setSurveyPool] = useState(initPath.pool);
+  const [surveyCategory, setSurveyCategory] = useState(initCatName);
+  const [catSearch, setCatSearch] = useState('');
+
+  const availablePools = useMemo(() =>
+    activeTaxDomains.find(d => d.name === surveyDomain)?.spendingPools.filter(sp => sp.active) || [],
+    [activeTaxDomains, surveyDomain]);
+  const availableLeafCats = useMemo(() =>
+    availablePools.find(sp => sp.name === surveyPool)?.categories.filter(c => c.active) || [],
+    [availablePools, surveyPool]);
+  const catSearchResults = useMemo(() =>
+    catSearch.trim().length >= 1
+      ? allTaxLeafCats.filter(c => c.name.toLowerCase().includes(catSearch.toLowerCase())).slice(0, 8)
+      : [],
+    [allTaxLeafCats, catSearch]);
+
+  const handleTaxDomainChange = (val) => { setSurveyDomain(val); setSurveyPool(''); setSurveyCategory(''); setIsDirty(true); };
+  const handleTaxPoolChange = (val) => { setSurveyPool(val); setSurveyCategory(''); setIsDirty(true); };
+  const handleTaxCatChange = (val) => { setSurveyCategory(val); setIsDirty(true); };
+  const handleCatSearchSelect = (cat) => { setSurveyDomain(cat.domain); setSurveyPool(cat.pool); setSurveyCategory(cat.name); setCatSearch(''); setIsDirty(true); };
   const [surveyTypology, setSurveyTypology] = useState(
     mode === 'edit' && existingSurvey?.typology
       ? existingSurvey.typology
@@ -1481,21 +1517,78 @@ export default function SurveyBuilder({ mode = 'create' }) {
               placeholder="Enter survey name..."
               className="w-full text-xl font-bold text-gray-900 border-0 border-b-2 border-gray-100 pb-2 bg-transparent focus:border-purple-400 focus:outline-none transition-colors placeholder-gray-300"
             />
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-gray-500 flex-shrink-0">Category</label>
-                <select
-                  value={surveyCategory}
-                  onChange={e => { setSurveyCategory(e.target.value); setIsDirty(true); }}
-                  className="border border-gray-200 rounded-lg px-2.5 py-1 text-sm bg-white focus:border-purple-400 focus:outline-none transition-colors text-gray-700"
-                >
-                  {activeCategories.length === 0 && <option value="">No categories available</option>}
-                  {activeCategories.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-                </select>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Typeahead search */}
+              <div className="relative flex items-center gap-1">
+                <Search size={12} className="text-gray-400 flex-shrink-0" />
+                <input
+                  type="text"
+                  value={catSearch}
+                  onChange={e => setCatSearch(e.target.value)}
+                  placeholder="Search category…"
+                  className="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:border-purple-400 focus:outline-none transition-colors text-gray-700 w-36"
+                />
+                {catSearchResults.length > 0 && (
+                  <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1 max-h-48 overflow-y-auto">
+                    {catSearchResults.map(c => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onMouseDown={() => handleCatSearchSelect(c)}
+                        className="w-full text-left px-3 py-2 hover:bg-purple-50 transition-colors"
+                      >
+                        <span className="text-sm font-medium text-gray-800">{c.name}</span>
+                        <span className="text-xs text-gray-400 ml-2">{c.domain} › {c.pool}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-1.5">
+
+              {/* Cascade selects */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <label className="text-xs font-medium text-gray-400 flex-shrink-0">Domain</label>
+                <select
+                  value={surveyDomain}
+                  onChange={e => handleTaxDomainChange(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:border-purple-400 focus:outline-none transition-colors text-gray-700"
+                >
+                  <option value="">Select…</option>
+                  {activeTaxDomains.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                </select>
+                {surveyDomain && (
+                  <>
+                    <ChevronRight size={11} className="text-gray-300 flex-shrink-0" />
+                    <select
+                      value={surveyPool}
+                      onChange={e => handleTaxPoolChange(e.target.value)}
+                      className="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:border-purple-400 focus:outline-none transition-colors text-gray-700"
+                    >
+                      <option value="">Select pool…</option>
+                      {availablePools.map(sp => <option key={sp.id} value={sp.name}>{sp.name}</option>)}
+                    </select>
+                  </>
+                )}
+                {surveyPool && (
+                  <>
+                    <ChevronRight size={11} className="text-gray-300 flex-shrink-0" />
+                    <select
+                      value={surveyCategory}
+                      onChange={e => handleTaxCatChange(e.target.value)}
+                      className="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:border-purple-400 focus:outline-none transition-colors text-gray-700"
+                    >
+                      <option value="">Select category…</option>
+                      {availableLeafCats.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    </select>
+                  </>
+                )}
+                {!surveyCategory && (
+                  <span className="text-xs text-amber-500 font-medium">No category selected</span>
+                )}
+              </div>
+
+              {/* Typology badge */}
+              <div className="flex items-center gap-1.5 ml-2">
                 <Globe size={12} className="text-gray-400 flex-shrink-0" />
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                   surveyTypology === 'other_survey'

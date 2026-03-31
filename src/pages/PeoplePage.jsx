@@ -75,6 +75,33 @@ function ProfileDrawer({ user, onClose, onProposeAccess, onAddToProject, isSuper
             )}
           </div>
 
+          {/* Team assignment */}
+          <div className="mb-5">
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Team assignment</h4>
+            {user.role === 'Super Admin' ? (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-purple-50 border border-purple-100">
+                <span className="text-sm">🌐</span>
+                <div>
+                  <p className="text-sm font-medium text-purple-800">Worldwide permissions</p>
+                  <p className="text-xs text-purple-500 mt-0.5">Access to all domains, spending pools, and categories</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {[
+                  { label: 'Domain', value: user.domain },
+                  { label: 'Spending Pool', value: user.spendingPool },
+                  { label: 'Category', value: user.category },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center justify-between py-1.5">
+                    <span className="text-xs text-gray-400">{label}</span>
+                    <span className="text-sm text-gray-700 font-medium">{value || '—'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Projects */}
           <div>
             <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
@@ -260,8 +287,16 @@ function ProposeAccessModal({ targetUser, projects, currentUser, onConfirm, onCl
 // ─── Invite User Modal (Super Admin — direct invite) ────────────────────────
 
 function InviteUserModal({ onClose, addToast }) {
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', role: 'Standard User' });
+  const { taxonomy } = useApp();
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', role: 'Standard User', domain: '', spendingPool: '', category: '' });
   const [errors, setErrors] = useState({});
+
+  const activeTaxDomains = (taxonomy || []).filter(d => d.active);
+  const inviteAvailablePools = activeTaxDomains.find(d => d.name === form.domain)?.spendingPools.filter(sp => sp.active) || [];
+  const inviteAvailableCats = inviteAvailablePools.find(sp => sp.name === form.spendingPool)?.categories.filter(c => c.active) || [];
+  const handleInviteDomainChange = (val) => setForm(f => ({ ...f, domain: val, spendingPool: '', category: '' }));
+  const handleInvitePoolChange = (val) => setForm(f => ({ ...f, spendingPool: val, category: '' }));
+  const isSuperAdminInvite = form.role === 'Super Admin';
 
   const validate = () => {
     const errs = {};
@@ -311,12 +346,62 @@ function InviteUserModal({ onClose, addToast }) {
           {field('email', 'Email address', 'email', 'jane@beroe.com')}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
-            <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+            <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value, domain: '', spendingPool: '', category: '' }))}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none">
               <option value="Standard User">Standard User</option>
               <option value="Admin">Admin</option>
             </select>
           </div>
+
+          {/* Team assignment — not applicable to Super Admin */}
+          {!isSuperAdminInvite && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Team assignment</label>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Domain</label>
+                  <select
+                    value={form.domain}
+                    onChange={e => handleInviteDomainChange(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none"
+                  >
+                    <option value="">Select…</option>
+                    {activeTaxDomains.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Spending Pool</label>
+                  <select
+                    value={form.spendingPool}
+                    onChange={e => handleInvitePoolChange(e.target.value)}
+                    disabled={!form.domain}
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none disabled:opacity-40"
+                  >
+                    <option value="">Select…</option>
+                    {inviteAvailablePools.map(sp => <option key={sp.id} value={sp.name}>{sp.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Category</label>
+                  <select
+                    value={form.category}
+                    onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    disabled={!form.spendingPool}
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none disabled:opacity-40"
+                  >
+                    <option value="">Select…</option>
+                    {inviteAvailableCats.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+          {isSuperAdminInvite && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-purple-50 border border-purple-100">
+              <span className="text-sm">🌐</span>
+              <p className="text-xs text-purple-700 font-medium">Super Admins have worldwide permissions — no team assignment needed.</p>
+            </div>
+          )}
         </div>
         <div className="flex gap-2 px-6 py-4 border-t border-gray-100">
           <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
@@ -900,7 +985,7 @@ export default function PeoplePage() {
     });
 
     return list;
-  }, [internalUsers, search, roleFilter, showDeactivated]);
+  }, [internalUsers, search, roleFilter, showDeactivated, domainFilter, spendingPoolFilter, categoryFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageStart = (page - 1) * pageSize;
@@ -1097,9 +1182,19 @@ export default function PeoplePage() {
                       className={`border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${user.status === 'Deactivated' ? 'opacity-50' : ''}`}
                       onClick={() => setSelectedUser(user)}
                     >
-                      <td className="py-3 px-4 text-sm text-gray-600">{user.domain || '—'}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600">{user.spendingPool || '—'}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600">{user.category || '—'}</td>
+                      {user.role === 'Super Admin' ? (
+                        <td colSpan={3} className="py-3 px-4">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
+                            🌐 Worldwide
+                          </span>
+                        </td>
+                      ) : (
+                        <>
+                          <td className="py-3 px-4 text-sm text-gray-600">{user.domain || '—'}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{user.spendingPool || '—'}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{user.category || '—'}</td>
+                        </>
+                      )}
                       <td className="py-3 px-6">
                         <div className="flex items-center gap-3">
                           <div
