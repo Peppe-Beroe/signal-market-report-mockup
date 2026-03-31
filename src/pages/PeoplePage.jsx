@@ -415,8 +415,15 @@ function InviteUserModal({ onClose, addToast }) {
 // ─── Platform Invite Request Modal (Admin + Standard User — routed to SA) ────
 
 function PlatformInviteRequestModal({ onClose, onConfirm }) {
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', requestedRole: 'Standard User', justification: '' });
+  const { taxonomy } = useApp();
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', requestedRole: 'Standard User', domain: '', spendingPool: '', category: '', justification: '' });
   const [errors, setErrors] = useState({});
+
+  const activeTaxDomains = (taxonomy || []).filter(d => d.active);
+  const reqAvailablePools = activeTaxDomains.find(d => d.name === form.domain)?.spendingPools.filter(sp => sp.active) || [];
+  const reqAvailableCats = reqAvailablePools.find(sp => sp.name === form.spendingPool)?.categories.filter(c => c.active) || [];
+  const handleReqDomainChange = (val) => setForm(f => ({ ...f, domain: val, spendingPool: '', category: '' }));
+  const handleReqPoolChange = (val) => setForm(f => ({ ...f, spendingPool: val, category: '' }));
 
   const validate = () => {
     const errs = {};
@@ -437,6 +444,9 @@ function PlatformInviteRequestModal({ onClose, onConfirm }) {
       inviteLastName: form.lastName.trim(),
       inviteEmail: form.email.trim(),
       requestedRole: form.requestedRole,
+      domain: form.domain,
+      spendingPool: form.spendingPool,
+      category: form.category,
       justification: form.justification.trim(),
     });
   };
@@ -477,12 +487,55 @@ function PlatformInviteRequestModal({ onClose, onConfirm }) {
             {field('email', 'Email address', 'email', 'jane@beroe.com')}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Requested role</label>
-              <select value={form.requestedRole} onChange={e => setForm(f => ({ ...f, requestedRole: e.target.value }))}
+              <select value={form.requestedRole} onChange={e => setForm(f => ({ ...f, requestedRole: e.target.value, domain: '', spendingPool: '', category: '' }))}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none">
                 <option value="Standard User">Standard User</option>
                 <option value="Admin">Admin</option>
               </select>
             </div>
+
+            {/* Team assignment */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Team assignment</label>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Domain</label>
+                  <select
+                    value={form.domain}
+                    onChange={e => handleReqDomainChange(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none"
+                  >
+                    <option value="">Select…</option>
+                    {activeTaxDomains.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Spending Pool</label>
+                  <select
+                    value={form.spendingPool}
+                    onChange={e => handleReqPoolChange(e.target.value)}
+                    disabled={!form.domain}
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none disabled:opacity-40"
+                  >
+                    <option value="">Select…</option>
+                    {reqAvailablePools.map(sp => <option key={sp.id} value={sp.name}>{sp.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Category</label>
+                  <select
+                    value={form.category}
+                    onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    disabled={!form.spendingPool}
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none disabled:opacity-40"
+                  >
+                    <option value="">Select…</option>
+                    {reqAvailableCats.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Justification <span className="text-red-400">*</span></label>
               <textarea
