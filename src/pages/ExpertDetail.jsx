@@ -3,8 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Mail, Building2, Tag, ArrowLeft, Edit2, Save, X,
   CheckCircle, MousePointerClick, Truck, XCircle, MessageSquare,
-  AlertTriangle, Send
+  AlertTriangle, Send, History
 } from 'lucide-react';
+
+const MOCK_RECORD_HISTORY = [
+  { id: 'rh1', ts: '31 Mar 2026, 14:46', actor: 'Maria Santos', field: 'Category',     before: 'Flat Steel',           after: 'Steel',                            via: 'CSV Import (steel_experts_march2026.csv)' },
+  { id: 'rh2', ts: '15 Mar 2026, 11:22', actor: 'Sarah Chen',   field: 'Tags',         before: 'Tier 1',               after: 'Tier 1, NA Region',                via: 'Manual edit' },
+  { id: 'rh3', ts: '10 Mar 2026, 09:15', actor: 'Maria Santos', field: 'Email',        before: 'j.wright.old@co.com',  after: 'j.wright@steelcorp.com',            via: 'Manual edit (from communication log)' },
+  { id: 'rh4', ts: '01 Mar 2026, 08:00', actor: 'System',       field: 'Status',       before: '—',                    after: 'Active',                            via: 'CSV Import (initial_expert_panel.csv)' },
+];
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -412,6 +419,41 @@ export default function ExpertDetail() {
           </div>
         )}
       </Card>
+
+      {/* Record History — Super Admin only, read-only */}
+      {isSuperAdmin && (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <History size={16} className="text-gray-400" />
+            <h2 className="text-base font-semibold text-gray-900">Record History</h2>
+            <Badge color="gray">{MOCK_RECORD_HISTORY.length} changes</Badge>
+            <span className="ml-auto text-xs text-gray-400 italic">Read-only — no revert</span>
+          </div>
+          <div className="border border-gray-100 rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  {['Date & time', 'Actor', 'Field', 'Before', 'After', 'Source'].map(h => (
+                    <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 py-2.5">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {MOCK_RECORD_HISTORY.map(entry => (
+                  <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-3 py-2.5 text-xs text-gray-400 whitespace-nowrap">{entry.ts}</td>
+                    <td className="px-3 py-2.5 text-xs text-gray-700">{entry.actor}</td>
+                    <td className="px-3 py-2.5"><span className="text-xs font-medium text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded">{entry.field}</span></td>
+                    <td className="px-3 py-2.5 text-xs text-gray-500 max-w-[140px] truncate" title={entry.before}>{entry.before}</td>
+                    <td className="px-3 py-2.5 text-xs text-gray-800 font-medium max-w-[140px] truncate" title={entry.after}>{entry.after}</td>
+                    <td className="px-3 py-2.5 text-xs text-gray-400 max-w-[180px] truncate" title={entry.via}>{entry.via}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

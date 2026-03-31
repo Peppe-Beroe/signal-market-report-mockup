@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { User, Bell, Sliders, Save, CheckCircle, Globe, List, Mail, Plus, X, Edit2, Info, BookTemplate, Trash2, Lock, Users, Eye, ThumbsUp, ThumbsDown, Paperclip, ToggleLeft, ToggleRight, ArrowUpRight, History, FileText, ChevronRight, ChevronDown } from 'lucide-react';
+import { User, Bell, Sliders, Save, CheckCircle, Globe, List, Mail, Plus, X, Edit2, Info, BookTemplate, Trash2, Lock, Users, Eye, ThumbsUp, ThumbsDown, Paperclip, ToggleLeft, ToggleRight, ArrowUpRight, History, FileText, ChevronRight, ChevronDown, Download } from 'lucide-react';
+
+const MOCK_TAXONOMY_LOG = [
+  { id: 'tl1', ts: '31 Mar 2026, 14:22', actor: 'Maria Santos', level: 'Category',     action: 'Added',       name: 'Rigid Packaging',     before: null,        after: null,       parent: 'Packaging' },
+  { id: 'tl2', ts: '30 Mar 2026, 10:15', actor: 'Maria Santos', level: 'Spending Pool',action: 'Renamed',     name: null,                  before: 'Chemicals', after: 'Specialty Chemicals', parent: 'Process' },
+  { id: 'tl3', ts: '29 Mar 2026, 09:05', actor: 'Maria Santos', level: 'Category',     action: 'Deactivated', name: 'Long Steel',          before: null,        after: null,       parent: 'Metals & Mining' },
+  { id: 'tl4', ts: '28 Mar 2026, 16:45', actor: 'Maria Santos', level: 'Domain',       action: 'Added',       name: 'Indirect',            before: null,        after: null,       parent: null },
+  { id: 'tl5', ts: '27 Mar 2026, 11:30', actor: 'Maria Santos', level: 'Category',     action: 'Renamed',     name: null,                  before: 'Feedstocks',after: 'Chemical Feedstocks', parent: 'Chemicals' },
+  { id: 'tl6', ts: '25 Mar 2026, 15:00', actor: 'Maria Santos', level: 'Category',     action: 'Activated',   name: 'Agriculture',         before: null,        after: null,       parent: 'Indirect' },
+];
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -393,6 +402,7 @@ export default function Settings() {
   const [renameValue, setRenameValue] = useState('');
 
   // Taxonomy tree state
+  const [showTaxLog, setShowTaxLog] = useState(false);
   const [expandedDomains, setExpandedDomains] = useState(() => new Set(['dom1', 'dom2', 'dom3']));
   const [expandedSpendingPools, setExpandedSpendingPools] = useState(() => new Set());
   const [taxRenaming, setTaxRenaming] = useState(null); // { level, domId, spId?, catId?, value }
@@ -846,6 +856,50 @@ export default function Settings() {
               <Plus size={13} /> Add domain
             </Button>
           </div>
+        </Card>
+      )}
+
+      {/* Taxonomy Change Log — Super Admin only */}
+      {isSuperAdmin && (
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-1">
+            <SectionHeader icon={History} title="Taxonomy Change Log" description="Read-only record of all taxonomy mutations — no revert" />
+            <Button variant="ghost" size="sm" onClick={() => setShowTaxLog(p => !p)} className="flex-shrink-0 self-start mt-0.5">
+              {showTaxLog ? 'Hide' : 'View log'}
+            </Button>
+          </div>
+          {showTaxLog && (
+            <div className="border border-gray-100 rounded-xl overflow-hidden mt-3">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    {['Date & time', 'Actor', 'Level', 'Action', 'Detail'].map(h => (
+                      <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 py-2">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {MOCK_TAXONOMY_LOG.map(entry => {
+                    const actionColor = entry.action === 'Added' ? 'text-green-600' : entry.action === 'Renamed' ? 'text-blue-600' : entry.action === 'Deactivated' ? 'text-red-500' : 'text-green-500';
+                    return (
+                      <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-3 py-2.5 text-xs text-gray-400 whitespace-nowrap">{entry.ts}</td>
+                        <td className="px-3 py-2.5 text-xs text-gray-700">{entry.actor}</td>
+                        <td className="px-3 py-2.5"><span className="text-xs font-medium text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">{entry.level}</span></td>
+                        <td className="px-3 py-2.5"><span className={`text-xs font-semibold ${actionColor}`}>{entry.action}</span></td>
+                        <td className="px-3 py-2.5 text-xs text-gray-700">
+                          {entry.action === 'Renamed'
+                            ? <span>"{entry.before}" → "{entry.after}" {entry.parent && <span className="text-gray-400 ml-1">in {entry.parent}</span>}</span>
+                            : <span>"{entry.name}" {entry.parent && <span className="text-gray-400 ml-1">in {entry.parent}</span>}</span>
+                          }
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Card>
       )}
 

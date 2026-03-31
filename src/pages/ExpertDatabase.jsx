@@ -1,6 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Mail, Building2, Tag, X, Upload, FileText, Check, AlertTriangle, ChevronRight, ChevronDown, Bell, Clock, CheckCircle2, Users } from 'lucide-react';
+import { Search, Plus, Mail, Building2, Tag, X, Upload, FileText, Check, AlertTriangle, ChevronRight, ChevronDown, Bell, Clock, CheckCircle2, Users, History, Download } from 'lucide-react';
+
+const MOCK_IMPORT_HISTORY = [
+  { id: 'imp1', ts: '31 Mar 2026, 14:45', actor: 'Maria Santos', filename: 'steel_experts_march2026.csv',  strategy: 'Skip existing',           created: 2,  updated: 0, skipped: 4, errors: 2 },
+  { id: 'imp2', ts: '15 Mar 2026, 09:30', actor: 'Sarah Chen',   filename: 'chemicals_panel_q1.xlsx',      strategy: 'Update empty fields only', created: 12, updated: 5, skipped: 1, errors: 0 },
+  { id: 'imp3', ts: '28 Feb 2026, 16:20', actor: 'Maria Santos', filename: 'initial_expert_panel.csv',     strategy: 'Full overwrite',           created: 47, updated: 0, skipped: 0, errors: 3 },
+];
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -399,6 +405,7 @@ export default function ExpertDatabase() {
   const [showModal, setShowModal] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showImportHistory, setShowImportHistory] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
 
@@ -785,6 +792,59 @@ export default function ExpertDatabase() {
           </div>
         );
       })()}
+
+      {/* Import History — Super Admin only */}
+      {isSuperAdmin && (
+        <div className="px-6 pb-6">
+          <div className="border border-gray-100 rounded-2xl overflow-hidden">
+            <button
+              onClick={() => setShowImportHistory(p => !p)}
+              className="w-full flex items-center justify-between px-5 py-4 bg-white hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <History size={15} className="text-gray-400" />
+                <span className="text-sm font-semibold text-gray-800">Import History</span>
+                <span className="text-xs text-gray-400 font-normal">— read-only record of all CSV imports</span>
+              </div>
+              <ChevronDown size={15} className={`text-gray-400 transition-transform ${showImportHistory ? 'rotate-180' : ''}`} />
+            </button>
+            {showImportHistory && (
+              <div className="border-t border-gray-100 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-100">
+                      {['Date & time', 'Actor', 'File', 'Strategy', 'Created', 'Updated', 'Skipped', 'Errors', ''].map(h => (
+                        <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-2.5">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {MOCK_IMPORT_HISTORY.map(entry => (
+                      <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{entry.ts}</td>
+                        <td className="px-4 py-3 text-xs text-gray-700">{entry.actor}</td>
+                        <td className="px-4 py-3 text-xs text-gray-700 font-medium">
+                          <span className="flex items-center gap-1.5"><FileText size={12} className="text-gray-400" />{entry.filename}</span>
+                        </td>
+                        <td className="px-4 py-3"><span className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">{entry.strategy}</span></td>
+                        <td className="px-4 py-3 text-xs font-semibold text-green-600">{entry.created}</td>
+                        <td className="px-4 py-3 text-xs font-semibold text-blue-600">{entry.updated}</td>
+                        <td className="px-4 py-3 text-xs font-semibold text-gray-400">{entry.skipped}</td>
+                        <td className="px-4 py-3 text-xs font-semibold text-red-500">{entry.errors}</td>
+                        <td className="px-4 py-3">
+                          <button onClick={() => addToast(`Downloading report for ${entry.filename}`)} className="flex items-center gap-1 text-xs font-medium hover:text-purple-700 transition-colors" style={{ color: '#4A00F8' }}>
+                            <Download size={11} /> Report
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Add Expert Modal */}
       {showModal && (
