@@ -28,7 +28,22 @@ function BarChart({ data }) {
   );
 }
 
-function ResponseRow({ response, survey, canExclude, onToggleExclusion }) {
+function KpiBadge({ label, value }) {
+  if (value === null) return (
+    <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-400">
+      {label} N/A
+    </span>
+  );
+  const color = value >= 75 ? '#16A34A' : value >= 50 ? '#D97706' : '#DC2626';
+  const bg = value >= 75 ? '#F0FDF4' : value >= 50 ? '#FFFBEB' : '#FEF2F2';
+  return (
+    <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ backgroundColor: bg, color }}>
+      {label} {value}%
+    </span>
+  );
+}
+
+function ResponseRow({ response, survey, canExclude, onToggleExclusion, expertKpis }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <>
@@ -44,6 +59,12 @@ function ResponseRow({ response, survey, canExclude, onToggleExclusion }) {
             <div>
               <p className={`text-sm font-medium ${response.excluded ? 'line-through text-gray-400' : 'text-gray-800'}`}>{response.expertName}</p>
               <p className="text-xs text-gray-400">{response.company}</p>
+              {expertKpis && (
+                <div className="flex items-center gap-1 mt-1">
+                  <KpiBadge label="RR" value={expertKpis.reactionRate} />
+                  <KpiBadge label="DAR" value={expertKpis.acceptanceRate} />
+                </div>
+              )}
             </div>
           </div>
         </td>
@@ -101,14 +122,24 @@ function ResponseRow({ response, survey, canExclude, onToggleExclusion }) {
 export default function PostCloseReview() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, currentUser, toggleExclusion, addToast } = useApp();
+  const { surveys, projects, currentUser, toggleExclusion, addToast, experts } = useApp();
 
   const survey = surveys.find(s => s.id === surveyId);
   const project = projects.find(p => p.id === projectId);
 
   if (!survey) return <div className="p-6 text-center text-gray-500">Survey not found.</div>;
 
-  const canExclude = ['Super Admin', 'Admin'].includes(currentUser.role);
+  const canExclude = ['Super Admin', 'Admin', 'Standard User'].includes(currentUser.role);
+
+  const MIN_KPI = 3;
+  const getExpertKpis = (expertId) => {
+    const e = experts.find(x => x.id === expertId);
+    if (!e) return null;
+    return {
+      reactionRate: e.surveysSent >= MIN_KPI ? Math.round((e.surveysResponded / e.surveysSent) * 100) : null,
+      acceptanceRate: e.surveysResponded >= MIN_KPI ? Math.round((e.responsesAccepted / e.surveysResponded) * 100) : null,
+    };
+  };
   const excludedCount = survey.responses.filter(r => r.excluded).length;
   const includedCount = survey.responses.length - excludedCount;
   const includedResponses = survey.responses.filter(r => !r.excluded);
@@ -180,7 +211,7 @@ export default function PostCloseReview() {
                 </thead>
                 <tbody>
                   {survey.responses.map(r => (
-                    <ResponseRow key={r.expertId} response={r} survey={survey} canExclude={canExclude} onToggleExclusion={(expertId) => toggleExclusion(survey.id, expertId)} />
+                    <ResponseRow key={r.expertId} response={r} survey={survey} canExclude={canExclude} onToggleExclusion={(expertId) => toggleExclusion(survey.id, expertId)} expertKpis={getExpertKpis(r.expertId)} />
                   ))}
                 </tbody>
               </table>

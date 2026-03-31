@@ -143,7 +143,22 @@ function QuestionSummaryCard({ question, responses, excluded }) {
   );
 }
 
-function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, orgTimezone, canExclude, isRunning }) {
+function KpiBadge({ label, value }) {
+  if (value === null) return (
+    <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-400">
+      {label} N/A
+    </span>
+  );
+  const color = value >= 75 ? '#16A34A' : value >= 50 ? '#D97706' : '#DC2626';
+  const bg = value >= 75 ? '#F0FDF4' : value >= 50 ? '#FFFBEB' : '#FEF2F2';
+  return (
+    <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ backgroundColor: bg, color }}>
+      {label} {value}%
+    </span>
+  );
+}
+
+function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, orgTimezone, canExclude, isRunning, expertKpis }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [annotation, setAnnotation] = useState(response.annotation || '');
@@ -169,6 +184,12 @@ function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, 
                 {response.expertName}
               </p>
               <p className="text-xs text-gray-400">{response.company}</p>
+              {expertKpis && (
+                <div className="flex items-center gap-1 mt-1">
+                  <KpiBadge label="RR" value={expertKpis.reactionRate} />
+                  <KpiBadge label="DAR" value={expertKpis.acceptanceRate} />
+                </div>
+              )}
             </div>
           </div>
         </td>
@@ -417,7 +438,17 @@ function AttachReportSection({ addToast, responsesReceived }) {
 export default function SurveyResults() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, surveys, projects, toggleExclusion, updateAnnotation, addToast, orgTimezone } = useApp();
+  const { currentUser, surveys, projects, toggleExclusion, updateAnnotation, addToast, orgTimezone, experts } = useApp();
+
+  const MIN_KPI = 3;
+  const getExpertKpis = (expertId) => {
+    const e = experts.find(x => x.id === expertId);
+    if (!e) return null;
+    return {
+      reactionRate: e.surveysSent >= MIN_KPI ? Math.round((e.surveysResponded / e.surveysSent) * 100) : null,
+      acceptanceRate: e.surveysResponded >= MIN_KPI ? Math.round((e.responsesAccepted / e.surveysResponded) * 100) : null,
+    };
+  };
   const [activeTab, setActiveTab] = useState('responses');
   const [emailCollapsed, setEmailCollapsed] = useState(false);
   const [responseFilter, setResponseFilter] = useState('all');
@@ -432,7 +463,7 @@ export default function SurveyResults() {
   const pendingExperts = survey.emailStatus.filter(e => !survey.responses.find(r => r.expertId === e.expertId));
   const bouncedCount = survey.emailStatus.filter(e => e.status === 'bounced').length;
   const isRunning = survey.status === 'Running';
-  const canExclude = ['Super Admin', 'Admin'].includes(currentUser.role) && survey.status === 'Review';
+  const canExclude = ['Super Admin', 'Admin', 'Standard User'].includes(currentUser.role) && survey.status === 'Review';
   const nonResponding = survey.emailStatus.filter(e => !survey.responses.find(r => r.expertId === e.expertId)).length;
 
   const tabs = ['Responses', 'Summary'];
@@ -703,6 +734,7 @@ export default function SurveyResults() {
                             orgTimezone={orgTimezone}
                             canExclude={canExclude}
                             isRunning={isRunning}
+                            expertKpis={survey.status === 'Review' ? getExpertKpis(r.expertId) : null}
                           />
                         ))}
                         {sortedEmails.map(e => (
