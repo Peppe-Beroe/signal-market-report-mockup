@@ -9,6 +9,53 @@ const DEFAULT_CATEGORIES = [
   { id: 'cat5', name: 'Agriculture', active: false },
 ];
 
+const DEFAULT_TAXONOMY = [
+  {
+    id: 'dom1', name: 'Industry', active: true,
+    spendingPools: [
+      {
+        id: 'sp1', name: 'Metals & Mining', active: true,
+        categories: [
+          { id: 'tc1', name: 'Steel', active: true },
+          { id: 'tc2', name: 'Flat Steel', active: true },
+          { id: 'tc3', name: 'Aluminium', active: true },
+        ],
+      },
+      {
+        id: 'sp2', name: 'Energy', active: true,
+        categories: [
+          { id: 'tc4', name: 'Oil & Gas', active: true },
+          { id: 'tc5', name: 'Renewables', active: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'dom2', name: 'Process', active: true,
+    spendingPools: [
+      {
+        id: 'sp3', name: 'Chemicals', active: true,
+        categories: [
+          { id: 'tc6', name: 'Polypropylene', active: true },
+          { id: 'tc7', name: 'Feedstocks', active: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'dom3', name: 'Indirect', active: true,
+    spendingPools: [
+      {
+        id: 'sp4', name: 'Packaging', active: true,
+        categories: [
+          { id: 'tc8', name: 'Flexible Packaging', active: true },
+          { id: 'tc9', name: 'Rigid Packaging', active: true },
+        ],
+      },
+    ],
+  },
+];
+
 // Default question type availability per typology (P1-F-83)
 const DEFAULT_TYPOLOGY_CONFIG = {
   market_signal_report: {
@@ -38,6 +85,7 @@ export function AppProvider({ children }) {
   const [orgTimezone, setOrgTimezone] = useState('IST');
   const [proposals, setProposals] = useState(PROPOSALS);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [taxonomy, setTaxonomy] = useState(DEFAULT_TAXONOMY);
   const [typologyConfig, setTypologyConfig] = useState(DEFAULT_TYPOLOGY_CONFIG);
   const [orgWideProposals, setOrgWideProposals] = useState([]);
   const [notificationPrefs, setNotificationPrefs] = useState(() => {
@@ -681,6 +729,7 @@ export function AppProvider({ children }) {
       toggleExclusion, updateAnnotation, transferToDataHub,
       proposeAmendments, resolveAmendments, respondToEditorFeedback,
       categories, setCategories,
+      taxonomy, setTaxonomy,
       orgTimezone, setOrgTimezone,
       notificationPrefs, setNotificationPrefs,
       toasts, addToast, removeToast,
