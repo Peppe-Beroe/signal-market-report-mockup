@@ -417,9 +417,24 @@ export default function Settings() {
     }));
   };
 
+  const _getTaxSiblings = (level, domId, spId) => {
+    if (level === 'domain') return taxonomy.map(d => d.name);
+    if (level === 'sp') return taxonomy.find(d => d.id === domId)?.spendingPools.map(s => s.name) || [];
+    if (level === 'cat') return taxonomy.find(d => d.id === domId)?.spendingPools.find(s => s.id === spId)?.categories.map(c => c.name) || [];
+    return [];
+  };
+
   const taxSaveRename = () => {
     if (!taxRenaming || !taxAddValue.trim()) { setTaxRenaming(null); setTaxAddValue(''); return; }
     const val = taxAddValue.trim();
+    const { level, domId, spId, catId } = taxRenaming;
+    const siblings = _getTaxSiblings(level, domId, spId);
+    const currentName = level === 'domain'
+      ? taxonomy.find(d => d.id === domId)?.name || ''
+      : level === 'sp'
+      ? taxonomy.find(d => d.id === domId)?.spendingPools.find(s => s.id === spId)?.name || ''
+      : taxonomy.find(d => d.id === domId)?.spendingPools.find(s => s.id === spId)?.categories.find(c => c.id === catId)?.name || '';
+    if (siblings.some(s => s.toLowerCase() === val.toLowerCase() && s.toLowerCase() !== currentName.toLowerCase())) return;
     setTaxonomy(prev => prev.map(dom => {
       if (dom.id !== taxRenaming.domId) return dom;
       if (taxRenaming.level === 'domain') return { ...dom, name: val };
@@ -445,6 +460,8 @@ export default function Settings() {
   const taxAdd = () => {
     if (!taxAdding || !taxAddValue.trim()) { setTaxAdding(null); setTaxAddValue(''); return; }
     const val = taxAddValue.trim();
+    const siblings = _getTaxSiblings(taxAdding.level, taxAdding.domId, taxAdding.spId);
+    if (siblings.some(s => s.toLowerCase() === val.toLowerCase())) return; // blocked — UI shows the error
     const newId = `${taxAdding.level}${Date.now()}`;
     if (taxAdding.level === 'domain') {
       setTaxonomy(prev => [...prev, { id: newId, name: val, active: true, spendingPools: [] }]);
@@ -463,6 +480,40 @@ export default function Settings() {
     setTaxAddValue('');
     addToast(`"${val}" added`);
   };
+
+  // Derived: validation state for the currently active taxonomy input
+  const _taxActiveCtx = taxAdding || taxRenaming;
+  const _taxSiblings = _taxActiveCtx ? _getTaxSiblings(_taxActiveCtx.level, _taxActiveCtx.domId, _taxActiveCtx.spId) : [];
+  const _taxCurrentName = taxRenaming ? (() => {
+    const { level, domId, spId, catId } = taxRenaming;
+    if (level === 'domain') return taxonomy.find(d => d.id === domId)?.name || '';
+    if (level === 'sp') return taxonomy.find(d => d.id === domId)?.spendingPools.find(s => s.id === spId)?.name || '';
+    return taxonomy.find(d => d.id === domId)?.spendingPools.find(s => s.id === spId)?.categories.find(c => c.id === catId)?.name || '';
+  })() : '';
+  const taxInputTrimmed = taxAddValue.trim();
+  const taxIsDupe = taxInputTrimmed.length > 0 && _taxSiblings.some(
+    s => s.toLowerCase() === taxInputTrimmed.toLowerCase() && s.toLowerCase() !== _taxCurrentName.toLowerCase()
+  );
+  const taxSuggestions = taxInputTrimmed.length >= 2
+    ? _taxSiblings.filter(s => s.toLowerCase().includes(taxInputTrimmed.toLowerCase()) && s.toLowerCase() !== taxInputTrimmed.toLowerCase()).slice(0, 3)
+    : [];
+
+  const renderTaxInput = (onConfirm, onCancel, placeholder = '') => (
+    <div className="flex-1 min-w-0">
+      <input
+        autoFocus
+        value={taxAddValue}
+        onChange={e => setTaxAddValue(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter' && !taxIsDupe && taxAddValue.trim()) onConfirm(); if (e.key === 'Escape') onCancel(); }}
+        placeholder={placeholder}
+        className={`w-full border rounded px-2 py-0.5 text-sm focus:outline-none ${taxIsDupe ? 'border-red-400 bg-red-50' : 'border-purple-300 bg-white'}`}
+      />
+      {taxIsDupe && <p className="text-xs text-red-500 mt-0.5 leading-tight">"{taxInputTrimmed}" already exists at this level</p>}
+      {!taxIsDupe && taxSuggestions.length > 0 && (
+        <p className="text-xs text-amber-600 mt-0.5 leading-tight">Similar: {taxSuggestions.join(', ')}</p>
+      )}
+    </div>
+  );
   const [defaultEmailSubject, setDefaultEmailSubject] = useState(`You're invited: {{survey_name}}`);
   const [defaultEmailBody, setDefaultEmailBody] = useState(DEFAULT_EMAIL_BODY);
 
@@ -666,22 +717,15 @@ export default function Settings() {
                   <button onClick={() => toggleDomain(dom.id)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
                     {expandedDomains.has(dom.id) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                   </button>
-                  {taxRenaming?.level === 'domain' && taxRenaming.domId === dom.id ? (
-                    <input
-                      autoFocus
-                      value={taxAddValue}
-                      onChange={e => setTaxAddValue(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') taxSaveRename(); if (e.key === 'Escape') { setTaxRenaming(null); setTaxAddValue(''); } }}
-                      className="flex-1 border border-purple-300 rounded px-2 py-0.5 text-sm focus:outline-none"
-                    />
-                  ) : (
-                    <span className={`flex-1 text-sm font-semibold ${dom.active ? 'text-gray-800' : 'text-gray-400 line-through'}`}>{dom.name}</span>
-                  )}
+                  {taxRenaming?.level === 'domain' && taxRenaming.domId === dom.id
+                    ? renderTaxInput(taxSaveRename, () => { setTaxRenaming(null); setTaxAddValue(''); })
+                    : <span className={`flex-1 text-sm font-semibold ${dom.active ? 'text-gray-800' : 'text-gray-400 line-through'}`}>{dom.name}</span>
+                  }
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {taxRenaming?.level === 'domain' && taxRenaming.domId === dom.id ? (
                       <>
-                        <button onClick={taxSaveRename} className="text-green-500 p-1"><CheckCircle size={13} /></button>
-                        <button onClick={() => { setTaxRenaming(null); setTaxAddValue(''); }} className="text-gray-400 p-1"><X size={13} /></button>
+                        <button onClick={taxSaveRename} disabled={taxIsDupe} className={`p-1 flex-shrink-0 ${taxIsDupe ? 'text-gray-300 cursor-not-allowed' : 'text-green-500'}`}><CheckCircle size={13} /></button>
+                        <button onClick={() => { setTaxRenaming(null); setTaxAddValue(''); }} className="text-gray-400 p-1 flex-shrink-0"><X size={13} /></button>
                       </>
                     ) : (
                       <>
@@ -707,23 +751,16 @@ export default function Settings() {
                           <button onClick={() => toggleSP(sp.id)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
                             {expandedSpendingPools.has(sp.id) ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                           </button>
-                          {taxRenaming?.level === 'sp' && taxRenaming.spId === sp.id ? (
-                            <input
-                              autoFocus
-                              value={taxAddValue}
-                              onChange={e => setTaxAddValue(e.target.value)}
-                              onKeyDown={e => { if (e.key === 'Enter') taxSaveRename(); if (e.key === 'Escape') { setTaxRenaming(null); setTaxAddValue(''); } }}
-                              className="flex-1 border border-purple-300 rounded px-2 py-0.5 text-sm focus:outline-none"
-                            />
-                          ) : (
-                            <span className={`flex-1 text-sm font-medium ${sp.active ? 'text-gray-700' : 'text-gray-400 line-through'}`}>{sp.name}</span>
-                          )}
-                          <span className="text-xs text-gray-400 mr-2">{sp.categories.length} {sp.categories.length === 1 ? 'category' : 'categories'}</span>
+                          {taxRenaming?.level === 'sp' && taxRenaming.spId === sp.id
+                            ? renderTaxInput(taxSaveRename, () => { setTaxRenaming(null); setTaxAddValue(''); })
+                            : <span className={`flex-1 text-sm font-medium ${sp.active ? 'text-gray-700' : 'text-gray-400 line-through'}`}>{sp.name}</span>
+                          }
+                          <span className="text-xs text-gray-400 mr-2 flex-shrink-0">{sp.categories.length} {sp.categories.length === 1 ? 'category' : 'categories'}</span>
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {taxRenaming?.level === 'sp' && taxRenaming.spId === sp.id ? (
                               <>
-                                <button onClick={taxSaveRename} className="text-green-500 p-1"><CheckCircle size={13} /></button>
-                                <button onClick={() => { setTaxRenaming(null); setTaxAddValue(''); }} className="text-gray-400 p-1"><X size={13} /></button>
+                                <button onClick={taxSaveRename} disabled={taxIsDupe} className={`p-1 flex-shrink-0 ${taxIsDupe ? 'text-gray-300 cursor-not-allowed' : 'text-green-500'}`}><CheckCircle size={13} /></button>
+                                <button onClick={() => { setTaxRenaming(null); setTaxAddValue(''); }} className="text-gray-400 p-1 flex-shrink-0"><X size={13} /></button>
                               </>
                             ) : (
                               <>
@@ -745,22 +782,15 @@ export default function Settings() {
                             {sp.categories.map(cat => (
                               <div key={cat.id} className="flex items-center gap-2 px-3 py-2 pl-16 hover:bg-gray-50 transition-colors group">
                                 <div className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
-                                {taxRenaming?.level === 'cat' && taxRenaming.catId === cat.id ? (
-                                  <input
-                                    autoFocus
-                                    value={taxAddValue}
-                                    onChange={e => setTaxAddValue(e.target.value)}
-                                    onKeyDown={e => { if (e.key === 'Enter') taxSaveRename(); if (e.key === 'Escape') { setTaxRenaming(null); setTaxAddValue(''); } }}
-                                    className="flex-1 border border-purple-300 rounded px-2 py-0.5 text-sm focus:outline-none"
-                                  />
-                                ) : (
-                                  <span className={`flex-1 text-sm ${cat.active ? 'text-gray-600' : 'text-gray-400 line-through'}`}>{cat.name}</span>
-                                )}
+                                {taxRenaming?.level === 'cat' && taxRenaming.catId === cat.id
+                                  ? renderTaxInput(taxSaveRename, () => { setTaxRenaming(null); setTaxAddValue(''); })
+                                  : <span className={`flex-1 text-sm ${cat.active ? 'text-gray-600' : 'text-gray-400 line-through'}`}>{cat.name}</span>
+                                }
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   {taxRenaming?.level === 'cat' && taxRenaming.catId === cat.id ? (
                                     <>
-                                      <button onClick={taxSaveRename} className="text-green-500 p-1"><CheckCircle size={13} /></button>
-                                      <button onClick={() => { setTaxRenaming(null); setTaxAddValue(''); }} className="text-gray-400 p-1"><X size={13} /></button>
+                                      <button onClick={taxSaveRename} disabled={taxIsDupe} className={`p-1 flex-shrink-0 ${taxIsDupe ? 'text-gray-300 cursor-not-allowed' : 'text-green-500'}`}><CheckCircle size={13} /></button>
+                                      <button onClick={() => { setTaxRenaming(null); setTaxAddValue(''); }} className="text-gray-400 p-1 flex-shrink-0"><X size={13} /></button>
                                     </>
                                   ) : (
                                     <>
@@ -777,16 +807,9 @@ export default function Settings() {
                             {taxAdding?.level === 'cat' && taxAdding.domId === dom.id && taxAdding.spId === sp.id && (
                               <div className="flex items-center gap-2 px-3 py-2 pl-16 bg-purple-50">
                                 <div className="w-1.5 h-1.5 rounded-full bg-purple-300 flex-shrink-0" />
-                                <input
-                                  autoFocus
-                                  value={taxAddValue}
-                                  onChange={e => setTaxAddValue(e.target.value)}
-                                  onKeyDown={e => { if (e.key === 'Enter') taxAdd(); if (e.key === 'Escape') { setTaxAdding(null); setTaxAddValue(''); } }}
-                                  placeholder="New category name…"
-                                  className="flex-1 border border-purple-300 rounded px-2 py-0.5 text-sm focus:outline-none bg-white"
-                                />
-                                <button onClick={taxAdd} className="text-green-500 p-1"><CheckCircle size={13} /></button>
-                                <button onClick={() => { setTaxAdding(null); setTaxAddValue(''); }} className="text-gray-400 p-1"><X size={13} /></button>
+                                {renderTaxInput(taxAdd, () => { setTaxAdding(null); setTaxAddValue(''); }, 'New category name…')}
+                                <button onClick={taxAdd} disabled={taxIsDupe} className={`p-1 flex-shrink-0 ${taxIsDupe ? 'text-gray-300 cursor-not-allowed' : 'text-green-500'}`}><CheckCircle size={13} /></button>
+                                <button onClick={() => { setTaxAdding(null); setTaxAddValue(''); }} className="text-gray-400 p-1 flex-shrink-0"><X size={13} /></button>
                               </div>
                             )}
                           </div>
@@ -797,16 +820,9 @@ export default function Settings() {
                     {taxAdding?.level === 'sp' && taxAdding.domId === dom.id && (
                       <div className="flex items-center gap-2 px-3 py-2.5 pl-8 bg-purple-50">
                         <div className="w-3 flex-shrink-0" />
-                        <input
-                          autoFocus
-                          value={taxAddValue}
-                          onChange={e => setTaxAddValue(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') taxAdd(); if (e.key === 'Escape') { setTaxAdding(null); setTaxAddValue(''); } }}
-                          placeholder="New spending pool name…"
-                          className="flex-1 border border-purple-300 rounded px-2 py-0.5 text-sm focus:outline-none bg-white"
-                        />
-                        <button onClick={taxAdd} className="text-green-500 p-1"><CheckCircle size={13} /></button>
-                        <button onClick={() => { setTaxAdding(null); setTaxAddValue(''); }} className="text-gray-400 p-1"><X size={13} /></button>
+                        {renderTaxInput(taxAdd, () => { setTaxAdding(null); setTaxAddValue(''); }, 'New spending pool name…')}
+                        <button onClick={taxAdd} disabled={taxIsDupe} className={`p-1 flex-shrink-0 ${taxIsDupe ? 'text-gray-300 cursor-not-allowed' : 'text-green-500'}`}><CheckCircle size={13} /></button>
+                        <button onClick={() => { setTaxAdding(null); setTaxAddValue(''); }} className="text-gray-400 p-1 flex-shrink-0"><X size={13} /></button>
                       </div>
                     )}
                   </div>
@@ -818,16 +834,9 @@ export default function Settings() {
             {taxAdding?.level === 'domain' && (
               <div className="flex items-center gap-2 px-3 py-2.5 bg-purple-50">
                 <div className="w-3 flex-shrink-0" />
-                <input
-                  autoFocus
-                  value={taxAddValue}
-                  onChange={e => setTaxAddValue(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') taxAdd(); if (e.key === 'Escape') { setTaxAdding(null); setTaxAddValue(''); } }}
-                  placeholder="New domain name…"
-                  className="flex-1 border border-purple-300 rounded px-2 py-0.5 text-sm focus:outline-none bg-white"
-                />
-                <button onClick={taxAdd} className="text-green-500 p-1"><CheckCircle size={13} /></button>
-                <button onClick={() => { setTaxAdding(null); setTaxAddValue(''); }} className="text-gray-400 p-1"><X size={13} /></button>
+                {renderTaxInput(taxAdd, () => { setTaxAdding(null); setTaxAddValue(''); }, 'New domain name…')}
+                <button onClick={taxAdd} disabled={taxIsDupe} className={`p-1 flex-shrink-0 ${taxIsDupe ? 'text-gray-300 cursor-not-allowed' : 'text-green-500'}`}><CheckCircle size={13} /></button>
+                <button onClick={() => { setTaxAdding(null); setTaxAddValue(''); }} className="text-gray-400 p-1 flex-shrink-0"><X size={13} /></button>
               </div>
             )}
           </div>

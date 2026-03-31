@@ -9,12 +9,24 @@ import Button from '../components/ui/Button';
 
 const EMPTY_FORM = { name: '', email: '', company: '', title: '', expertise: '', tags: '' };
 
+// Mock CSV rows demonstrating all data quality scenarios
 const MOCK_PREFLIGHT = [
-  { row: 2, name: 'Chen Wei', email: 'c.wei@baosteel.com', company: 'Baosteel', title: 'Procurement Lead', status: 'ok', error: null },
-  { row: 3, name: 'Fatima Al-Hassan', email: 'f.alhassan@sabic.com', company: 'SABIC', title: 'Supply Chain Manager', status: 'ok', error: null },
-  { row: 4, name: 'Erik Johansson', email: 'e.johansson@ssab.com', company: 'SSAB', title: 'Category Director', status: 'ok', error: null },
-  { row: 5, name: 'Dr. James Wright', email: 'j.wright@steelcorp.com', company: 'SteelCorp', title: 'VP Procurement', status: 'error', error: 'Duplicate email: j.wright@steelcorp.com' },
+  { row: 2, name: 'Chen Wei',          email: 'c.wei@baosteel.com',     company: 'Baosteel',    title: 'Procurement Lead',     spendingPool: 'Metals & Mining', category: 'Steel',        status: 'new',      issue: null },
+  { row: 3, name: 'Fatima Al-Hassan',  email: 'f.alhassan@sabic.com',   company: 'SABIC',       title: 'Supply Chain Manager', spendingPool: 'Chemicals',       category: 'Polypropylene',status: 'new',      issue: null },
+  { row: 4, name: 'Erik Johansson',    email: 'e.johansson@ssab.com',   company: 'SSAB',        title: 'Category Director',    spendingPool: 'Metals & Mining', category: 'Long Products',status: 'tax_warn', issue: 'Category "Long Products" not in active taxonomy — field will be imported blank.' },
+  { row: 5, name: 'Dr. James Wright',  email: 'j.wright@steelcorp.com', company: 'SteelCorp',   title: 'VP Procurement',       spendingPool: 'Metals & Mining', category: 'Steel',        status: 'conflict', issue: 'Email matches existing expert. Conflict strategy applies.' },
+  { row: 6, name: 'Linda Park',        email: 'l.park@posco.com',       company: 'POSCO',       title: 'Strategic Buyer',      spendingPool: 'Metals & Mining', category: 'Steel',        status: 'optout',   issue: 'Expert has opted out. Will always be skipped — compliance rule.' },
+  { row: 7, name: 'John Doe',          email: '',                        company: 'Acme Corp',   title: 'Buyer',                spendingPool: '',                category: '',             status: 'error',    issue: 'Missing required field: email' },
+  { row: 8, name: 'Chen Wei',          email: 'c.wei@baosteel.com',     company: 'Baosteel',    title: 'Procurement Lead',     spendingPool: 'Metals & Mining', category: 'Steel',        status: 'error',    issue: 'Duplicate within file — email c.wei@baosteel.com already appears in row 2' },
 ];
+
+const STATUS_META = {
+  new:      { label: 'New',            bg: 'bg-green-50',  border: 'border-green-100', text: 'text-green-700',  dot: 'bg-green-400' },
+  tax_warn: { label: 'Taxonomy warn',  bg: 'bg-amber-50',  border: 'border-amber-100', text: 'text-amber-700',  dot: 'bg-amber-400' },
+  conflict: { label: 'Conflict',       bg: 'bg-blue-50',   border: 'border-blue-100',  text: 'text-blue-700',   dot: 'bg-blue-400'  },
+  optout:   { label: 'Opted out',      bg: 'bg-gray-50',   border: 'border-gray-200',  text: 'text-gray-500',   dot: 'bg-gray-400'  },
+  error:    { label: 'Error',          bg: 'bg-red-50',    border: 'border-red-100',   text: 'text-red-700',    dot: 'bg-red-400'   },
+};
 
 function RequestChangeModal({ onClose, onSubmit }) {
   const [form, setForm] = useState({ requestType: 'Add', expertName: '', details: '', justification: '' });
@@ -103,17 +115,80 @@ function RequestChangeModal({ onClose, onSubmit }) {
 function CSVImportModal({ onClose, onImport, addToast, createExpert }) {
   const [step, setStep] = useState(1);
   const [fileName, setFileName] = useState('');
+  const [strategy, setStrategy] = useState('skip'); // 'skip' | 'update_empty' | 'overwrite'
+  const [showReport, setShowReport] = useState(false);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) setFileName(file.name);
   };
-
   const downloadTemplate = () => addToast('Template CSV downloaded');
+
+  const newRows      = MOCK_PREFLIGHT.filter(r => r.status === 'new');
+  const taxWarnRows  = MOCK_PREFLIGHT.filter(r => r.status === 'tax_warn');
+  const conflictRows = MOCK_PREFLIGHT.filter(r => r.status === 'conflict');
+  const optoutRows   = MOCK_PREFLIGHT.filter(r => r.status === 'optout');
+  const errorRows    = MOCK_PREFLIGHT.filter(r => r.status === 'error');
+
+  const conflictAction = strategy === 'skip' ? 'Skipped' : strategy === 'update_empty' ? 'Partially updated' : 'Overwritten';
+  const importableCount = newRows.length + taxWarnRows.length + (strategy !== 'skip' ? conflictRows.length : 0);
+
+  const handleConfirmImport = () => {
+    newRows.concat(taxWarnRows).forEach(row => {
+      createExpert({ name: row.name, email: row.email, company: row.company, title: row.title, expertise: '', tags: '' });
+    });
+    setShowReport(true);
+  };
+
+  if (showReport) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-bold text-gray-900">Import Complete</h2>
+            <button onClick={() => { setShowReport(false); onClose(); }} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+          </div>
+          <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+            <Check size={24} className="text-green-600" />
+          </div>
+          <div className="space-y-2 mb-5">
+            <div className="flex justify-between py-2 border-b border-gray-50">
+              <span className="text-sm text-gray-600">Created (new)</span>
+              <span className="text-sm font-bold text-green-600">{newRows.length + taxWarnRows.length}</span>
+            </div>
+            {taxWarnRows.length > 0 && (
+              <div className="flex justify-between py-2 border-b border-gray-50">
+                <span className="text-sm text-gray-600">Taxonomy fields cleared (not in active taxonomy)</span>
+                <span className="text-sm font-bold text-amber-600">{taxWarnRows.length}</span>
+              </div>
+            )}
+            <div className="flex justify-between py-2 border-b border-gray-50">
+              <span className="text-sm text-gray-600">Conflicts — {conflictAction.toLowerCase()}</span>
+              <span className="text-sm font-bold text-blue-600">{conflictRows.length}</span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-gray-50">
+              <span className="text-sm text-gray-600">Opted-out — always skipped</span>
+              <span className="text-sm font-bold text-gray-500">{optoutRows.length}</span>
+            </div>
+            <div className="flex justify-between py-2">
+              <span className="text-sm text-gray-600">Errors — skipped</span>
+              <span className="text-sm font-bold text-red-600">{errorRows.length}</span>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={() => addToast('Import report downloaded')}>
+              <FileText size={14} /> Download report
+            </Button>
+            <Button className="flex-1" onClick={() => { setShowReport(false); onClose(); }}>Done</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold text-gray-900">Import Experts from CSV</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
@@ -130,7 +205,7 @@ function CSVImportModal({ onClose, onImport, addToast, createExpert }) {
                 {step > s ? <Check size={13} /> : s}
               </div>
               <span className={`text-sm ${step === s ? 'font-semibold text-gray-800' : 'text-gray-400'}`}>
-                {['Upload file', 'Pre-flight check', 'Confirm import'][i]}
+                {['Upload file', 'Data quality review', 'Confirm & import'][i]}
               </span>
               {i < 2 && <ChevronRight size={14} className="text-gray-300" />}
             </div>
@@ -146,9 +221,7 @@ function CSVImportModal({ onClose, onImport, addToast, createExpert }) {
               <p className="text-xs text-gray-400 mb-4">Accepted formats: .csv, .xlsx · Max file size: 5MB</p>
               <label className="cursor-pointer">
                 <input type="file" accept=".csv,.xlsx" onChange={handleFileChange} className="hidden" />
-                <span className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: '#4A00F8' }}>
-                  Choose file
-                </span>
+                <span className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: '#4A00F8' }}>Choose file</span>
               </label>
               {fileName && (
                 <div className="flex items-center justify-center gap-2 mt-3">
@@ -158,139 +231,150 @@ function CSVImportModal({ onClose, onImport, addToast, createExpert }) {
               )}
             </div>
             <div className="flex items-center justify-between">
-              <button onClick={downloadTemplate} className="text-sm font-medium underline underline-offset-2" style={{ color: '#4A00F8' }}>
-                Download template
-              </button>
+              <button onClick={downloadTemplate} className="text-sm font-medium underline underline-offset-2" style={{ color: '#4A00F8' }}>Download template</button>
               <div className="flex gap-2">
                 <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                <Button onClick={() => setStep(2)} disabled={!fileName}>
-                  Validate file
-                </Button>
+                <Button onClick={() => setStep(2)} disabled={!fileName}>Validate file</Button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Step 2: Pre-flight check */}
+        {/* Step 2: Data quality review */}
         {step === 2 && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-100">
-              <AlertTriangle size={14} className="text-amber-500" />
-              <p className="text-sm text-amber-700">1 row has an error and will be skipped. Review before importing.</p>
+            {/* Summary bar */}
+            <div className="grid grid-cols-5 gap-2">
+              {[
+                { label: 'New', count: newRows.length,      color: 'text-green-700', bg: 'bg-green-50',  border: 'border-green-100' },
+                { label: 'Tax. warn', count: taxWarnRows.length,  color: 'text-amber-700', bg: 'bg-amber-50',  border: 'border-amber-100' },
+                { label: 'Conflicts', count: conflictRows.length, color: 'text-blue-700',  bg: 'bg-blue-50',   border: 'border-blue-100' },
+                { label: 'Opted out', count: optoutRows.length,   color: 'text-gray-500',  bg: 'bg-gray-50',   border: 'border-gray-200' },
+                { label: 'Errors',    count: errorRows.length,    color: 'text-red-700',   bg: 'bg-red-50',    border: 'border-red-100' },
+              ].map(({ label, count, color, bg, border }) => (
+                <div key={label} className={`${bg} border ${border} rounded-lg p-2 text-center`}>
+                  <p className={`text-lg font-bold ${color}`}>{count}</p>
+                  <p className={`text-xs ${color}`}>{label}</p>
+                </div>
+              ))}
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
+
+            {/* Row table */}
+            <div className="overflow-x-auto border border-gray-100 rounded-xl">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100">
-                    {['Row', 'Name', 'Email', 'Company', 'Title', 'Status'].map(h => (
+                  <tr className="border-b border-gray-100 bg-gray-50">
+                    {['Row', 'Name', 'Email', 'Spending Pool', 'Category', 'Status / Issue'].map(h => (
                       <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-3 py-2">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {MOCK_PREFLIGHT.map(row => {
-                    const formulaFields = ['name', 'email', 'company', 'title'].filter(
-                      f => row[f] && /^[=+\-@]/.test(String(row[f]))
-                    );
+                    const meta = STATUS_META[row.status];
                     return (
-                    <tr key={row.row} className={row.status === 'error' ? 'bg-red-50' : 'bg-green-50/30'}>
-                      <td className="px-3 py-2.5 text-xs text-gray-500">{row.row}</td>
-                      <td className="px-3 py-2.5 text-sm text-gray-800">
-                        <span>{row.name}</span>
-                        {/^[=+\-@]/.test(String(row.name || '')) && (
-                          <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded">
-                            <AlertTriangle size={10} /> Formula
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5 text-xs text-gray-600">
-                        <span>{row.email}</span>
-                        {/^[=+\-@]/.test(String(row.email || '')) && (
-                          <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded">
-                            <AlertTriangle size={10} /> Formula
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-gray-600">
-                        <span>{row.company}</span>
-                        {/^[=+\-@]/.test(String(row.company || '')) && (
-                          <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded">
-                            <AlertTriangle size={10} /> Formula
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-gray-600">
-                        <span>{row.title}</span>
-                        {/^[=+\-@]/.test(String(row.title || '')) && (
-                          <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded">
-                            <AlertTriangle size={10} /> Formula
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        {row.status === 'ok' ? (
-                          <div className="space-y-1">
-                            <span className="flex items-center gap-1 text-xs font-medium text-green-600">
-                              <Check size={12} /> Valid
-                            </span>
-                            {formulaFields.length > 0 && (
-                              <span className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
-                                <AlertTriangle size={10} /> Possible formula injection
-                              </span>
-                            )}
+                      <tr key={row.row} className={`${meta.bg}`}>
+                        <td className="px-3 py-2.5 text-xs text-gray-500">{row.row}</td>
+                        <td className="px-3 py-2.5 text-sm text-gray-800 font-medium">{row.name || <span className="text-gray-400 italic">—</span>}</td>
+                        <td className="px-3 py-2.5 text-xs text-gray-600">{row.email || <span className="text-red-400 italic">missing</span>}</td>
+                        <td className="px-3 py-2.5 text-xs text-gray-600">{row.spendingPool || '—'}</td>
+                        <td className="px-3 py-2.5 text-xs text-gray-600">
+                          {row.status === 'tax_warn'
+                            ? <span className="text-amber-600 font-medium">{row.category} ⚠</span>
+                            : row.category || '—'}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-start gap-1.5">
+                            <div className={`w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0 ${meta.dot}`} />
+                            <div>
+                              <span className={`text-xs font-semibold ${meta.text}`}>{meta.label}</span>
+                              {row.issue && <p className="text-xs text-gray-500 mt-0.5">{row.issue}</p>}
+                            </div>
                           </div>
-                        ) : (
-                          <span className="flex items-center gap-1 text-xs font-medium text-red-600">
-                            <AlertTriangle size={12} /> {row.error}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-            <div className="flex justify-between">
+
+            {/* Legend */}
+            <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block" /> New — will be created</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Taxonomy warn — field imported blank</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> Conflict — email matches existing expert</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400 inline-block" /> Opted-out — always skipped</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" /> Error — will be skipped</span>
+            </div>
+
+            <div className="flex justify-between pt-1">
               <Button variant="secondary" onClick={() => setStep(1)}>Back</Button>
-              <Button onClick={() => setStep(3)}>Continue to import</Button>
+              <Button onClick={() => setStep(3)} disabled={errorRows.length === MOCK_PREFLIGHT.length}>Review & confirm</Button>
             </div>
           </div>
         )}
 
-        {/* Step 3: Confirm */}
+        {/* Step 3: Conflict strategy + confirm */}
         {step === 3 && (
-          <div className="space-y-4">
-            <div className="bg-gray-50 rounded-xl p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">New records to add</span>
-                <span className="text-sm font-bold text-green-600">3</span>
+          <div className="space-y-5">
+            {/* Conflict strategy */}
+            {conflictRows.length > 0 && (
+              <div className="border border-blue-100 rounded-xl p-4 bg-blue-50">
+                <p className="text-sm font-semibold text-blue-800 mb-3">
+                  {conflictRows.length} row{conflictRows.length > 1 ? 's' : ''} match existing experts by email — choose how to handle them:
+                </p>
+                <div className="space-y-2">
+                  {[
+                    { value: 'skip',         label: 'Skip existing',           desc: 'Leave all existing records unchanged. Safest option.' },
+                    { value: 'update_empty', label: 'Update empty fields only', desc: 'Only fill blank fields on existing records — populated fields are not overwritten.' },
+                    { value: 'overwrite',    label: 'Full overwrite',           desc: 'Replace all fields on existing records with CSV data. Use with caution.' },
+                  ].map(opt => (
+                    <label key={opt.value} className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer border transition-colors ${strategy === opt.value ? 'border-blue-400 bg-white' : 'border-transparent bg-white/60 hover:bg-white'}`}>
+                      <input type="radio" name="strategy" value={opt.value} checked={strategy === opt.value} onChange={() => setStrategy(opt.value)} className="mt-0.5 accent-purple-600" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{opt.label}</p>
+                        <p className="text-xs text-gray-500">{opt.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
               </div>
+            )}
+
+            {/* Summary */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-2.5">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Import summary</p>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Records to update</span>
-                <span className="text-sm font-bold text-gray-800">0</span>
+                <span className="text-sm text-gray-600">New experts to create</span>
+                <span className="text-sm font-bold text-green-600">{newRows.length + taxWarnRows.length}</span>
               </div>
-              <div className="flex items-center justify-between border-t border-gray-200 pt-3">
-                <span className="text-sm text-gray-600">Rows to skip (errors)</span>
-                <span className="text-sm font-bold text-amber-600">1</span>
+              {taxWarnRows.length > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500 flex items-center gap-1"><AlertTriangle size={12} className="text-amber-500" /> Taxonomy fields will be cleared</span>
+                  <span className="text-sm font-semibold text-amber-600">{taxWarnRows.length} field{taxWarnRows.length > 1 ? 's' : ''}</span>
+                </div>
+              )}
+              {conflictRows.length > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Conflicts — {conflictAction}</span>
+                  <span className="text-sm font-bold text-blue-600">{conflictRows.length}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Opted-out — always skipped</span>
+                <span className="text-sm font-bold text-gray-400">{optoutRows.length}</span>
+              </div>
+              <div className="flex items-center justify-between border-t border-gray-200 pt-2.5">
+                <span className="text-sm text-gray-600">Errors — skipped</span>
+                <span className="text-sm font-bold text-red-500">{errorRows.length}</span>
               </div>
             </div>
-            <p className="text-xs text-gray-400">
-              Skipped row: Row 5 — Duplicate email j.wright@steelcorp.com
-            </p>
+
             <div className="flex justify-between">
               <Button variant="secondary" onClick={() => setStep(2)}>Back</Button>
-              <Button onClick={() => {
-                const validRows = MOCK_PREFLIGHT.filter(r => r.status === 'ok');
-                validRows.forEach(row => {
-                  createExpert({ name: row.name, email: row.email, company: row.company, title: row.title, expertise: '', tags: '' });
-                });
-                const newCount = validRows.length;
-                const skipCount = MOCK_PREFLIGHT.filter(r => r.status !== 'ok').length;
-                addToast(`Import complete: ${newCount} added, ${skipCount} skipped`);
-                onClose();
-              }}>
-                <Upload size={14} /> Import {MOCK_PREFLIGHT.filter(r => r.status === 'ok').length} experts
+              <Button onClick={handleConfirmImport}>
+                <Upload size={14} /> Import {importableCount} experts
               </Button>
             </div>
           </div>
