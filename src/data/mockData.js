@@ -38,7 +38,7 @@ export const SURVEYS = [
     typology: 'market_signal_report',
     status: 'Running', wave: 1,
     createdBy: 'Marco Rossi', approvedBy: 'Sarah Chen',
-    sendDate: '2026-03-05', closeDate: '2026-03-20',
+    sendDate: '2026-03-05', closeDate: '2026-05-31',
     expertsTargeted: 6, responsesReceived: 3, responseRate: 50,
     questions: [
       { id: 'q1', type: 'single_choice', required: true, text: 'How do you expect hot-rolled coil (HRC) prices to trend in Q3 2026?', options: ['Increase >10%', 'Increase 5–10%', 'Stay flat (±5%)', 'Decrease 5–10%', 'Decrease >10%'] },
