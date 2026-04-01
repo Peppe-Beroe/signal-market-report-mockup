@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { User, Bell, Sliders, Save, CheckCircle, Globe, List, Mail, Plus, X, Edit2, Info, BookTemplate, Trash2, Lock, Users, Eye, ThumbsUp, ThumbsDown, Paperclip, ToggleLeft, ToggleRight, ArrowUpRight, History, FileText, ChevronRight, ChevronDown, Download } from 'lucide-react';
 
 const MOCK_TAXONOMY_LOG = [
@@ -370,8 +370,29 @@ function TemplateDetailModal({ template, onClose, onRevert, categories, internal
 export default function Settings() {
   const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs, categories, setCategories, taxonomy, setTaxonomy, templates, deleteTemplate, renameTemplate, updateTemplateQuestions, revertTemplateToPrivate, revertTemplateVersion, proposeOrgWide, approveOrgWide, rejectOrgWide, orgWideProposals, typologyConfig, updateTypologyConfig, projects, internalUsers } = useApp();
   const isSuperAdmin = currentUser.role === 'Super Admin';
+  const isAdmin = currentUser.role === 'Admin';
   const isStandardUser = currentUser.role === 'Standard User';
   const profileReadOnly = !isSuperAdmin; // Admin and Standard User see read-only profile
+
+  // Category Admin: proposals eligible for approval = proposals whose template categories
+  // intersect with the Admin's responsible spending pools or leaf categories
+  const adminCatNames = useMemo(() => {
+    if (!isAdmin) return new Set();
+    return new Set(
+      (currentUser.responsibleCategories || []).flatMap(rc => [rc.category, rc.spendingPool].filter(Boolean))
+    );
+  }, [isAdmin, currentUser]);
+
+  const eligibleProposals = useMemo(() => {
+    if (!isAdmin || adminCatNames.size === 0) return [];
+    return (orgWideProposals || []).filter(p => {
+      const tpl = templates.find(t => t.id === p.templateId);
+      const tplCatNames = (tpl?.categories || [])
+        .map(cid => categories.find(c => c.id === cid)?.name)
+        .filter(Boolean);
+      return tplCatNames.some(n => adminCatNames.has(n));
+    });
+  }, [isAdmin, adminCatNames, orgWideProposals, templates, categories]);
 
   const [profile] = useState({ name: currentUser.name, email: currentUser.email });
   const [editProfile, setEditProfile] = useState({ name: currentUser.name, email: currentUser.email });
@@ -970,6 +991,36 @@ export default function Settings() {
               onViewDetail={null}
             />
           )}
+        </Card>
+      )}
+
+      {/* Pending Org-Wide Proposals — Category Admin */}
+      {isAdmin && eligibleProposals.length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <ArrowUpRight size={16} className="text-violet-500" />
+            <h3 className="text-sm font-semibold text-gray-800">Pending Org-Wide Proposals — your categories</h3>
+            <span className="ml-auto text-xs font-medium px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">{eligibleProposals.length}</span>
+          </div>
+          <p className="text-xs text-gray-500 mb-3">
+            These templates are tagged to categories in your perimeter. You can approve or reject the Org-Wide promotion proposal.
+          </p>
+          <div className="space-y-2">
+            {eligibleProposals.map(p => (
+              <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl border border-violet-200 bg-violet-50">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{p.templateName}</p>
+                  <p className="text-xs text-gray-500">Proposed by {p.proposedBy} · {p.proposedAt}</p>
+                </div>
+                <Button variant="ghost" size="xs" className="text-green-600 hover:text-green-800 border border-green-200" onClick={() => approveOrgWide(p.id)}>
+                  <ThumbsUp size={11} /> Approve
+                </Button>
+                <Button variant="ghost" size="xs" className="text-red-400 hover:text-red-600 border border-red-100" onClick={() => rejectOrgWide(p.id)}>
+                  <ThumbsDown size={11} /> Reject
+                </Button>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
 

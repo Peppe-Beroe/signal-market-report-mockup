@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Mail, Building2, Tag, X, Upload, FileText, Check, AlertTriangle, ChevronRight, ChevronDown, Bell, Clock, CheckCircle2, Users, History, Download } from 'lucide-react';
+import { Search, Plus, Mail, Building2, Tag, X, Upload, FileText, Check, AlertTriangle, ChevronRight, ChevronDown, Bell, Clock, CheckCircle2, Users, History, Download, Edit2, List } from 'lucide-react';
 
 const MOCK_IMPORT_HISTORY = [
   { id: 'imp1', ts: '31 Mar 2026, 14:45', actor: 'Maria Santos', filename: 'steel_experts_march2026.csv',  strategy: 'Skip existing',           created: 2,  updated: 0, skipped: 4, errors: 2 },
@@ -162,6 +162,430 @@ function RequestChangeModal({ onClose, onSubmit, taxonomy }) {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Change Expert List Modal (Admin only) ───────────────────────────────────
+// Unified "Change expert list" entry point for Admin users.
+// Tab 1 "Invite new expert": direct add within perimeter, request approval outside.
+// Tab 2 "Edit existing expert": autocomplete search, direct edit within perimeter,
+//   request change outside — same validation constraints as SA edit in ExpertDetail.
+
+function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDirectAdd, onDirectEdit, onRequestChange }) {
+  const adminPerimeter = currentUser.responsibleCategories || [];
+  const [activeTab, setActiveTab] = useState('invite');
+
+  // ── Invite tab ──────────────────────────────────────────────────────────────
+  const firstRC = adminPerimeter[0] || {};
+  const [inviteForm, setInviteForm] = useState({
+    name: '', email: '', company: '', title: '',
+    domain: firstRC.domain || '',
+    spendingPool: firstRC.spendingPool || '',
+    category: firstRC.category || '',
+    geography: '',
+  });
+  const [inviteErrors, setInviteErrors] = useState({});
+  const [inviteSubmitted, setInviteSubmitted] = useState(false);
+
+  const activeTaxDomains = useMemo(() => (taxonomy || []).filter(d => d.active), [taxonomy]);
+  const invitePools = activeTaxDomains.find(d => d.name === inviteForm.domain)?.spendingPools.filter(sp => sp.active) || [];
+  const inviteCats = invitePools.find(sp => sp.name === inviteForm.spendingPool)?.categories.filter(c => c.active) || [];
+
+  const handleInviteDomain = (val) => setInviteForm(f => ({ ...f, domain: val, spendingPool: '', category: '' }));
+  const handleInvitePool = (val) => setInviteForm(f => ({ ...f, spendingPool: val, category: '' }));
+
+  const inviteInPerimeter = !inviteForm.category || adminPerimeter.some(rc =>
+    rc.domain === inviteForm.domain &&
+    rc.spendingPool === inviteForm.spendingPool &&
+    rc.category === inviteForm.category
+  );
+
+  const validateInvite = () => {
+    const errs = {};
+    if (!inviteForm.name.trim()) errs.name = 'Required';
+    if (!inviteForm.email.trim()) errs.email = 'Required';
+    else if (!/\S+@\S+\.\S+/.test(inviteForm.email)) errs.email = 'Invalid email format';
+    if (!inviteForm.company.trim()) errs.company = 'Required';
+    if (!inviteForm.title.trim()) errs.title = 'Required';
+    return errs;
+  };
+
+  const handleSubmitInvite = () => {
+    const errs = validateInvite();
+    if (Object.keys(errs).length > 0) { setInviteErrors(errs); return; }
+    if (inviteInPerimeter) {
+      onDirectAdd({
+        name: inviteForm.name.trim(), email: inviteForm.email.trim(),
+        company: inviteForm.company.trim(), title: inviteForm.title.trim(),
+        domain: inviteForm.domain, spendingPool: inviteForm.spendingPool,
+        category: inviteForm.category, geography: inviteForm.geography.trim(),
+        tags: [],
+      });
+      setInviteSubmitted(true);
+    } else {
+      onRequestChange({
+        requestType: 'Add', expertName: inviteForm.name.trim(),
+        domain: inviteForm.domain, spendingPool: inviteForm.spendingPool,
+        category: inviteForm.category,
+        details: `Invite new expert: ${inviteForm.name} (${inviteForm.email}), ${inviteForm.title} at ${inviteForm.company}.`,
+        justification: '',
+      });
+      setInviteSubmitted(true);
+    }
+  };
+
+  // ── Edit tab ────────────────────────────────────────────────────────────────
+  const [expertSearch, setExpertSearch] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedExpert, setSelectedExpert] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [editErrors, setEditErrors] = useState({});
+  const [reqForm, setReqForm] = useState({ details: '', justification: '' });
+  const [editSubmitted, setEditSubmitted] = useState(false);
+
+  const suggestions = useMemo(() => {
+    const q = expertSearch.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return experts.filter(e => e.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [experts, expertSearch]);
+
+  const editInPerimeter = selectedExpert
+    ? adminPerimeter.some(rc => rc.category === selectedExpert.category)
+    : false;
+
+  const handleExpertSelect = (expert) => {
+    setSelectedExpert(expert);
+    setExpertSearch(expert.name);
+    setShowDropdown(false);
+    setEditForm({
+      name: expert.name, email: expert.email,
+      company: expert.company, title: expert.title,
+      geography: expert.geography || '',
+      tags: (expert.tags || []).join(', '),
+    });
+    setEditErrors({});
+    setReqForm({ details: '', justification: '' });
+    setEditSubmitted(false);
+  };
+
+  const validateEdit = () => {
+    const errs = {};
+    if (!editForm.name.trim()) errs.name = 'Name is required';
+    if (!editForm.email.trim()) errs.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(editForm.email)) errs.email = 'Invalid email format';
+    if (!editForm.company.trim()) errs.company = 'Company is required';
+    if (!editForm.title.trim()) errs.title = 'Job title is required';
+    return errs;
+  };
+
+  const handleSubmitEdit = () => {
+    if (!selectedExpert) return;
+    if (editInPerimeter) {
+      const errs = validateEdit();
+      if (Object.keys(errs).length > 0) { setEditErrors(errs); return; }
+      onDirectEdit(selectedExpert.id, {
+        name: editForm.name.trim(), email: editForm.email.trim(),
+        company: editForm.company.trim(), title: editForm.title.trim(),
+        geography: editForm.geography.trim(),
+        tags: editForm.tags.split(',').map(s => s.trim()).filter(Boolean),
+      });
+      setEditSubmitted(true);
+    } else {
+      if (!reqForm.details.trim()) return;
+      onRequestChange({
+        requestType: 'Edit', expertName: selectedExpert.name,
+        domain: selectedExpert.domain, spendingPool: selectedExpert.spendingPool,
+        category: selectedExpert.category,
+        details: reqForm.details, justification: reqForm.justification,
+      });
+      setEditSubmitted(true);
+    }
+  };
+
+  const inviteField = (key, label, placeholder, required) => (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">
+        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+      </label>
+      <input
+        type={key === 'email' ? 'email' : 'text'}
+        value={inviteForm[key]}
+        placeholder={placeholder}
+        onChange={e => { setInviteForm(f => ({ ...f, [key]: e.target.value })); setInviteErrors(er => ({ ...er, [key]: '' })); }}
+        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors ${inviteErrors[key] ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-purple-400'}`}
+      />
+      {inviteErrors[key] && <p className="text-xs text-red-500 mt-0.5">{inviteErrors[key]}</p>}
+    </div>
+  );
+
+  const editField = (key, label) => (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <input
+        type={key === 'email' ? 'email' : 'text'}
+        value={editForm[key]}
+        onChange={e => { setEditForm(f => ({ ...f, [key]: e.target.value })); setEditErrors(er => ({ ...er, [key]: '' })); }}
+        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors ${editErrors[key] ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-purple-400'}`}
+      />
+      {editErrors[key] && <p className="text-xs text-red-500 mt-0.5">{editErrors[key]}</p>}
+    </div>
+  );
+
+  const successState = (message) => (
+    <div className="text-center py-8">
+      <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+        <Check size={22} className="text-green-600" />
+      </div>
+      <p className="font-semibold text-gray-800 mb-1">{message}</p>
+      <button onClick={onClose} className="mt-4 px-5 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: '#4A00F8' }}>Close</button>
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[92vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
+          <div className="flex items-center gap-2">
+            <List size={18} style={{ color: '#4A00F8' }} />
+            <h2 className="font-semibold text-gray-900">Change expert list</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+
+        {/* Tab switcher */}
+        <div className="flex border-b border-gray-100 px-6">
+          {[
+            { key: 'invite', label: 'Invite new expert' },
+            { key: 'edit', label: 'Edit existing expert' },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`py-3 mr-6 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                activeTab === tab.key
+                  ? 'border-purple-600 text-purple-700'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+              style={activeTab === tab.key ? { borderColor: '#4A00F8', color: '#4A00F8' } : {}}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="px-6 py-5">
+
+          {/* ── Invite new expert tab ─────────────────────────────────── */}
+          {activeTab === 'invite' && (
+            inviteSubmitted
+              ? successState(inviteInPerimeter ? 'Expert added to the panel!' : 'Approval request submitted!')
+              : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    {inviteField('name', 'Full name', 'Dr. Jane Smith', true)}
+                    {inviteField('email', 'Email address', 'jane@company.com', true)}
+                    {inviteField('company', 'Company', 'Acme Corp', true)}
+                    {inviteField('title', 'Job title', 'VP Procurement', true)}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Domain</label>
+                      <select value={inviteForm.domain} onChange={e => handleInviteDomain(e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none">
+                        <option value="">Select…</option>
+                        {activeTaxDomains.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Spending Pool</label>
+                      <select value={inviteForm.spendingPool} onChange={e => handleInvitePool(e.target.value)}
+                        disabled={!inviteForm.domain}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none disabled:opacity-40">
+                        <option value="">Select…</option>
+                        {invitePools.map(sp => <option key={sp.id} value={sp.name}>{sp.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                      <select value={inviteForm.category} onChange={e => setInviteForm(f => ({ ...f, category: e.target.value }))}
+                        disabled={!inviteForm.spendingPool}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none disabled:opacity-40">
+                        <option value="">Select…</option>
+                        {inviteCats.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Geography</label>
+                    <input type="text" value={inviteForm.geography}
+                      onChange={e => setInviteForm(f => ({ ...f, geography: e.target.value }))}
+                      placeholder="North America, Europe…"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors" />
+                  </div>
+                  {inviteForm.category && !inviteInPerimeter && (
+                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <AlertTriangle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-800">
+                        <strong>{inviteForm.category}</strong> is outside your category perimeter. This will be submitted as an approval request to the relevant Admin or Super Admin.
+                      </p>
+                    </div>
+                  )}
+                  <div className="flex gap-2 pt-1">
+                    <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+                    {inviteForm.category && !inviteInPerimeter ? (
+                      <button onClick={handleSubmitInvite}
+                        className="flex-1 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors"
+                        style={{ backgroundColor: '#D97706' }}>
+                        Request Approval
+                      </button>
+                    ) : (
+                      <Button className="flex-1" onClick={handleSubmitInvite}>Add Expert</Button>
+                    )}
+                  </div>
+                </div>
+              )
+          )}
+
+          {/* ── Edit existing expert tab ──────────────────────────────── */}
+          {activeTab === 'edit' && (
+            editSubmitted
+              ? successState(editInPerimeter ? 'Expert record updated!' : 'Change request submitted!')
+              : (
+                <div className="space-y-4">
+                  {/* Expert search */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Find expert <span className="text-red-400">*</span></label>
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={expertSearch}
+                        onChange={e => {
+                          setExpertSearch(e.target.value);
+                          setShowDropdown(true);
+                          if (!e.target.value) { setSelectedExpert(null); setEditForm(null); }
+                        }}
+                        onFocus={() => expertSearch.length >= 2 && setShowDropdown(true)}
+                        placeholder="Start typing an expert's name…"
+                        className="w-full pl-9 pr-3 border border-gray-200 rounded-lg py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors"
+                      />
+                      {showDropdown && suggestions.length > 0 && (
+                        <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                          {suggestions.map(e => (
+                            <button
+                              key={e.id}
+                              onClick={() => handleExpertSelect(e)}
+                              className="w-full text-left px-3 py-2.5 hover:bg-purple-50 transition-colors border-b border-gray-50 last:border-b-0"
+                            >
+                              <p className="text-sm font-medium text-gray-800">{e.name}</p>
+                              <p className="text-xs text-gray-400">{e.title} · {e.company} · <span className="text-purple-500">{e.category}</span></p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {expertSearch.length >= 2 && suggestions.length === 0 && !selectedExpert && (
+                      <p className="text-xs text-gray-400 mt-1">No experts found matching "{expertSearch}"</p>
+                    )}
+                  </div>
+
+                  {selectedExpert && editForm && (
+                    <>
+                      {/* Selected expert context card */}
+                      <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                          style={{ backgroundColor: '#4A00F8' }}>
+                          {selectedExpert.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">{selectedExpert.name}</p>
+                          <p className="text-xs text-gray-400">{selectedExpert.title} · {selectedExpert.company} · {selectedExpert.category}</p>
+                        </div>
+                      </div>
+
+                      {/* Out-of-perimeter disclaimer */}
+                      {!editInPerimeter && (
+                        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <AlertTriangle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-semibold text-amber-800 mb-0.5">Outside your category perimeter</p>
+                            <p className="text-xs text-amber-700">
+                              <strong>{selectedExpert.category}</strong> is not in your assigned categories. You can describe the change needed and it will be routed to the category Admin or Super Admin for approval.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {editInPerimeter ? (
+                        /* Direct edit form */
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            {editField('name', 'Full name *')}
+                            {editField('email', 'Email address *')}
+                            {editField('company', 'Company *')}
+                            {editField('title', 'Job title *')}
+                          </div>
+                          {editField('geography', 'Geography')}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Tags <span className="text-gray-400 font-normal">(comma-separated)</span></label>
+                            <input type="text" value={editForm.tags}
+                              onChange={e => setEditForm(f => ({ ...f, tags: e.target.value }))}
+                              placeholder="Tier 1, EU Region…"
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors" />
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+                            <Button className="flex-1" onClick={handleSubmitEdit}>
+                              <Edit2 size={13} /> Save changes
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Request change form */
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Describe the change needed <span className="text-red-400">*</span></label>
+                            <textarea value={reqForm.details}
+                              onChange={e => setReqForm(f => ({ ...f, details: e.target.value }))}
+                              placeholder="What needs to be updated on this expert's record?"
+                              rows={3}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:border-purple-400 focus:outline-none" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Justification</label>
+                            <textarea value={reqForm.justification}
+                              onChange={e => setReqForm(f => ({ ...f, justification: e.target.value }))}
+                              placeholder="Why is this change needed?"
+                              rows={2}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:border-purple-400 focus:outline-none" />
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+                            <button
+                              onClick={handleSubmitEdit}
+                              disabled={!reqForm.details.trim()}
+                              className="flex-1 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40 transition-colors"
+                              style={{ backgroundColor: '#D97706' }}>
+                              Submit request
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {!selectedExpert && (
+                    <div className="flex justify-end pt-2">
+                      <Button variant="secondary" onClick={onClose}>Cancel</Button>
+                    </div>
+                  )}
+                </div>
+              )
+          )}
+        </div>
       </div>
     </div>
   );
@@ -441,7 +865,7 @@ function CSVImportModal({ onClose, onImport, addToast, createExpert }) {
 
 export default function ExpertDatabase() {
   const navigate = useNavigate();
-  const { experts, currentUser, taxonomy, changeRequests, createExpert, addToast, submitChangeRequest, resolveChangeRequest } = useApp();
+  const { experts, currentUser, taxonomy, changeRequests, createExpert, updateExpert, addToast, submitChangeRequest, resolveChangeRequest } = useApp();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [spendingPoolFilter, setSpendingPoolFilter] = useState('All');
@@ -453,6 +877,7 @@ export default function ExpertDatabase() {
   const [sortDir, setSortDir] = useState('desc');
   const [showModal, setShowModal] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
+  const [showChangeExpertListModal, setShowChangeExpertListModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showImportHistory, setShowImportHistory] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -637,12 +1062,21 @@ export default function ExpertDatabase() {
               <Upload size={15} /> CSV Import
             </Button>
           )}
-          {isAdminOrResearcher && (
+          {isAdmin && (
+            <button
+              onClick={() => setShowChangeExpertListModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors hover:opacity-90"
+              style={{ backgroundColor: '#1D4ED8' }}
+            >
+              <List size={15} /> Change expert list
+            </button>
+          )}
+          {!isAdmin && isAdminOrResearcher && (
             <Button variant="secondary" onClick={() => setShowRequestModal(true)}>
               Request Change
             </Button>
           )}
-          {(isSuperAdmin || isAdmin) && (
+          {isSuperAdmin && (
             <Button onClick={openAddExpertModal}>
               <Plus size={16} /> Add Expert
             </Button>
@@ -1055,6 +1489,27 @@ export default function ExpertDatabase() {
           onImport={handleImportComplete}
           addToast={addToast}
           createExpert={createExpert}
+        />
+      )}
+
+      {/* Change Expert List Modal (Admin only) */}
+      {showChangeExpertListModal && (
+        <ChangeExpertListModal
+          onClose={() => setShowChangeExpertListModal(false)}
+          currentUser={currentUser}
+          experts={experts}
+          taxonomy={taxonomy}
+          onDirectAdd={(expertData) => {
+            createExpert(expertData);
+            addToast(`${expertData.name} added to the expert panel`);
+          }}
+          onDirectEdit={(expertId, data) => {
+            updateExpert(expertId, data);
+            addToast('Expert record updated');
+          }}
+          onRequestChange={(form) => {
+            submitChangeRequest(form);
+          }}
         />
       )}
     </div>
