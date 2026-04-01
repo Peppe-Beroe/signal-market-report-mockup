@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Mail, Building2, Tag, ArrowLeft, Edit2, Save, X,
   CheckCircle, MousePointerClick, Truck, XCircle, MessageSquare,
-  AlertTriangle, Send, History
+  AlertTriangle, Send, History, MapPin, Layers
 } from 'lucide-react';
 
 const MOCK_RECORD_HISTORY = [
@@ -156,6 +156,9 @@ export default function ExpertDetail() {
       email: expert.email,
       company: expert.company,
       title: expert.title,
+      domain: expert.domain || '',
+      spendingPool: expert.spendingPool || '',
+      category: expert.category || '',
       geography: expert.geography || '',
       tags: expert.tags.join(', '),
     });
@@ -169,9 +172,10 @@ export default function ExpertDetail() {
     const errs = {};
     if (!form.name.trim()) errs.name = 'Name is required';
     if (!form.email.trim()) errs.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Invalid email';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Invalid email format';
     if (!form.company.trim()) errs.company = 'Company is required';
-    if (!form.title.trim()) errs.title = 'Title is required';
+    if (!form.title.trim()) errs.title = 'Job title is required';
+    if (!form.category) errs.category = 'Category is required';
     return errs;
   };
 
@@ -183,6 +187,9 @@ export default function ExpertDetail() {
       email: form.email.trim(),
       company: form.company.trim(),
       title: form.title.trim(),
+      domain: form.domain,
+      spendingPool: form.spendingPool,
+      category: form.category,
       geography: form.geography.trim(),
       tags: form.tags.split(',').map(s => s.trim()).filter(Boolean),
     });
@@ -310,6 +317,18 @@ export default function ExpertDetail() {
                     <Mail size={13} />
                     {expert.email}
                   </div>
+                  {expert.category && (
+                    <div className="flex items-center gap-1.5 text-sm text-gray-500 mt-0.5">
+                      <Layers size={13} />
+                      <span>{[expert.domain, expert.spendingPool, expert.category].filter(Boolean).join(' › ')}</span>
+                    </div>
+                  )}
+                  {expert.geography && (
+                    <div className="flex items-center gap-1.5 text-sm text-gray-500 mt-0.5">
+                      <MapPin size={13} />
+                      {expert.geography}
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-1.5 mt-3">
                     {expert.tags.map(t => (
                       <span key={t} className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
@@ -372,42 +391,115 @@ export default function ExpertDetail() {
                 <Button size="sm" onClick={saveEdit}><Save size={13} /> Save Changes</Button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              {[['name', 'Full name', true], ['email', 'Email address', true], ['company', 'Company', true], ['title', 'Job title', true]].map(([key, label, req]) => (
-                <div key={key}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    {label} {req && <span className="text-red-400">*</span>}
-                  </label>
-                  <input
-                    type={key === 'email' ? 'email' : 'text'}
-                    value={form[key]}
-                    onChange={e => { setForm(f => ({ ...f, [key]: e.target.value })); setErrors(er => ({ ...er, [key]: '' })); }}
-                    className={inputClass(key)}
-                  />
-                  {errors[key] && <p className="text-xs text-red-500 mt-1">{errors[key]}</p>}
+            {(() => {
+              const activeTaxDomains = (taxonomy || []).filter(d => d.active);
+              const availablePools = activeTaxDomains.find(d => d.name === form.domain)?.spendingPools.filter(sp => sp.active) || [];
+              const availableCats = availablePools.find(sp => sp.name === form.spendingPool)?.categories.filter(c => c.active) || [];
+              const selectClass = (key) =>
+                `w-full border rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors bg-white ${errors[key] ? 'border-red-300 focus:border-red-400' : 'border-gray-200 focus:border-purple-400'}`;
+              return (
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Row 1: Full name + Email */}
+                  {[['name', 'Full name', true], ['email', 'Email address', true]].map(([key, label, req]) => (
+                    <div key={key}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        {label} {req && <span className="text-red-400">*</span>}
+                      </label>
+                      <input
+                        type={key === 'email' ? 'email' : 'text'}
+                        value={form[key]}
+                        onChange={e => { setForm(f => ({ ...f, [key]: e.target.value })); setErrors(er => ({ ...er, [key]: '' })); }}
+                        className={inputClass(key)}
+                      />
+                      {errors[key] && <p className="text-xs text-red-500 mt-1">{errors[key]}</p>}
+                    </div>
+                  ))}
+
+                  {/* Row 2: Company + Job title */}
+                  {[['company', 'Company', true], ['title', 'Job title', true]].map(([key, label, req]) => (
+                    <div key={key}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        {label} {req && <span className="text-red-400">*</span>}
+                      </label>
+                      <input
+                        type="text"
+                        value={form[key]}
+                        onChange={e => { setForm(f => ({ ...f, [key]: e.target.value })); setErrors(er => ({ ...er, [key]: '' })); }}
+                        className={inputClass(key)}
+                      />
+                      {errors[key] && <p className="text-xs text-red-500 mt-1">{errors[key]}</p>}
+                    </div>
+                  ))}
+
+                  {/* Row 3: Taxonomy cascade — full width */}
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Taxonomy <span className="text-red-400">*</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Domain</label>
+                        <select
+                          value={form.domain}
+                          onChange={e => setForm(f => ({ ...f, domain: e.target.value, spendingPool: '', category: '' }))}
+                          className={selectClass('domain')}
+                        >
+                          <option value="">Select domain…</option>
+                          {activeTaxDomains.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Spending pool</label>
+                        <select
+                          value={form.spendingPool}
+                          onChange={e => setForm(f => ({ ...f, spendingPool: e.target.value, category: '' }))}
+                          disabled={!form.domain}
+                          className={selectClass('spendingPool') + (!form.domain ? ' opacity-50 cursor-not-allowed' : '')}
+                        >
+                          <option value="">Select pool…</option>
+                          {availablePools.map(sp => <option key={sp.id} value={sp.name}>{sp.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Category <span className="text-red-400">*</span></label>
+                        <select
+                          value={form.category}
+                          onChange={e => { setForm(f => ({ ...f, category: e.target.value })); setErrors(er => ({ ...er, category: '' })); }}
+                          disabled={!form.spendingPool}
+                          className={selectClass('category') + (!form.spendingPool ? ' opacity-50 cursor-not-allowed' : '')}
+                        >
+                          <option value="">Select category…</option>
+                          {availableCats.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                        </select>
+                        {errors.category && <p className="text-xs text-red-500 mt-1">{errors.category}</p>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Row 4: Geography + Tags */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Geography</label>
+                    <input
+                      type="text"
+                      value={form.geography}
+                      onChange={e => setForm(f => ({ ...f, geography: e.target.value }))}
+                      placeholder="e.g. North America, Europe"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Tags</label>
+                    <input
+                      type="text"
+                      value={form.tags}
+                      onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
+                      placeholder="Tier 1, EU Region (comma-separated)"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
+                    />
+                  </div>
                 </div>
-              ))}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Geography</label>
-                <input
-                  type="text"
-                  value={form.geography}
-                  onChange={e => setForm(f => ({ ...f, geography: e.target.value }))}
-                  placeholder="North America, Europe…"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Tags</label>
-                <input
-                  type="text"
-                  value={form.tags}
-                  onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
-                  placeholder="Tier 1, EU Region (comma-separated)"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
-                />
-              </div>
-            </div>
+              );
+            })()}
           </div>
         )}
       </Card>
