@@ -160,7 +160,6 @@ export default function ExpertDetail() {
       spendingPool: expert.spendingPool || '',
       category: expert.category || '',
       geography: expert.geography || '',
-      tags: expert.tags.join(', '),
     });
     setEditing(true);
     setErrors({});
@@ -191,7 +190,6 @@ export default function ExpertDetail() {
       spendingPool: form.spendingPool,
       category: form.category,
       geography: form.geography.trim(),
-      tags: form.tags.split(',').map(s => s.trim()).filter(Boolean),
     });
     setEditing(false);
     setForm(null);
@@ -476,7 +474,7 @@ export default function ExpertDetail() {
                     </div>
                   </div>
 
-                  {/* Row 4: Geography + Tags */}
+                  {/* Row 4: Geography */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Geography</label>
                     <input
@@ -484,16 +482,6 @@ export default function ExpertDetail() {
                       value={form.geography}
                       onChange={e => setForm(f => ({ ...f, geography: e.target.value }))}
                       placeholder="e.g. North America, Europe"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Tags</label>
-                    <input
-                      type="text"
-                      value={form.tags}
-                      onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
-                      placeholder="Tier 1, EU Region (comma-separated)"
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
                     />
                   </div>
