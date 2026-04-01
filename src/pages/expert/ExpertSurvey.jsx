@@ -27,6 +27,13 @@ export default function ExpertSurvey() {
   const { token } = useParams();
 
   const submittedKey = `survey_submitted_${token}`;
+
+  // Clear submission state on every load for demo tokens so the flow restarts on refresh
+  if (token === 'demo123' || token === 'demo-closed') {
+    localStorage.removeItem(submittedKey);
+    localStorage.removeItem(`${submittedKey}_at`);
+  }
+
   const alreadySubmitted = localStorage.getItem(submittedKey);
   const submittedAt = localStorage.getItem(`${submittedKey}_at`);
 
