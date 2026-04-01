@@ -68,16 +68,18 @@ export default function ExpertThankYou() {
 
         {/* View results CTA */}
         <button
-          onClick={() => navigate(`/survey/${token}/results`)}
+          onClick={() => navigate(`/survey/${token}/results${token === 'demo-closed' ? '?state=closed' : ''}`)}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold text-sm transition-opacity hover:opacity-90 shadow-sm mb-3"
           style={{ backgroundColor: '#4A00F8' }}
         >
           <BarChart2 size={16} />
-          View live results
+          {token === 'demo-closed' ? 'View final results & download report' : 'View live results'}
         </button>
 
         <p className="text-xs text-gray-400 mb-6">
-          See how other experts responded — results are updated in real time.
+          {token === 'demo-closed'
+            ? 'The survey has closed — download the final Signal Market Report.'
+            : 'See how other experts responded — results are updated in real time.'}
         </p>
 
         <button

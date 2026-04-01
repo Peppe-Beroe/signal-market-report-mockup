@@ -112,7 +112,7 @@ function RatingDisplay({ avg, counts, scale, labels }) {
 export default function ExpertResultsHub() {
   const { token } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const isClosed = searchParams.get('state') === 'closed';
+  const isClosed = searchParams.get('state') === 'closed' || token === 'demo-closed';
 
   const survey = DEMO_SURVEY;
   const aggregates = computeAggregates(survey);
