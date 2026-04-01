@@ -204,11 +204,11 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
 
   const validateInvite = () => {
     const errs = {};
-    if (!inviteForm.name.trim()) errs.name = 'Required';
-    if (!inviteForm.email.trim()) errs.email = 'Required';
-    else if (!/\S+@\S+\.\S+/.test(inviteForm.email)) errs.email = 'Invalid email format';
-    if (!inviteForm.company.trim()) errs.company = 'Required';
-    if (!inviteForm.title.trim()) errs.title = 'Required';
+    if (!inviteForm.name.trim()) errs.name = 'Name is required';
+    if (!inviteForm.email.trim()) errs.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(inviteForm.email)) errs.email = 'Enter a valid email';
+    if (!inviteForm.company.trim()) errs.company = 'Company is required';
+    if (!inviteForm.title.trim()) errs.title = 'Title is required';
     return errs;
   };
 
@@ -274,9 +274,9 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
     const errs = {};
     if (!editForm.name.trim()) errs.name = 'Name is required';
     if (!editForm.email.trim()) errs.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(editForm.email)) errs.email = 'Invalid email format';
+    else if (!/\S+@\S+\.\S+/.test(editForm.email)) errs.email = 'Enter a valid email';
     if (!editForm.company.trim()) errs.company = 'Company is required';
-    if (!editForm.title.trim()) errs.title = 'Job title is required';
+    if (!editForm.title.trim()) errs.title = 'Title is required';
     return errs;
   };
 
