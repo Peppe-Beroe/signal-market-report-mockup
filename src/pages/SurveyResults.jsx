@@ -557,6 +557,9 @@ export default function SurveyResults() {
           <Button variant="secondary" size="sm" onClick={handleExportCSV}>
             <Download size={13} /> Export CSV
           </Button>
+          <Button variant="secondary" size="sm" onClick={() => navigate('/survey/demo123/results')}>
+            <Eye size={13} /> Preview expert view
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => navigate(`/projects/${projectId}`)}>
             ← Back to Project
           </Button>

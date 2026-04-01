@@ -168,6 +168,14 @@ export default function PostCloseReview() {
               </div>
               <p className="text-sm text-gray-500">{project?.name} · Wave {survey.wave}</p>
             </div>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={() => navigate('/survey/demo123/results?state=closed')}>
+                <Eye size={13} /> Preview expert view
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => navigate(`/projects/${projectId}`)}>
+                ← Back to Project
+              </Button>
+            </div>
           </div>
 
           {/* Review mode banner */}
