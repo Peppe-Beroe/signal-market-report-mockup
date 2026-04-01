@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom';
-import { Zap } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Zap, BarChart2 } from 'lucide-react';
 
 function CheckmarkSVG() {
   return (
@@ -19,6 +19,7 @@ function CheckmarkSVG() {
 
 export default function ExpertThankYou() {
   const navigate = useNavigate();
+  const { token } = useParams();
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-5 bg-white">
@@ -65,7 +66,19 @@ export default function ExpertThankYou() {
           </div>
         </div>
 
-        <p className="text-sm text-gray-400 mb-6">You may close this window.</p>
+        {/* View results CTA */}
+        <button
+          onClick={() => navigate(`/survey/${token}/results`)}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold text-sm transition-opacity hover:opacity-90 shadow-sm mb-3"
+          style={{ backgroundColor: '#4A00F8' }}
+        >
+          <BarChart2 size={16} />
+          View live results
+        </button>
+
+        <p className="text-xs text-gray-400 mb-6">
+          See how other experts responded — results are updated in real time.
+        </p>
 
         <button
           onClick={() => navigate('/dashboard')}
