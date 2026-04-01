@@ -173,7 +173,7 @@ export default function ExpertDetail() {
     if (!form.email.trim()) errs.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Invalid email format';
     if (!form.company.trim()) errs.company = 'Company is required';
-    if (!form.title.trim()) errs.title = 'Job title is required';
+    if (!form.title.trim()) errs.title = 'Designation is required';
     if (!form.category) errs.category = 'Category is required';
     return errs;
   };
@@ -413,8 +413,8 @@ export default function ExpertDetail() {
                     </div>
                   ))}
 
-                  {/* Row 2: Company + Job title */}
-                  {[['company', 'Company', true], ['title', 'Job title', true]].map(([key, label, req]) => (
+                  {/* Row 2: Company + Designation */}
+                  {[['company', 'Company', true], ['title', 'Designation', true]].map(([key, label, req]) => (
                     <div key={key}>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">
                         {label} {req && <span className="text-red-400">*</span>}

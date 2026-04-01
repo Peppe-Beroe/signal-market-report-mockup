@@ -210,7 +210,7 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
     if (!inviteForm.email.trim()) errs.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(inviteForm.email)) errs.email = 'Enter a valid email';
     if (!inviteForm.company.trim()) errs.company = 'Company is required';
-    if (!inviteForm.title.trim()) errs.title = 'Title is required';
+    if (!inviteForm.title.trim()) errs.title = 'Designation is required';
     return errs;
   };
 
@@ -278,7 +278,7 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
     if (!editForm.email.trim()) errs.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(editForm.email)) errs.email = 'Enter a valid email';
     if (!editForm.company.trim()) errs.company = 'Company is required';
-    if (!editForm.title.trim()) errs.title = 'Title is required';
+    if (!editForm.title.trim()) errs.title = 'Designation is required';
     return errs;
   };
 
@@ -390,7 +390,7 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
                     {inviteField('name', 'Full name', 'Dr. Jane Smith', true)}
                     {inviteField('email', 'Email address', 'jane@company.com', true)}
                     {inviteField('company', 'Company', 'Acme Corp', true)}
-                    {inviteField('title', 'Job title', 'VP Procurement', true)}
+                    {inviteField('title', 'Designation', 'VP Procurement', true)}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <div>
@@ -528,7 +528,7 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
                             {editField('name', 'Full name *')}
                             {editField('email', 'Email address *')}
                             {editField('company', 'Company *')}
-                            {editField('title', 'Job title *')}
+                            {editField('title', 'Designation *')}
                           </div>
                           {editField('geography', 'Geography')}
                           <div>
@@ -991,7 +991,7 @@ export default function ExpertDatabase() {
     if (!form.email.trim()) errs.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Enter a valid email';
     if (!form.company.trim()) errs.company = 'Company is required';
-    if (!form.title.trim()) errs.title = 'Title is required';
+    if (!form.title.trim()) errs.title = 'Designation is required';
     return errs;
   };
 
@@ -1386,7 +1386,7 @@ export default function ExpertDatabase() {
               {field('name', 'Full name', 'Dr. Jane Smith', true)}
               {field('email', 'Email address', 'jane.smith@company.com', true)}
               {field('company', 'Company', 'Acme Corp', true)}
-              {field('title', 'Job title', 'VP Procurement', true)}
+              {field('title', 'Designation', 'VP Procurement', true)}
             </div>
 
             {/* Taxonomy cascade */}
