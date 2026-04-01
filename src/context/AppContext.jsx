@@ -158,7 +158,6 @@ export function AppProvider({ children }) {
       spendingPool: data.spendingPool || '',
       category: data.category || '',
       geography: data.geography || '',
-      expertise: data.expertise ? data.expertise.split(',').map(s => s.trim()).filter(Boolean) : [],
       tags: data.tags ? data.tags.split(',').map(s => s.trim()).filter(Boolean) : [],
       status: 'Active',
       waves: 0,

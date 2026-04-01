@@ -13,7 +13,7 @@ import Badge from '../components/ui/Badge';
 import StatusBadge from '../components/ui/StatusBadge';
 import Button from '../components/ui/Button';
 
-const EMPTY_FORM = { name: '', email: '', company: '', title: '', domain: '', spendingPool: '', category: '', geography: '', expertise: '', tags: '' };
+const EMPTY_FORM = { name: '', email: '', company: '', title: '', domain: '', spendingPool: '', category: '', geography: '', tags: '' };
 
 // Mock CSV rows demonstrating all data quality scenarios
 const MOCK_PREFLIGHT = [
@@ -190,7 +190,7 @@ function CSVImportModal({ onClose, onImport, addToast, createExpert }) {
 
   const handleConfirmImport = () => {
     newRows.concat(taxWarnRows).forEach(row => {
-      createExpert({ name: row.name, email: row.email, company: row.company, title: row.title, expertise: '', tags: '' });
+      createExpert({ name: row.name, email: row.email, company: row.company, title: row.title, tags: '' });
     });
     setShowReport(true);
   };
@@ -459,7 +459,30 @@ export default function ExpertDatabase() {
   const [errors, setErrors] = useState({});
 
   const isSuperAdmin = currentUser.role === 'Super Admin';
+  const isAdmin = currentUser.role === 'Admin';
   const isAdminOrResearcher = currentUser.role !== 'Super Admin';
+
+  // Category perimeter helpers
+  const adminPerimeter = useMemo(() => currentUser.responsibleCategories || [], [currentUser]);
+  const isWithinPerimeter = useMemo(() => {
+    if (isSuperAdmin) return true;
+    if (!form.category) return true; // no category selected yet — neutral
+    return adminPerimeter.some(rc =>
+      rc.domain === form.domain &&
+      rc.spendingPool === form.spendingPool &&
+      rc.category === form.category
+    );
+  }, [isSuperAdmin, adminPerimeter, form.domain, form.spendingPool, form.category]);
+
+  const openAddExpertModal = () => {
+    if (isAdmin && adminPerimeter.length > 0) {
+      const first = adminPerimeter[0];
+      setForm({ ...EMPTY_FORM, domain: first.domain, spendingPool: first.spendingPool, category: first.category });
+    } else {
+      setForm(EMPTY_FORM);
+    }
+    setShowModal(true);
+  };
   const pendingRequestCount = isSuperAdmin ? changeRequests.filter(r => r.status === 'Pending').length : 0;
 
   // Derived filter options
@@ -517,7 +540,7 @@ export default function ExpertDatabase() {
       if (geographyFilter !== 'All' && e.geography !== geographyFilter) return false;
       const matchSearch = e.name.toLowerCase().includes(search.toLowerCase()) ||
         e.company.toLowerCase().includes(search.toLowerCase()) ||
-        e.expertise.some(x => x.toLowerCase().includes(search.toLowerCase()));
+        (e.tags || []).some(t => t.toLowerCase().includes(search.toLowerCase()));
       const matchStatus = statusFilter === 'All' || e.status === statusFilter;
       return matchSearch && matchStatus;
     });
@@ -549,6 +572,20 @@ export default function ExpertDatabase() {
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     createExpert(form);
+    setShowModal(false);
+    setForm(EMPTY_FORM);
+    setErrors({});
+  };
+
+  const handleRequestFromModal = () => {
+    const errs = validate();
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    submitChangeRequest({
+      requestType: 'Add expert',
+      expertName: form.name,
+      details: `Add new expert: ${form.name} (${form.email}) — ${form.company}, ${form.title}. Category: ${form.domain} › ${form.spendingPool} › ${form.category}. Geography: ${form.geography || '—'}. Tags: ${form.tags || '—'}.`,
+      justification: `Expert addition in category outside submitter's perimeter (${form.category}). Requires approval by category Admin or Super Admin.`,
+    });
     setShowModal(false);
     setForm(EMPTY_FORM);
     setErrors({});
@@ -605,8 +642,8 @@ export default function ExpertDatabase() {
               Request Change
             </Button>
           )}
-          {(isSuperAdmin || currentUser.role === 'Admin') && (
-            <Button onClick={() => setShowModal(true)}>
+          {(isSuperAdmin || isAdmin) && (
+            <Button onClick={openAddExpertModal}>
               <Plus size={16} /> Add Expert
             </Button>
           )}
@@ -973,9 +1010,30 @@ export default function ExpertDatabase() {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors"
               />
             </div>
+
+            {/* Perimeter warning — shown only when Admin selects a category outside their perimeter */}
+            {isAdmin && form.category && !isWithinPerimeter && (
+              <div className="mt-4 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <AlertTriangle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-800">
+                  <strong>{form.category}</strong> is outside your category perimeter. Submitting will create a change request for approval by the relevant category Admin or Super Admin.
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-2 mt-6">
               <Button variant="secondary" className="flex-1" onClick={closeModal}>Cancel</Button>
-              <Button className="flex-1" onClick={handleCreate}>Add Expert</Button>
+              {isAdmin && form.category && !isWithinPerimeter ? (
+                <button
+                  onClick={handleRequestFromModal}
+                  className="flex-1 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors"
+                  style={{ backgroundColor: '#D97706' }}
+                >
+                  Request Approval
+                </button>
+              ) : (
+                <Button className="flex-1" onClick={handleCreate}>Add Expert</Button>
+              )}
             </div>
           </div>
         </div>

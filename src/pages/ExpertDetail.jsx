@@ -127,6 +127,13 @@ export default function ExpertDetail() {
 
   const expert = experts.find(e => e.id === expertId);
   const isSuperAdmin = currentUser.role === 'Super Admin';
+  const isAdmin = currentUser.role === 'Admin';
+
+  // Can this user directly edit this expert (within perimeter)?
+  const canDirectEdit = isSuperAdmin || (
+    isAdmin &&
+    (currentUser.responsibleCategories || []).some(rc => rc.category === expert?.category)
+  );
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(null);
@@ -146,7 +153,7 @@ export default function ExpertDetail() {
       email: expert.email,
       company: expert.company,
       title: expert.title,
-      expertise: expert.expertise.join(', '),
+      geography: expert.geography || '',
       tags: expert.tags.join(', '),
     });
     setEditing(true);
@@ -173,7 +180,7 @@ export default function ExpertDetail() {
       email: form.email.trim(),
       company: form.company.trim(),
       title: form.title.trim(),
-      expertise: form.expertise.split(',').map(s => s.trim()).filter(Boolean),
+      geography: form.geography.trim(),
       tags: form.tags.split(',').map(s => s.trim()).filter(Boolean),
     });
     setEditing(false);
@@ -301,7 +308,6 @@ export default function ExpertDetail() {
                     {expert.email}
                   </div>
                   <div className="flex flex-wrap gap-1.5 mt-3">
-                    {expert.expertise.map(ex => <Badge key={ex} color="purple">{ex}</Badge>)}
                     {expert.tags.map(t => (
                       <span key={t} className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
                         <Tag size={10} /> {t}
@@ -315,9 +321,21 @@ export default function ExpertDetail() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Button variant="secondary" size="sm" onClick={startEdit}>
-                  <Edit2 size={13} /> Edit
-                </Button>
+                {canDirectEdit && (
+                  <Button variant="secondary" size="sm" onClick={startEdit}>
+                    <Edit2 size={13} /> Edit
+                  </Button>
+                )}
+                {isAdmin && !canDirectEdit && (
+                  <button
+                    onClick={() => addToast('To change this expert, use "Request Change" from the Expert Database — this expert is outside your category perimeter.')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
+                    style={{ borderColor: '#D97706', color: '#D97706', backgroundColor: '#FFFBEB' }}
+                    title="This expert is outside your category perimeter — submit a change request for approval"
+                  >
+                    <AlertTriangle size={12} /> Request Change
+                  </button>
+                )}
                 {isSuperAdmin && expert.status !== 'Deactivated' && (
                   !confirmDeactivate ? (
                     <Button variant="danger-outline" size="sm" onClick={() => setConfirmDeactivate(true)}>
@@ -368,12 +386,12 @@ export default function ExpertDetail() {
                 </div>
               ))}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Expertise areas</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Geography</label>
                 <input
                   type="text"
-                  value={form.expertise}
-                  onChange={e => setForm(f => ({ ...f, expertise: e.target.value }))}
-                  placeholder="Steel, Metals (comma-separated)"
+                  value={form.geography}
+                  onChange={e => setForm(f => ({ ...f, geography: e.target.value }))}
+                  placeholder="North America, Europe…"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
                 />
               </div>
