@@ -181,13 +181,14 @@ export function AppProvider({ children }) {
     addToast('Expert deactivated', 'warning');
   };
 
-  const createSurvey = ({ projectId, name, category = '', typology = 'market_signal_report', questions, status = 'Draft', waveConfig = null }) => {
+  const createSurvey = ({ projectId, name, categories = [], typology = 'market_signal_report', questions, status = 'Draft', waveConfig = null }) => {
     const wave = surveys.filter(s => s.projectId === projectId).length + 1;
     const newSurvey = {
       id: `s${Date.now()}`,
       projectId,
       name,
-      category,
+      categories,
+      category: categories[0] || '',
       typology,
       status,
       wave,
@@ -210,7 +211,7 @@ export function AppProvider({ children }) {
     return newSurvey;
   };
 
-  const updateSurvey = ({ surveyId, name, category, questions, status, waveConfig }) => {
+  const updateSurvey = ({ surveyId, name, categories, questions, status, waveConfig }) => {
     setSurveys(prev => prev.map(s => {
       if (s.id !== surveyId) return s;
       // If re-submitting after rejection, store the current questions as previousSnapshot
@@ -218,7 +219,7 @@ export function AppProvider({ children }) {
       return {
         ...s,
         name,
-        ...(category !== undefined ? { category } : {}),
+        ...(categories !== undefined ? { categories, category: categories?.[0] || '' } : {}),
         questions,
         ...(waveConfig !== undefined ? { waveConfig } : {}),
         ...(status ? { status } : {}),
@@ -582,6 +583,21 @@ export function AppProvider({ children }) {
     addToast('User role updated');
   };
 
+  const updateUserCategory = (userId, responsibleCategories) => {
+    const user = internalUsers.find(u => u.id === userId);
+    const first = responsibleCategories[0] || {};
+    setInternalUsers(prev => prev.map(u => u.id === userId ? {
+      ...u,
+      responsibleCategories,
+      domain: first.domain || '',
+      spendingPool: first.spendingPool || '',
+      category: first.category || '',
+    } : u));
+    addAuditEvent('User category updated', user ? `${user.firstName} ${user.lastName}` : userId, 'user',
+      `Category perimeter updated: ${responsibleCategories.map(c => c.category).join(', ') || '(none)'}`);
+    addToast('Category assignment updated');
+  };
+
   const attachReport = (surveyId, fileName) => {
     setSurveys(prev => prev.map(s =>
       s.id === surveyId
@@ -727,7 +743,7 @@ export function AppProvider({ children }) {
       typologyConfig, updateTypologyConfig,
       submitChangeRequest, resolveChangeRequest,
       createProposal, addUserToProject,
-      deactivateUser, updateUserRole,
+      deactivateUser, updateUserRole, updateUserCategory,
       attachReport, shareReport,
       toggleExclusion, updateAnnotation, transferToDataHub,
       proposeAmendments, resolveAmendments, respondToEditorFeedback,

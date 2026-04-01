@@ -1052,29 +1052,53 @@ export default function SurveyBuilder({ mode = 'create' }) {
       : (location.state?.surveyName || '')
   );
 
-  const initCatName = mode === 'edit' && existingSurvey?.category ? existingSurvey.category : '';
-  const initPath = findTaxPath(initCatName);
-  const [surveyDomain, setSurveyDomain] = useState(initPath.domain);
-  const [surveyPool, setSurveyPool] = useState(initPath.pool);
-  const [surveyCategory, setSurveyCategory] = useState(initCatName);
+  // Multi-category state
+  const initCategories = mode === 'edit' && existingSurvey
+    ? (existingSurvey.categories?.length ? existingSurvey.categories : (existingSurvey.category ? [existingSurvey.category] : []))
+    : [];
+  const [surveyCategories, setSurveyCategories] = useState(initCategories); // array of category name strings
+
+  // Picker state (for adding new categories one at a time)
+  const [pickerDomain, setPickerDomain] = useState('');
+  const [pickerPool, setPickerPool] = useState('');
+  const [pickerCat, setPickerCat] = useState('');
   const [catSearch, setCatSearch] = useState('');
 
   const availablePools = useMemo(() =>
-    activeTaxDomains.find(d => d.name === surveyDomain)?.spendingPools.filter(sp => sp.active) || [],
-    [activeTaxDomains, surveyDomain]);
+    activeTaxDomains.find(d => d.name === pickerDomain)?.spendingPools.filter(sp => sp.active) || [],
+    [activeTaxDomains, pickerDomain]);
   const availableLeafCats = useMemo(() =>
-    availablePools.find(sp => sp.name === surveyPool)?.categories.filter(c => c.active) || [],
-    [availablePools, surveyPool]);
+    availablePools.find(sp => sp.name === pickerPool)?.categories.filter(c => c.active) || [],
+    [availablePools, pickerPool]);
   const catSearchResults = useMemo(() =>
     catSearch.trim().length >= 1
       ? allTaxLeafCats.filter(c => c.name.toLowerCase().includes(catSearch.toLowerCase())).slice(0, 8)
       : [],
     [allTaxLeafCats, catSearch]);
 
-  const handleTaxDomainChange = (val) => { setSurveyDomain(val); setSurveyPool(''); setSurveyCategory(''); setIsDirty(true); };
-  const handleTaxPoolChange = (val) => { setSurveyPool(val); setSurveyCategory(''); setIsDirty(true); };
-  const handleTaxCatChange = (val) => { setSurveyCategory(val); setIsDirty(true); };
-  const handleCatSearchSelect = (cat) => { setSurveyDomain(cat.domain); setSurveyPool(cat.pool); setSurveyCategory(cat.name); setCatSearch(''); setIsDirty(true); };
+  const handlePickerDomainChange = (val) => { setPickerDomain(val); setPickerPool(''); setPickerCat(''); };
+  const handlePickerPoolChange = (val) => { setPickerPool(val); setPickerCat(''); };
+  const handlePickerCatChange = (val) => { setPickerCat(val); };
+  // Typeahead: immediately adds the category to surveyCategories if not already present
+  const handleCatSearchSelect = (cat) => {
+    if (!surveyCategories.includes(cat.name)) {
+      setSurveyCategories(prev => [...prev, cat.name]);
+      setIsDirty(true);
+    }
+    setCatSearch('');
+    setPickerDomain(''); setPickerPool(''); setPickerCat('');
+  };
+  const addCategoryToSurvey = () => {
+    if (pickerCat && !surveyCategories.includes(pickerCat)) {
+      setSurveyCategories(prev => [...prev, pickerCat]);
+      setIsDirty(true);
+    }
+    setPickerDomain(''); setPickerPool(''); setPickerCat('');
+  };
+  const removeSurveyCategory = (catName) => {
+    setSurveyCategories(prev => prev.filter(c => c !== catName));
+    setIsDirty(true);
+  };
   const [surveyTypology, setSurveyTypology] = useState(
     mode === 'edit' && existingSurvey?.typology
       ? existingSurvey.typology
@@ -1242,9 +1266,9 @@ export default function SurveyBuilder({ mode = 'create' }) {
     if (!surveyName.trim()) { addToast('Please enter a survey name first.', 'warning'); return; }
     const waveConfig = buildWaveConfig();
     if (mode === 'edit' && surveyId) {
-      updateSurvey({ surveyId, name: surveyName, category: surveyCategory, questions, waveConfig });
+      updateSurvey({ surveyId, name: surveyName, categories: surveyCategories, questions, waveConfig });
     } else {
-      const saved = createSurvey({ projectId, name: surveyName, category: surveyCategory, typology: surveyTypology, questions, status: 'Draft', waveConfig });
+      const saved = createSurvey({ projectId, name: surveyName, categories: surveyCategories, typology: surveyTypology, questions, status: 'Draft', waveConfig });
       navigate(`/projects/${projectId}/surveys/${saved.id}/builder`, { replace: true });
     }
     setIsDirty(false);
@@ -1270,9 +1294,9 @@ export default function SurveyBuilder({ mode = 'create' }) {
       resolveAmendments(surveyId, resolutions);
     }
     if (mode === 'edit' && surveyId) {
-      updateSurvey({ surveyId, name: surveyName, category: surveyCategory, questions, status: 'Submitted', waveConfig });
+      updateSurvey({ surveyId, name: surveyName, categories: surveyCategories, questions, status: 'Submitted', waveConfig });
     } else {
-      createSurvey({ projectId, name: surveyName, category: surveyCategory, typology: surveyTypology, questions, status: 'Submitted', waveConfig });
+      createSurvey({ projectId, name: surveyName, categories: surveyCategories, typology: surveyTypology, questions, status: 'Submitted', waveConfig });
     }
     setIsDirty(false);
     navigate(`/projects/${projectId}`);
@@ -1517,6 +1541,26 @@ export default function SurveyBuilder({ mode = 'create' }) {
               placeholder="Enter survey name..."
               className="w-full text-xl font-bold text-gray-900 border-0 border-b-2 border-gray-100 pb-2 bg-transparent focus:border-purple-400 focus:outline-none transition-colors placeholder-gray-300"
             />
+            {/* Selected categories — pills with remove */}
+            {surveyCategories.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                <span className="text-xs font-medium text-gray-400 flex-shrink-0">Categories:</span>
+                {surveyCategories.map(cat => (
+                  <span key={cat} className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-100">
+                    {cat}
+                    <button
+                      type="button"
+                      onClick={() => removeSurveyCategory(cat)}
+                      className="ml-0.5 hover:text-red-500 transition-colors"
+                    >
+                      <X size={9} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Category picker row */}
             <div className="flex items-center gap-2 flex-wrap">
               {/* Typeahead search */}
               <div className="relative flex items-center gap-1">
@@ -1537,8 +1581,9 @@ export default function SurveyBuilder({ mode = 'create' }) {
                         onMouseDown={() => handleCatSearchSelect(c)}
                         className="w-full text-left px-3 py-2 hover:bg-purple-50 transition-colors"
                       >
-                        <span className="text-sm font-medium text-gray-800">{c.name}</span>
+                        <span className={`text-sm font-medium ${surveyCategories.includes(c.name) ? 'text-gray-300' : 'text-gray-800'}`}>{c.name}</span>
                         <span className="text-xs text-gray-400 ml-2">{c.domain} › {c.pool}</span>
+                        {surveyCategories.includes(c.name) && <span className="text-xs text-gray-300 ml-1">— already added</span>}
                       </button>
                     ))}
                   </div>
@@ -1549,19 +1594,19 @@ export default function SurveyBuilder({ mode = 'create' }) {
               <div className="flex items-center gap-1.5 flex-wrap">
                 <label className="text-xs font-medium text-gray-400 flex-shrink-0">Domain</label>
                 <select
-                  value={surveyDomain}
-                  onChange={e => handleTaxDomainChange(e.target.value)}
+                  value={pickerDomain}
+                  onChange={e => handlePickerDomainChange(e.target.value)}
                   className="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:border-purple-400 focus:outline-none transition-colors text-gray-700"
                 >
                   <option value="">Select…</option>
                   {activeTaxDomains.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                 </select>
-                {surveyDomain && (
+                {pickerDomain && (
                   <>
                     <ChevronRight size={11} className="text-gray-300 flex-shrink-0" />
                     <select
-                      value={surveyPool}
-                      onChange={e => handleTaxPoolChange(e.target.value)}
+                      value={pickerPool}
+                      onChange={e => handlePickerPoolChange(e.target.value)}
                       className="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:border-purple-400 focus:outline-none transition-colors text-gray-700"
                     >
                       <option value="">Select pool…</option>
@@ -1569,12 +1614,12 @@ export default function SurveyBuilder({ mode = 'create' }) {
                     </select>
                   </>
                 )}
-                {surveyPool && (
+                {pickerPool && (
                   <>
                     <ChevronRight size={11} className="text-gray-300 flex-shrink-0" />
                     <select
-                      value={surveyCategory}
-                      onChange={e => handleTaxCatChange(e.target.value)}
+                      value={pickerCat}
+                      onChange={e => handlePickerCatChange(e.target.value)}
                       className="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:border-purple-400 focus:outline-none transition-colors text-gray-700"
                     >
                       <option value="">Select category…</option>
@@ -1582,7 +1627,21 @@ export default function SurveyBuilder({ mode = 'create' }) {
                     </select>
                   </>
                 )}
-                {!surveyCategory && (
+                {pickerCat && (
+                  surveyCategories.includes(pickerCat) ? (
+                    <span className="text-xs text-gray-400 italic">Already added</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={addCategoryToSurvey}
+                      className="text-xs font-semibold px-2 py-1 rounded-lg border transition-colors"
+                      style={{ borderColor: '#4A00F8', color: '#4A00F8', backgroundColor: '#F5F3FF' }}
+                    >
+                      + Add
+                    </button>
+                  )
+                )}
+                {surveyCategories.length === 0 && !pickerCat && (
                   <span className="text-xs text-amber-500 font-medium">No category selected</span>
                 )}
               </div>

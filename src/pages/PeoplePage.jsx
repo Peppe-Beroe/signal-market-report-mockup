@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, ChevronDown, X, MoreVertical, UserCheck,
   ChevronLeft, ChevronRight, Users, FileText, PlusCircle,
-  AlertTriangle, UserPlus, Send
+  AlertTriangle, UserPlus, Send, Tag
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
@@ -34,7 +34,7 @@ function getInitials(firstName, lastName) {
 
 // ─── Profile Drawer ─────────────────────────────────────────────────────────
 
-function ProfileDrawer({ user, onClose, onProposeAccess, onAddToProject, isSuperAdmin }) {
+function ProfileDrawer({ user, onClose, onProposeAccess, onAddToProject, onChangeCategory, isSuperAdmin }) {
   if (!user) return null;
   return (
     <>
@@ -77,7 +77,17 @@ function ProfileDrawer({ user, onClose, onProposeAccess, onAddToProject, isSuper
 
           {/* Team assignment */}
           <div className="mb-5">
-            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Team assignment</h4>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Team assignment</h4>
+              {isSuperAdmin && user.role !== 'Super Admin' && (
+                <button
+                  onClick={() => onChangeCategory(user)}
+                  className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg border border-purple-200 text-purple-700 hover:bg-purple-50 transition-colors"
+                >
+                  <Tag size={11} /> Change
+                </button>
+              )}
+            </div>
             {user.role === 'Super Admin' ? (
               <div className="flex items-center gap-2 p-3 rounded-xl bg-purple-50 border border-purple-100">
                 <span className="text-sm">🌐</span>
@@ -88,16 +98,25 @@ function ProfileDrawer({ user, onClose, onProposeAccess, onAddToProject, isSuper
               </div>
             ) : (
               <div className="space-y-2">
-                {[
-                  { label: 'Domain', value: user.domain },
-                  { label: 'Spending Pool', value: user.spendingPool },
-                  { label: 'Category', value: user.category },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex items-center justify-between py-1.5">
-                    <span className="text-xs text-gray-400">{label}</span>
-                    <span className="text-sm text-gray-700 font-medium">{value || '—'}</span>
-                  </div>
-                ))}
+                {(user.responsibleCategories && user.responsibleCategories.length > 1) ? (
+                  user.responsibleCategories.map((rc, i) => (
+                    <div key={i} className="p-2 rounded-lg bg-purple-50 border border-purple-100">
+                      <p className="text-xs text-purple-400">{rc.domain} / {rc.spendingPool}</p>
+                      <p className="text-sm font-medium text-purple-800">{rc.category}</p>
+                    </div>
+                  ))
+                ) : (
+                  [
+                    { label: 'Domain', value: user.domain },
+                    { label: 'Spending Pool', value: user.spendingPool },
+                    { label: 'Category', value: user.category },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex items-center justify-between py-1.5">
+                      <span className="text-xs text-gray-400">{label}</span>
+                      <span className="text-sm text-gray-700 font-medium">{value || '—'}</span>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -663,9 +682,214 @@ function AddToProjectModal({ targetUser, projects, onConfirm, onClose }) {
   );
 }
 
+// ─── Change Category Modal (Super Admin only) ────────────────────────────────
+
+function ChangeCategoryModal({ targetUser, internalUsers, onConfirm, onClose }) {
+  const { taxonomy } = useApp();
+
+  // initialise from user's current responsibleCategories (or single category fields)
+  const initCats = () => {
+    if (targetUser.responsibleCategories && targetUser.responsibleCategories.length > 0) {
+      return targetUser.responsibleCategories;
+    }
+    if (targetUser.domain && targetUser.category) {
+      return [{ domain: targetUser.domain, spendingPool: targetUser.spendingPool || '', category: targetUser.category }];
+    }
+    return [];
+  };
+
+  const [selectedCats, setSelectedCats] = useState(initCats);
+  const [pickerDomain, setPickerDomain] = useState('');
+  const [pickerPool, setPickerPool] = useState('');
+  const [pickerCat, setPickerCat] = useState('');
+
+  const activeDomains = (taxonomy || []).filter(d => d.active);
+  const pickerPools = activeDomains.find(d => d.name === pickerDomain)?.spendingPools.filter(sp => sp.active) || [];
+  const pickerCats = pickerPools.find(sp => sp.name === pickerPool)?.categories.filter(c => c.active) || [];
+
+  const handlePickerDomain = (val) => { setPickerDomain(val); setPickerPool(''); setPickerCat(''); };
+  const handlePickerPool = (val) => { setPickerPool(val); setPickerCat(''); };
+
+  const addCategory = () => {
+    if (!pickerDomain || !pickerPool || !pickerCat) return;
+    const already = selectedCats.some(c => c.category === pickerCat && c.domain === pickerDomain);
+    if (already) return;
+    setSelectedCats(prev => [...prev, { domain: pickerDomain, spendingPool: pickerPool, category: pickerCat }]);
+    setPickerDomain(''); setPickerPool(''); setPickerCat('');
+  };
+
+  const removeCategory = (catName) => {
+    setSelectedCats(prev => prev.filter(c => c.category !== catName));
+  };
+
+  // Orphaned category check: if target is Admin, find categories they currently cover
+  // that would have no other Admin after the change
+  const orphanedCategories = useMemo(() => {
+    if (targetUser.role !== 'Admin') return [];
+    const currentCatNames = (targetUser.responsibleCategories || []).map(c => c.category);
+    const newCatNames = selectedCats.map(c => c.category);
+    const removedCats = currentCatNames.filter(c => !newCatNames.includes(c));
+
+    return removedCats.filter(catName => {
+      // Any other active Admin covering this category?
+      const otherAdmins = internalUsers.filter(u =>
+        u.id !== targetUser.id &&
+        u.role === 'Admin' &&
+        u.status === 'Active' &&
+        (u.responsibleCategories || []).some(rc => rc.category === catName)
+      );
+      return otherAdmins.length === 0;
+    });
+  }, [selectedCats, targetUser, internalUsers]);
+
+  const hasOrphans = orphanedCategories.length > 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <Tag size={18} style={{ color: '#4A00F8' }} />
+            <h2 className="font-semibold text-gray-900">Change category assignment</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            <X size={16} className="text-gray-500" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          {/* Target user card */}
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+              style={{ backgroundColor: '#4A00F8' }}
+            >
+              {targetUser.firstName[0]}{targetUser.lastName[0]}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-800">{targetUser.firstName} {targetUser.lastName}</p>
+              <p className="text-xs text-gray-400">{targetUser.email} · {targetUser.role}</p>
+            </div>
+          </div>
+
+          {/* Orphaned category warning */}
+          {hasOrphans && (
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
+              <div className="flex items-start gap-2">
+                <AlertTriangle size={15} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-amber-800 mb-1">Orphaned category warning</p>
+                  <p className="text-xs text-amber-700 mb-1">
+                    Removing this Admin from the following {orphanedCategories.length === 1 ? 'category' : 'categories'} will leave
+                    {orphanedCategories.length === 1 ? ' it ' : ' them '}with no assigned Admin:
+                  </p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {orphanedCategories.map(c => (
+                      <span key={c} className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">{c}</span>
+                    ))}
+                  </div>
+                  <p className="text-xs text-amber-700 mt-2">
+                    <span className="font-semibold">Super Admin will be auto-assigned</span> as fallback Admin for these categories.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Selected categories — pills */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Assigned categories</label>
+            {selectedCats.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">No categories assigned</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {selectedCats.map(c => (
+                  <span
+                    key={c.category}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200"
+                  >
+                    <span className="text-purple-400 text-xs">{c.domain} / {c.spendingPool} /</span> {c.category}
+                    <button
+                      onClick={() => removeCategory(c.category)}
+                      className="ml-0.5 hover:text-red-500 transition-colors"
+                    >
+                      <X size={11} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Cascade picker */}
+          <div className="p-3 rounded-xl border border-gray-200 bg-gray-50">
+            <p className="text-xs font-medium text-gray-500 mb-2">Add a category</p>
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Domain</label>
+                <select
+                  value={pickerDomain}
+                  onChange={e => handlePickerDomain(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none"
+                >
+                  <option value="">Select…</option>
+                  {activeDomains.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Spending Pool</label>
+                <select
+                  value={pickerPool}
+                  onChange={e => handlePickerPool(e.target.value)}
+                  disabled={!pickerDomain}
+                  className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none disabled:opacity-40"
+                >
+                  <option value="">Select…</option>
+                  {pickerPools.map(sp => <option key={sp.id} value={sp.name}>{sp.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Category</label>
+                <select
+                  value={pickerCat}
+                  onChange={e => setPickerCat(e.target.value)}
+                  disabled={!pickerPool}
+                  className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none disabled:opacity-40"
+                >
+                  <option value="">Select…</option>
+                  {pickerCats.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <button
+              onClick={addCategory}
+              disabled={!pickerDomain || !pickerPool || !pickerCat}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-purple-300 text-purple-700 hover:bg-purple-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              + Add category
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-between px-6 py-4 border-t border-gray-100">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            onClick={() => onConfirm(selectedCats)}
+            disabled={selectedCats.length === 0}
+          >
+            Save assignment
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Kebab menu ─────────────────────────────────────────────────────────────
 
-function KebabMenu({ user, isSuperAdmin, isAdmin, onViewProfile, onChangeRole, onDeactivate, onProposeAccess, onAddToProject, totalSuperAdmins }) {
+function KebabMenu({ user, isSuperAdmin, isAdmin, onViewProfile, onChangeRole, onDeactivate, onProposeAccess, onAddToProject, onChangeCategory, totalSuperAdmins }) {
   const [open, setOpen] = useState(false);
   const isLastSA = user.role === 'Super Admin' && totalSuperAdmins <= 1;
 
@@ -710,6 +934,14 @@ function KebabMenu({ user, isSuperAdmin, isAdmin, onViewProfile, onChangeRole, o
                 >
                   Change org role
                 </button>
+                {user.role !== 'Super Admin' && (
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={() => { setOpen(false); onChangeCategory(); }}
+                  >
+                    Change category
+                  </button>
+                )}
                 <button
                   className={`w-full text-left px-3 py-2 text-sm transition-colors ${
                     isLastSA
@@ -975,7 +1207,7 @@ function ChangeRoleModal({ user, internalUsers, projects, onConfirm, onClose }) 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function PeoplePage() {
-  const { currentUser, internalUsers, projects, proposals, addToast, createProposal, addUserToProject, deactivateUser, updateUserRole } = useApp();
+  const { currentUser, internalUsers, projects, proposals, addToast, createProposal, addUserToProject, deactivateUser, updateUserRole, updateUserCategory } = useApp();
   const navigate = useNavigate();
 
   const isSuperAdmin = currentUser.role === 'Super Admin';
@@ -999,6 +1231,7 @@ export default function PeoplePage() {
   const [changeRoleTarget, setChangeRoleTarget] = useState(null);
   const [proposeTarget, setProposeTarget] = useState(null);
   const [addTarget, setAddTarget] = useState(null);
+  const [changeCategoryTarget, setChangeCategoryTarget] = useState(null);
 
   const roleOptions = ['All', 'Super Admin', 'Admin', 'Standard User'];
 
@@ -1089,6 +1322,26 @@ export default function PeoplePage() {
   const handleConfirmInviteRequest = (data) => {
     createProposal(data);
     setShowInviteRequestModal(false);
+  };
+
+  const handleChangeCategory = (user) => {
+    setChangeCategoryTarget(user);
+  };
+
+  const handleConfirmChangeCategory = (responsibleCategories) => {
+    updateUserCategory(changeCategoryTarget.id, responsibleCategories);
+    // If drawer is open for this user, refresh its data
+    if (selectedUser?.id === changeCategoryTarget.id) {
+      const first = responsibleCategories[0] || {};
+      setSelectedUser(prev => ({
+        ...prev,
+        responsibleCategories,
+        domain: first.domain || '',
+        spendingPool: first.spendingPool || '',
+        category: first.category || '',
+      }));
+    }
+    setChangeCategoryTarget(null);
   };
 
   return (
@@ -1278,6 +1531,7 @@ export default function PeoplePage() {
                           onDeactivate={() => handleDeactivate(user)}
                           onProposeAccess={() => handleProposeAccess(user)}
                           onAddToProject={() => handleAddToProject(user)}
+                          onChangeCategory={() => handleChangeCategory(user)}
                         />
                       </td>
                     </tr>
@@ -1335,6 +1589,7 @@ export default function PeoplePage() {
           onClose={() => setSelectedUser(null)}
           onProposeAccess={handleProposeAccess}
           onAddToProject={handleAddToProject}
+          onChangeCategory={handleChangeCategory}
           isSuperAdmin={isSuperAdmin}
         />
       )}
@@ -1391,6 +1646,14 @@ export default function PeoplePage() {
         <PlatformInviteRequestModal
           onClose={() => setShowInviteRequestModal(false)}
           onConfirm={handleConfirmInviteRequest}
+        />
+      )}
+      {changeCategoryTarget && (
+        <ChangeCategoryModal
+          targetUser={changeCategoryTarget}
+          internalUsers={internalUsers}
+          onConfirm={handleConfirmChangeCategory}
+          onClose={() => setChangeCategoryTarget(null)}
         />
       )}
     </div>

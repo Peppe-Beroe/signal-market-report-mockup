@@ -34,7 +34,7 @@ export const PROJECTS = [
 
 export const SURVEYS = [
   {
-    id: 's1', projectId: 'p1', name: 'Steel Price Outlook', category: 'Metals & Mining',
+    id: 's1', projectId: 'p1', name: 'Steel Price Outlook', category: 'Metals & Mining', categories: ['Steel'],
     typology: 'market_signal_report',
     status: 'Running', wave: 1,
     createdBy: 'Marco Rossi', approvedBy: 'Sarah Chen',
@@ -84,7 +84,7 @@ export const SURVEYS = [
     ],
   },
   {
-    id: 's2', projectId: 'p1', name: 'Steel Supply Chain Risk', category: 'Metals & Mining',
+    id: 's2', projectId: 'p1', name: 'Steel Supply Chain Risk', category: 'Metals & Mining', categories: ['Steel'],
     typology: 'market_signal_report',
     status: 'Submitted', wave: 1,
     createdBy: 'Marco Rossi', approvedBy: null,
@@ -127,7 +127,7 @@ export const SURVEYS = [
     archived: false,
   },
   {
-    id: 's3', projectId: 'p2', name: 'Polypropylene Supply Outlook', category: 'Chemicals',
+    id: 's3', projectId: 'p2', name: 'Polypropylene Supply Outlook', category: 'Chemicals', categories: ['Polypropylene'],
     typology: 'market_signal_report',
     status: 'Review', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: 'Maria Santos',
@@ -153,7 +153,7 @@ export const SURVEYS = [
     archived: false,
   },
   {
-    id: 's4', projectId: 'p3', name: 'Packaging Cost Index', category: 'Packaging',
+    id: 's4', projectId: 'p3', name: 'Packaging Cost Index', category: 'Packaging', categories: ['Packaging'],
     typology: 'other_survey',
     status: 'Draft', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: null,
@@ -171,7 +171,7 @@ export const SURVEYS = [
     archived: false,
   },
   {
-    id: 's5', projectId: 'p3', name: 'Packaging Sustainability Practices', category: 'Packaging',
+    id: 's5', projectId: 'p3', name: 'Packaging Sustainability Practices', category: 'Packaging', categories: ['Packaging'],
     typology: 'market_signal_report',
     status: 'Running', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: 'Sarah Chen',
@@ -214,7 +214,7 @@ export const SURVEYS = [
     archived: false,
   },
   {
-    id: 's6', projectId: 'p3', name: 'Flexible Packaging Demand Outlook', category: 'Packaging',
+    id: 's6', projectId: 'p3', name: 'Flexible Packaging Demand Outlook', category: 'Packaging', categories: ['Packaging'],
     typology: 'market_signal_report',
     status: 'Submitted', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: null,
@@ -249,7 +249,7 @@ export const SURVEYS = [
   },
   {
     // s7 — APPROVED: approved, locked, awaiting scheduled send (Steel Trade Flow Analysis)
-    id: 's7', projectId: 'p1', name: 'Steel Trade Flow Analysis', category: 'Metals & Mining',
+    id: 's7', projectId: 'p1', name: 'Steel Trade Flow Analysis', category: 'Metals & Mining', categories: ['Steel'],
     typology: 'market_signal_report',
     status: 'Approved', wave: 1,
     createdBy: 'Marco Rossi', approvedBy: 'Sarah Chen',
@@ -287,7 +287,7 @@ export const SURVEYS = [
   },
   {
     // s8 — CLOSED: close date passed, responses collected, entering Review
-    id: 's8', projectId: 'p2', name: 'Ethylene Pricing Outlook', category: 'Chemicals',
+    id: 's8', projectId: 'p2', name: 'Ethylene Pricing Outlook', category: 'Chemicals', categories: ['Polypropylene'],
     status: 'Closed', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: 'Maria Santos',
     sendDate: '2026-01-20', closeDate: '2026-02-05',
@@ -329,7 +329,7 @@ export const SURVEYS = [
   },
   {
     // s9 — ARCHIVED: manually archived survey from the archived Energy project
-    id: 's9', projectId: 'p4', name: 'Energy Procurement Cost Drivers', category: 'Energy',
+    id: 's9', projectId: 'p4', name: 'Energy Procurement Cost Drivers', category: 'Energy', categories: ['Oil & Gas'],
     status: 'Archived', wave: 1,
     createdBy: 'Sarah Chen', approvedBy: 'Maria Santos',
     sendDate: '2025-10-15', closeDate: '2025-11-01',

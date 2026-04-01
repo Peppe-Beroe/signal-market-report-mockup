@@ -123,7 +123,7 @@ function TimelineEvent({ event, isLast, isSuperAdmin, onUpdateEmail }) {
 export default function ExpertDetail() {
   const { expertId } = useParams();
   const navigate = useNavigate();
-  const { experts, surveys, currentUser, updateExpert, deactivateExpert, addToast } = useApp();
+  const { experts, surveys, currentUser, updateExpert, deactivateExpert, addToast, submitChangeRequest, taxonomy } = useApp();
 
   const expert = experts.find(e => e.id === expertId);
   const isSuperAdmin = currentUser.role === 'Super Admin';
@@ -139,6 +139,9 @@ export default function ExpertDetail() {
   const [form, setForm] = useState(null);
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
   const [errors, setErrors] = useState({});
+  const [showReqModal, setShowReqModal] = useState(false);
+  const [reqForm, setReqForm] = useState({ changeType: 'Edit data', details: '', justification: '' });
+  const [reqSubmitted, setReqSubmitted] = useState(false);
 
   if (!expert) return (
     <div className="p-6 text-center">
@@ -326,16 +329,15 @@ export default function ExpertDetail() {
                     <Edit2 size={13} /> Edit
                   </Button>
                 )}
-                {isAdmin && !canDirectEdit && (
+                {(isAdmin && !canDirectEdit) || currentUser.role === 'Standard User' ? (
                   <button
-                    onClick={() => addToast('To change this expert, use "Request Change" from the Expert Database — this expert is outside your category perimeter.')}
+                    onClick={() => { setReqForm({ changeType: 'Edit data', details: '', justification: '' }); setReqSubmitted(false); setShowReqModal(true); }}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
                     style={{ borderColor: '#D97706', color: '#D97706', backgroundColor: '#FFFBEB' }}
-                    title="This expert is outside your category perimeter — submit a change request for approval"
                   >
                     <AlertTriangle size={12} /> Request Change
                   </button>
-                )}
+                ) : null}
                 {isSuperAdmin && expert.status !== 'Deactivated' && (
                   !confirmDeactivate ? (
                     <Button variant="danger-outline" size="sm" onClick={() => setConfirmDeactivate(true)}>
@@ -471,6 +473,107 @@ export default function ExpertDetail() {
             </table>
           </div>
         </Card>
+      )}
+
+      {/* Request Change Modal */}
+      {showReqModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+            {!reqSubmitted ? (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base font-bold text-gray-900">Request Change</h2>
+                  <button onClick={() => setShowReqModal(false)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+                </div>
+
+                {/* Expert info — read-only context */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100 mb-4">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0" style={{ backgroundColor: '#4A00F8' }}>
+                    {expert.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">{expert.name}</p>
+                    <p className="text-xs text-gray-500">{expert.category}{expert.spendingPool ? ` · ${expert.spendingPool}` : ''}</p>
+                  </div>
+                </div>
+
+                {isAdmin && !canDirectEdit && (
+                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-4">
+                    <AlertTriangle size={13} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-800">This expert is outside your category perimeter. Your request will be routed to the relevant category Admin or Super Admin for approval.</p>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Change type</label>
+                    <div className="flex gap-2">
+                      {['Edit data', 'Change category', 'Other'].map(t => (
+                        <button
+                          key={t}
+                          onClick={() => setReqForm(f => ({ ...f, changeType: t }))}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${reqForm.changeType === t ? 'text-white border-transparent' : 'border-gray-200 text-gray-600 bg-white hover:bg-gray-50'}`}
+                          style={reqForm.changeType === t ? { backgroundColor: '#4A00F8', borderColor: '#4A00F8' } : {}}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Details <span className="text-red-400">*</span></label>
+                    <textarea
+                      rows={3}
+                      value={reqForm.details}
+                      onChange={e => setReqForm(f => ({ ...f, details: e.target.value }))}
+                      placeholder="Describe exactly what should change…"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Justification</label>
+                    <textarea
+                      rows={2}
+                      value={reqForm.justification}
+                      onChange={e => setReqForm(f => ({ ...f, justification: e.target.value }))}
+                      placeholder="Why is this change needed?"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-5">
+                  <button onClick={() => setShowReqModal(false)} className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                  <button
+                    onClick={() => {
+                      if (!reqForm.details.trim()) { addToast('Please describe the change needed.', 'warning'); return; }
+                      submitChangeRequest({
+                        requestType: reqForm.changeType,
+                        expertName: expert.name,
+                        details: reqForm.details.trim(),
+                        justification: reqForm.justification.trim(),
+                      });
+                      setReqSubmitted(true);
+                    }}
+                    className="flex-1 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors"
+                    style={{ backgroundColor: '#4A00F8' }}
+                  >
+                    Submit Request
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-6">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+                  <CheckCircle size={24} className="text-green-600" />
+                </div>
+                <h3 className="text-base font-bold text-gray-900 mb-1">Request submitted</h3>
+                <p className="text-sm text-gray-500 mb-4">Your change request for <strong>{expert.name}</strong> has been routed for approval.</p>
+                <button onClick={() => setShowReqModal(false)} className="px-4 py-2 rounded-lg text-sm font-semibold text-white" style={{ backgroundColor: '#4A00F8' }}>Done</button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
