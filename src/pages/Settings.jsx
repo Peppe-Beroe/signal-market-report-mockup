@@ -31,21 +31,26 @@ const MERGE_TAGS_POST_SUB = ['expert_name', 'survey_name', 'results_hub_link', '
 const MERGE_TAGS_SURVEY_CLOSED = ['expert_name', 'survey_name', 'results_hub_link', 'expiry_date'];
 const MERGE_TAGS_REPORT = ['expert_name', 'report_title', 'download_link', 'expiry_date'];
 
-const INTERNAL_NOTIF_EVENTS = [
-  { key: 'survey_approved',        label: 'Survey approved',                          channels: ['email', 'in-platform'] },
-  { key: 'survey_rejected',        label: 'Survey rejected',                          channels: ['email', 'in-platform'] },
-  { key: 'response_rate_alert',    label: 'Response rate threshold alert',            channels: ['email', 'in-platform'] },
-  { key: 'proposal_approved',      label: 'Membership proposal approved',             channels: ['email', 'in-platform'] },
-  { key: 'proposal_rejected',      label: 'Membership proposal rejected',             channels: ['email', 'in-platform'] },
-  { key: 'proposal_auto_cancelled',label: 'Membership proposal auto-cancelled',       channels: ['email', 'in-platform'] },
-  { key: 'new_proposal_received',  label: 'New membership proposal received',         channels: ['email', 'in-platform'] },
-  { key: 'invite_approved',        label: 'Platform invite request approved',         channels: ['email', 'in-platform'] },
-  { key: 'invite_rejected',        label: 'Platform invite request rejected',         channels: ['email', 'in-platform'] },
-  { key: 'expert_change_resolved', label: 'Expert change request resolved',           channels: ['email', 'in-platform'] },
-  { key: 'wave_closed',            label: 'Wave closed',                              channels: ['email', 'in-platform'] },
-  { key: 'org_wide_proposal_result',label: 'Org-Wide template proposal result',       channels: ['email', 'in-platform'] },
-  { key: 'auto_report_live',        label: 'Auto-report live on Expert Results Hub',  channels: ['email', 'in-platform'], nonConfigurable: true },
+// Single source of truth — 13 internal notification events (P1-F-61)
+const NOTIFICATION_EVENT_DEFS = [
+  { key: 'survey_submitted',        label: 'Survey submitted for approval',        description: 'Sent to you when an editor submits a survey for your review as Project Owner',                 poOnly: true },
+  { key: 'survey_approved',         label: 'Survey approved',                      description: 'Sent to you when a Project Owner approves a survey you submitted'                               },
+  { key: 'survey_rejected',         label: 'Survey rejected',                      description: 'Sent to you when a Project Owner rejects your survey and provides a written reason'             },
+  { key: 'survey_amended',          label: 'Survey returned with amendments',      description: 'Sent to you when a Project Owner proposes tracked changes to your survey for review'            },
+  { key: 'expert_change_submitted', label: 'Expert change request submitted',      description: 'Sent to you when a user submits a request to add or edit an expert outside their perimeter',   adminOnly: true },
+  { key: 'expert_change_resolved',  label: 'Expert change request resolved',       description: 'Sent to you when your request to add or edit an expert has been approved or rejected'          },
+  { key: 'new_proposal_received',   label: 'Membership proposal received',         description: 'Sent to you when a user requests to join a project you own or change their project role',      poOnly: true },
+  { key: 'proposal_approved',       label: 'Membership proposal approved',         description: 'Sent to you when a Project Owner approves your request to join a project'                      },
+  { key: 'proposal_rejected',       label: 'Membership proposal rejected',         description: 'Sent to you when a Project Owner rejects your request to join a project'                       },
+  { key: 'response_rate_alert',     label: 'Response rate threshold alert',        description: 'Sent when response rate drops below your configured threshold with N days remaining until close'},
+  { key: 'org_wide_proposed',       label: 'Org-Wide template proposal received',  description: 'Sent to you when a template is nominated for org-wide promotion and awaits your approval',     adminOnly: true },
+  { key: 'auto_report_live',        label: 'Auto-report live on Expert Results Hub', description: 'Sent once when the auto-generated PDF is ready after survey closes — cannot be disabled',   nonConfigurable: true },
 ];
+
+const INTERNAL_NOTIF_EVENTS = NOTIFICATION_EVENT_DEFS.map(e => ({
+  key: e.key, label: e.label, description: e.description,
+  channels: ['email', 'in-platform'], nonConfigurable: !!e.nonConfigurable,
+}));
 
 const SAMPLE_DATA = {
   expert_name: 'Dr. Sarah Johnson', survey_name: 'Steel Market Outlook Q2 2026',
@@ -599,20 +604,12 @@ export default function Settings() {
     addToast('Internal notification template updated');
   };
 
-  const ALL_NOTIFICATION_EVENTS = [
-    { key: 'survey_approved', label: 'Survey approved' },
-    { key: 'survey_rejected', label: 'Survey rejected' },
-    { key: 'proposal_approved', label: 'Proposal approved' },
-    { key: 'proposal_rejected', label: 'Proposal rejected' },
-    { key: 'proposal_auto_cancelled', label: 'Proposal auto-cancelled' },
-    { key: 'new_proposal_received', label: 'New proposal received', adminOnly: true },
-    { key: 'invite_approved', label: 'Invite approved' },
-    { key: 'invite_rejected', label: 'Invite rejected' },
-    { key: 'response_rate_alert', label: 'Response rate threshold alert' },
-    { key: 'expert_change_resolved', label: 'Expert change request resolved' },
-    { key: 'wave_closed', label: 'Wave closed' },
-  ];
-  const NOTIFICATION_EVENTS = ALL_NOTIFICATION_EVENTS.filter(e => !e.adminOnly || !isStandardUser);
+  const NOTIFICATION_EVENTS = NOTIFICATION_EVENT_DEFS.filter(e => {
+    if (e.nonConfigurable) return false;
+    if (e.adminOnly || e.poOnly) return !isStandardUser;
+    return true;
+  });
+  const NON_CONFIGURABLE_EVENTS = NOTIFICATION_EVENT_DEFS.filter(e => e.nonConfigurable);
 
   const [surveyDefaults, setSurveyDefaults] = useState({
     autoCloseEnabled: false,
@@ -886,7 +883,7 @@ export default function Settings() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {NOTIFICATION_EVENTS.map(({ key, label }) => {
+              {NOTIFICATION_EVENTS.map(({ key, label, description }) => {
                 const prefs = notificationPrefs?.[key] || { email: false, inPlatform: false };
                 const toggle = (channel) => setNotificationPrefs(prev => ({
                   ...prev,
@@ -894,7 +891,10 @@ export default function Settings() {
                 }));
                 return (
                   <tr key={key} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-3 text-sm text-gray-700">{label}</td>
+                    <td className="py-3 px-3">
+                      <p className="text-sm font-medium text-gray-800">{label}</p>
+                      {description && <p className="text-xs text-gray-400 mt-0.5">{description}</p>}
+                    </td>
                     <td className="py-3 px-3 text-center">
                       <button
                         onClick={() => toggle('email')}
@@ -923,6 +923,21 @@ export default function Settings() {
             </tbody>
           </table>
         </div>
+        {NON_CONFIGURABLE_EVENTS.length > 0 && (
+          <div className="mt-4 border-t border-gray-100 pt-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Always on — cannot be disabled</p>
+            {NON_CONFIGURABLE_EVENTS.map(({ key, label, description }) => (
+              <div key={key} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-100">
+                <Lock size={13} className="text-amber-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800">{label}</p>
+                  {description && <p className="text-xs text-gray-400 mt-0.5">{description}</p>}
+                </div>
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200 flex-shrink-0">Non-configurable</span>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       {/* Internal Notification Templates — Super Admin only (P1-F-95) */}
@@ -943,15 +958,16 @@ export default function Settings() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {INTERNAL_NOTIF_EVENTS.map(({ key, label, channels, nonConfigurable }) => (
+                {INTERNAL_NOTIF_EVENTS.map(({ key, label, description, channels, nonConfigurable }) => (
                   <tr key={key} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-3 text-sm text-gray-700">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {label}
+                    <td className="py-3 px-3">
+                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                        <span className="text-sm font-medium text-gray-800">{label}</span>
                         {nonConfigurable && (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">Non-configurable</span>
                         )}
                       </div>
+                      {description && <p className="text-xs text-gray-400">{description}</p>}
                     </td>
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-1.5 flex-wrap">

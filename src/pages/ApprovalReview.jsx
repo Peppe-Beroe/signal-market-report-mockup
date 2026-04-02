@@ -991,13 +991,16 @@ export default function ApprovalReview() {
                     </div>
                   </div>
 
-                  {/* Post-submission email preview */}
-                  {survey.waveConfig.postSubSubject && (
-                    <div className="border-t border-gray-100 pt-4 mt-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Mail size={14} className="text-gray-400" />
-                        <span className="text-sm font-semibold text-gray-700">Post-submission thank-you email</span>
-                      </div>
+                  {/* Post-submission email preview — always shown */}
+                  <div className="border-t border-gray-100 pt-4 mt-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Mail size={14} className="text-gray-400" />
+                      <span className="text-sm font-semibold text-gray-700">Post-submission thank-you email</span>
+                      {!survey.waveConfig.postSubSubject && (
+                        <span className="text-xs text-gray-400 italic ml-1">— using sender's personal default</span>
+                      )}
+                    </div>
+                    {survey.waveConfig.postSubSubject ? (
                       <div className="space-y-2">
                         <div className="flex gap-3">
                           <span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">Subject</span>
@@ -1007,16 +1010,21 @@ export default function ApprovalReview() {
                           <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs text-gray-600 whitespace-pre-wrap">{survey.waveConfig.postSubBody}</div>
                         )}
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <p className="text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">Sent automatically to experts after they submit their response. Content is the sender's personal default template and was not customised for this survey.</p>
+                    )}
+                  </div>
 
-                  {/* Survey-closed email preview */}
-                  {survey.waveConfig.surveyClosedSubject && (
-                    <div className="border-t border-gray-100 pt-4 mt-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Mail size={14} className="text-gray-400" />
-                        <span className="text-sm font-semibold text-gray-700">Survey-closed report-ready email</span>
-                      </div>
+                  {/* Survey-closed email preview — always shown */}
+                  <div className="border-t border-gray-100 pt-4 mt-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Mail size={14} className="text-gray-400" />
+                      <span className="text-sm font-semibold text-gray-700">Survey-closed report-ready email</span>
+                      {!survey.waveConfig.surveyClosedSubject && (
+                        <span className="text-xs text-gray-400 italic ml-1">— using sender's personal default</span>
+                      )}
+                    </div>
+                    {survey.waveConfig.surveyClosedSubject ? (
                       <div className="space-y-2">
                         <div className="flex gap-3">
                           <span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">Subject</span>
@@ -1026,8 +1034,10 @@ export default function ApprovalReview() {
                           <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs text-gray-600 whitespace-pre-wrap">{survey.waveConfig.surveyClosedBody}</div>
                         )}
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <p className="text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">Sent automatically to all respondents when the survey closes and the final report is ready. Content is the sender's personal default template and was not customised for this survey.</p>
+                    )}
+                  </div>
 
                   {/* Note on report-sharing override */}
                   <div className="border-t border-gray-100 pt-4 mt-4">
