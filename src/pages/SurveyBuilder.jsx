@@ -1159,6 +1159,12 @@ export default function SurveyBuilder({ mode = 'create' }) {
       emailExpanded: false,
     })) || []
   );
+  const [postSubExpanded, setPostSubExpanded] = useState(!!existingWaveConfig?.postSubSubject);
+  const [postSubSubject, setPostSubSubject] = useState(existingWaveConfig?.postSubSubject || userTpls.postSubmission.subject);
+  const [postSubBody, setPostSubBody] = useState(existingWaveConfig?.postSubBody || userTpls.postSubmission.body);
+  const [surveyClosedExpanded, setSurveyClosedExpanded] = useState(!!existingWaveConfig?.surveyClosedSubject);
+  const [surveyClosedSubject, setSurveyClosedSubject] = useState(existingWaveConfig?.surveyClosedSubject || userTpls.surveyClosed.subject);
+  const [surveyClosedBody, setSurveyClosedBody] = useState(existingWaveConfig?.surveyClosedBody || userTpls.surveyClosed.body);
   const [alertEnabled, setAlertEnabled] = useState(Boolean(existingWaveConfig?.responseRateAlert));
   const [alertThreshold, setAlertThreshold] = useState(existingWaveConfig?.responseRateAlert?.threshold || 50);
   const [alertDaysRemaining, setAlertDaysRemaining] = useState(existingWaveConfig?.responseRateAlert?.daysRemaining || 7);
@@ -1226,6 +1232,10 @@ export default function SurveyBuilder({ mode = 'create' }) {
     emailBody,
     reminders: reminders.filter(r => r.datetime).map(r => ({ datetime: r.datetime, subject: r.subject, body: r.body })),
     responseRateAlert: alertEnabled ? { threshold: alertThreshold, daysRemaining: alertDaysRemaining } : null,
+    postSubSubject: postSubExpanded ? postSubSubject : null,
+    postSubBody: postSubExpanded ? postSubBody : null,
+    surveyClosedSubject: surveyClosedExpanded ? surveyClosedSubject : null,
+    surveyClosedBody: surveyClosedExpanded ? surveyClosedBody : null,
   });
 
   const insertMergeTag = (tag) => {
@@ -1892,6 +1902,94 @@ export default function SurveyBuilder({ mode = 'create' }) {
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* Post-submission thank-you email */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <Mail size={15} className="text-gray-400" />
+                <h2 className="text-sm font-semibold text-gray-900">Post-submission thank-you email</h2>
+              </div>
+              <button
+                onClick={() => { setPostSubExpanded(v => !v); triggerAutoSave(); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${postSubExpanded ? 'border-purple-300 bg-purple-100 text-purple-700' : 'border-purple-200 bg-white text-purple-600 hover:bg-purple-50'}`}>
+                <Mail size={12} />{postSubExpanded ? 'Hide template' : 'Customise post-submission email'}
+                <ChevronDown size={12} className={`transition-transform ${postSubExpanded ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mb-3">Sent to experts immediately after they submit their response. Pre-filled from your personal default.</p>
+            {postSubExpanded && (
+              <div className="mt-3 p-3 rounded-xl bg-purple-50/50 border border-purple-200 space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Subject line</label>
+                  <input type="text" value={postSubSubject} onChange={e => { setPostSubSubject(e.target.value); triggerAutoSave(); }}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-purple-400 focus:outline-none" />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-gray-500">Email body</label>
+                    <div className="flex items-center gap-1 flex-wrap justify-end">
+                      {['expert_name', 'survey_name', 'results_hub_link', 'survey_close_date'].map(t => (
+                        <span key={t} className="px-1.5 py-0.5 rounded text-xs font-mono border border-purple-100 bg-purple-50 text-purple-700">{`{{${t}}}`}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <textarea value={postSubBody} onChange={e => { setPostSubBody(e.target.value); triggerAutoSave(); }} rows={6}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono resize-none focus:border-purple-400 focus:outline-none" />
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={() => addToast('Test email sent to your inbox')}
+                    className="flex items-center gap-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
+                    <Send size={12} /> Send me a test email
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Survey-closed report-ready email */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <Mail size={15} className="text-gray-400" />
+                <h2 className="text-sm font-semibold text-gray-900">Survey-closed report-ready email</h2>
+              </div>
+              <button
+                onClick={() => { setSurveyClosedExpanded(v => !v); triggerAutoSave(); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${surveyClosedExpanded ? 'border-purple-300 bg-purple-100 text-purple-700' : 'border-purple-200 bg-white text-purple-600 hover:bg-purple-50'}`}>
+                <Mail size={12} />{surveyClosedExpanded ? 'Hide template' : 'Customise survey-closed email'}
+                <ChevronDown size={12} className={`transition-transform ${surveyClosedExpanded ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mb-3">Sent to experts when the survey closes and the final report is available. Pre-filled from your personal default.</p>
+            {surveyClosedExpanded && (
+              <div className="mt-3 p-3 rounded-xl bg-purple-50/50 border border-purple-200 space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Subject line</label>
+                  <input type="text" value={surveyClosedSubject} onChange={e => { setSurveyClosedSubject(e.target.value); triggerAutoSave(); }}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-purple-400 focus:outline-none" />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-gray-500">Email body</label>
+                    <div className="flex items-center gap-1 flex-wrap justify-end">
+                      {['expert_name', 'survey_name', 'results_hub_link', 'expiry_date'].map(t => (
+                        <span key={t} className="px-1.5 py-0.5 rounded text-xs font-mono border border-purple-100 bg-purple-50 text-purple-700">{`{{${t}}}`}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <textarea value={surveyClosedBody} onChange={e => { setSurveyClosedBody(e.target.value); triggerAutoSave(); }} rows={6}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono resize-none focus:border-purple-400 focus:outline-none" />
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={() => addToast('Test email sent to your inbox')}
+                    className="flex items-center gap-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
+                    <Send size={12} /> Send me a test email
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Reminders */}

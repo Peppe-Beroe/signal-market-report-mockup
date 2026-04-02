@@ -192,7 +192,7 @@ export default function ApprovalReview() {
     });
 
     if (survey.waveConfig && amendedWaveConfig) {
-      [['sendDate','Send date'],['closeDate','Close date'],['emailSubject','Email subject'],['senderName','Sender name'],['emailBody','Email body']].forEach(([key, label]) => {
+      [['sendDate','Send date'],['closeDate','Close date'],['emailSubject','Email subject'],['senderName','Sender name'],['emailBody','Email body'],['postSubSubject','Post-submission subject'],['postSubBody','Post-submission body'],['surveyClosedSubject','Survey-closed subject'],['surveyClosedBody','Survey-closed body']].forEach(([key, label]) => {
         if ((survey.waveConfig[key] || '') !== (amendedWaveConfig[key] || '')) {
           amendments.push({ type: 'wave_setting', target: key, label, before: survey.waveConfig[key] || '—', after: amendedWaveConfig[key] || '—', note: amendNotes.wave });
         }
@@ -574,6 +574,70 @@ export default function ApprovalReview() {
                   </div>
                 </div>
               </Card>
+              {/* Post-submission email override */}
+              <Card className="p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Mail size={14} className="text-gray-400" />
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Post-submission thank-you email</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Subject</label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 line-through w-36 truncate">{(survey.waveConfig?.postSubSubject || '—').slice(0, 24)}</span>
+                    <span className="text-gray-300">→</span>
+                    <input type="text" value={amendedWaveConfig?.postSubSubject || ''}
+                      onChange={e => setAmendedWaveConfig(prev => ({ ...prev, postSubSubject: e.target.value }))}
+                      className="flex-1 border border-amber-200 rounded-lg px-3 py-1.5 text-sm focus:border-amber-400 focus:outline-none bg-amber-50" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Body</label>
+                  <div className="space-y-1.5">
+                    <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs text-gray-400 whitespace-pre-wrap max-h-24 overflow-y-auto line-through">
+                      {survey.waveConfig?.postSubBody || '—'}
+                    </div>
+                    <textarea
+                      value={amendedWaveConfig?.postSubBody || ''}
+                      onChange={e => setAmendedWaveConfig(prev => ({ ...prev, postSubBody: e.target.value }))}
+                      rows={5}
+                      className="w-full border border-amber-200 rounded-lg px-3 py-2 text-xs resize-none focus:border-amber-400 focus:outline-none bg-amber-50"
+                    />
+                  </div>
+                </div>
+              </Card>
+
+              {/* Survey-closed email override */}
+              <Card className="p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Mail size={14} className="text-gray-400" />
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Survey-closed report-ready email</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Subject</label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 line-through w-36 truncate">{(survey.waveConfig?.surveyClosedSubject || '—').slice(0, 24)}</span>
+                    <span className="text-gray-300">→</span>
+                    <input type="text" value={amendedWaveConfig?.surveyClosedSubject || ''}
+                      onChange={e => setAmendedWaveConfig(prev => ({ ...prev, surveyClosedSubject: e.target.value }))}
+                      className="flex-1 border border-amber-200 rounded-lg px-3 py-1.5 text-sm focus:border-amber-400 focus:outline-none bg-amber-50" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Body</label>
+                  <div className="space-y-1.5">
+                    <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs text-gray-400 whitespace-pre-wrap max-h-24 overflow-y-auto line-through">
+                      {survey.waveConfig?.surveyClosedBody || '—'}
+                    </div>
+                    <textarea
+                      value={amendedWaveConfig?.surveyClosedBody || ''}
+                      onChange={e => setAmendedWaveConfig(prev => ({ ...prev, surveyClosedBody: e.target.value }))}
+                      rows={5}
+                      className="w-full border border-amber-200 rounded-lg px-3 py-2 text-xs resize-none focus:border-amber-400 focus:outline-none bg-amber-50"
+                    />
+                  </div>
+                </div>
+              </Card>
+
               {(amendedWaveConfig?.reminders?.length > 0) && (
                 <Card className="p-5 space-y-4">
                   <div className="flex items-center gap-2">
