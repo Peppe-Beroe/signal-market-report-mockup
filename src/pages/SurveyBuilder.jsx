@@ -1171,7 +1171,6 @@ export default function SurveyBuilder({ mode = 'create' }) {
       : new Set(experts.filter(e => e.status !== 'Opted-out').map(e => e.id))
   );
   const [expertSearch, setExpertSearch] = useState('');
-  const [tagFilter, setTagFilter] = useState('');
   const [spendingPoolFilter, setSpendingPoolFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [designationFilter, setDesignationFilter] = useState('');
@@ -1180,7 +1179,6 @@ export default function SurveyBuilder({ mode = 'create' }) {
   const expertSearchRef = useRef(null);
   const bodyRef = useRef(null);
 
-  const allTags = [...new Set(experts.flatMap(e => e.tags || []))];
   const allSpendingPools = [...new Set(experts.map(e => e.spendingPool).filter(Boolean))].sort();
   const allCategories = [...new Set(
     experts.filter(e => !spendingPoolFilter || e.spendingPool === spendingPoolFilter)
@@ -1197,12 +1195,11 @@ export default function SurveyBuilder({ mode = 'create' }) {
     const matchSearch = !expertSearch ||
       e.name.toLowerCase().includes(expertSearch.toLowerCase()) ||
       e.company.toLowerCase().includes(expertSearch.toLowerCase());
-    const matchTag = !tagFilter || (e.tags || []).includes(tagFilter);
     const matchSP = !spendingPoolFilter || e.spendingPool === spendingPoolFilter;
     const matchCat = !categoryFilter || e.category === categoryFilter;
     const matchDesig = !designationFilter || e.title === designationFilter;
     const matchGeo = !geographyFilter || e.geography === geographyFilter;
-    return matchSearch && matchTag && matchSP && matchCat && matchDesig && matchGeo;
+    return matchSearch && matchSP && matchCat && matchDesig && matchGeo;
   });
 
   const buildWaveConfig = () => ({
@@ -2048,14 +2045,9 @@ export default function SurveyBuilder({ mode = 'create' }) {
                 <option value="">All Geographies</option>
                 {allGeographies.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
-              <select value={tagFilter} onChange={e => setTagFilter(e.target.value)}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none">
-                <option value="">All tags</option>
-                {allTags.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-              {(spendingPoolFilter || categoryFilter || designationFilter || geographyFilter || tagFilter) && (
+              {(spendingPoolFilter || categoryFilter || designationFilter || geographyFilter) && (
                 <button
-                  onClick={() => { setSpendingPoolFilter(''); setCategoryFilter(''); setDesignationFilter(''); setGeographyFilter(''); setTagFilter(''); }}
+                  onClick={() => { setSpendingPoolFilter(''); setCategoryFilter(''); setDesignationFilter(''); setGeographyFilter(''); }}
                   className="text-xs text-purple-600 hover:text-purple-800 underline whitespace-nowrap">
                   Clear filters
                 </button>
@@ -2097,11 +2089,6 @@ export default function SurveyBuilder({ mode = 'create' }) {
                       <p className="text-xs text-gray-400 mt-0.5">
                         {[expert.spendingPool, expert.category, expert.geography].filter(Boolean).join(' · ')}
                       </p>
-                    </div>
-                    <div className="flex flex-wrap gap-1 justify-end max-w-xs">
-                      {(expert.tags || []).slice(0, 2).map(tag => (
-                        <span key={tag} className="text-xs bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded">{tag}</span>
-                      ))}
                     </div>
                   </div>
                 );
