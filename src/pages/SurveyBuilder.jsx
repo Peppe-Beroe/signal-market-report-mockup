@@ -1172,15 +1172,37 @@ export default function SurveyBuilder({ mode = 'create' }) {
   );
   const [expertSearch, setExpertSearch] = useState('');
   const [tagFilter, setTagFilter] = useState('');
+  const [spendingPoolFilter, setSpendingPoolFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [designationFilter, setDesignationFilter] = useState('');
+  const [geographyFilter, setGeographyFilter] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const expertSearchRef = useRef(null);
   const bodyRef = useRef(null);
 
   const allTags = [...new Set(experts.flatMap(e => e.tags || []))];
+  const allSpendingPools = [...new Set(experts.map(e => e.spendingPool).filter(Boolean))].sort();
+  const allCategories = [...new Set(
+    experts.filter(e => !spendingPoolFilter || e.spendingPool === spendingPoolFilter)
+      .map(e => e.category).filter(Boolean)
+  )].sort();
+  const allDesignations = [...new Set(experts.map(e => e.title).filter(Boolean))].sort();
+  const allGeographies = [...new Set(experts.map(e => e.geography).filter(Boolean))].sort();
+
+  const nameSuggestions = expertSearch.length >= 1
+    ? experts.filter(e => e.name.toLowerCase().includes(expertSearch.toLowerCase())).slice(0, 6)
+    : [];
+
   const filteredExperts = experts.filter(e => {
     const matchSearch = !expertSearch ||
       e.name.toLowerCase().includes(expertSearch.toLowerCase()) ||
       e.company.toLowerCase().includes(expertSearch.toLowerCase());
     const matchTag = !tagFilter || (e.tags || []).includes(tagFilter);
-    return matchSearch && matchTag;
+    const matchSP = !spendingPoolFilter || e.spendingPool === spendingPoolFilter;
+    const matchCat = !categoryFilter || e.category === categoryFilter;
+    const matchDesig = !designationFilter || e.title === designationFilter;
+    const matchGeo = !geographyFilter || e.geography === geographyFilter;
+    return matchSearch && matchTag && matchSP && matchCat && matchDesig && matchGeo;
   });
 
   const buildWaveConfig = () => ({
@@ -1961,35 +1983,98 @@ export default function SurveyBuilder({ mode = 'create' }) {
               <h2 className="text-sm font-semibold text-gray-900">Expert Target List</h2>
             </div>
 
-            <div className="flex items-center gap-3 mb-4">
-              <div className="relative flex-1">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input type="text" placeholder="Search by name or company..."
-                  value={expertSearch} onChange={e => setExpertSearch(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:border-purple-400 focus:outline-none" />
+            {/* Row 1: name search with autocomplete + select/deselect */}
+            <div className="flex items-center gap-3 mb-3">
+              <div className="relative flex-1" ref={expertSearchRef}>
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search by name or company..."
+                  value={expertSearch}
+                  onChange={e => { setExpertSearch(e.target.value); setShowSuggestions(true); }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:border-purple-400 focus:outline-none"
+                />
+                {showSuggestions && nameSuggestions.length > 0 && (
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                    {nameSuggestions.map(s => (
+                      <button
+                        key={s.id}
+                        onMouseDown={() => { setExpertSearch(s.name); setShowSuggestions(false); }}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-purple-50 flex items-center gap-2"
+                      >
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                          style={{ backgroundColor: s.status === 'Opted-out' ? '#9CA3AF' : '#4A00F8' }}>
+                          {s.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <span className="font-medium text-gray-800">{s.name}</span>
+                        <span className="text-gray-400 text-xs ml-1">{s.title} · {s.company}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+              <button onClick={selectAllExperts}
+                className="px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap">
+                Select all
+              </button>
+              <button onClick={deselectAllExperts}
+                className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors whitespace-nowrap">
+                Deselect all
+              </button>
+            </div>
+
+            {/* Row 2: taxonomy + designation + geography + tags filters */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <select value={spendingPoolFilter}
+                onChange={e => { setSpendingPoolFilter(e.target.value); setCategoryFilter(''); }}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none">
+                <option value="">All Spending Pools</option>
+                {allSpendingPools.map(sp => <option key={sp} value={sp}>{sp}</option>)}
+              </select>
+              <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none">
+                <option value="">All Categories</option>
+                {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select value={designationFilter} onChange={e => setDesignationFilter(e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none">
+                <option value="">All Designations</option>
+                {allDesignations.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <select value={geographyFilter} onChange={e => setGeographyFilter(e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none">
+                <option value="">All Geographies</option>
+                {allGeographies.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
               <select value={tagFilter} onChange={e => setTagFilter(e.target.value)}
                 className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none">
                 <option value="">All tags</option>
                 {allTags.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
-              <button onClick={selectAllExperts}
-                className="px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                Select all
-              </button>
-              <button onClick={deselectAllExperts}
-                className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
-                Deselect all
-              </button>
+              {(spendingPoolFilter || categoryFilter || designationFilter || geographyFilter || tagFilter) && (
+                <button
+                  onClick={() => { setSpendingPoolFilter(''); setCategoryFilter(''); setDesignationFilter(''); setGeographyFilter(''); setTagFilter(''); }}
+                  className="text-xs text-purple-600 hover:text-purple-800 underline whitespace-nowrap">
+                  Clear filters
+                </button>
+              )}
             </div>
 
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-gray-600">
                 <span className="font-semibold" style={{ color: '#4A00F8' }}>{selectedExperts.size}</span> of {experts.length} experts selected
+                {filteredExperts.length !== experts.length && (
+                  <span className="text-gray-400 ml-1">· showing {filteredExperts.length}</span>
+                )}
               </span>
             </div>
 
             <div className="border border-gray-100 rounded-xl overflow-hidden">
+              {filteredExperts.length === 0 && (
+                <div className="px-4 py-8 text-center text-sm text-gray-400">No experts match the current filters.</div>
+              )}
               {filteredExperts.map((expert, idx) => {
                 const isOptedOut = expert.status === 'Opted-out';
                 const isSelected = selectedExperts.has(expert.id);
@@ -2008,11 +2093,14 @@ export default function SurveyBuilder({ mode = 'create' }) {
                         <p className="text-sm font-medium text-gray-800">{expert.name}</p>
                         {isOptedOut && <span className="text-xs text-red-500 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded">Opted-out</span>}
                       </div>
-                      <p className="text-xs text-gray-400">{expert.title} · {expert.company}</p>
+                      <p className="text-xs text-gray-500">{expert.title} · {expert.company}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {[expert.spendingPool, expert.category, expert.geography].filter(Boolean).join(' · ')}
+                      </p>
                     </div>
                     <div className="flex flex-wrap gap-1 justify-end max-w-xs">
-                      {(expert.expertise || []).slice(0, 2).map(ex => (
-                        <span key={ex} className="text-xs bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded">{ex}</span>
+                      {(expert.tags || []).slice(0, 2).map(tag => (
+                        <span key={tag} className="text-xs bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded">{tag}</span>
                       ))}
                     </div>
                   </div>
