@@ -1150,7 +1150,14 @@ export default function SurveyBuilder({ mode = 'create' }) {
   const [senderName, setSenderName] = useState(existingWaveConfig?.senderName || 'Beroe Research Team');
   const [emailBody, setEmailBody] = useState(existingWaveConfig?.emailBody || userTpls.invitation.body);
   const [reminders, setReminders] = useState(
-    existingWaveConfig?.reminders?.map((dt, i) => ({ id: i, datetime: dt, error: '' })) || []
+    existingWaveConfig?.reminders?.map((r, i) => ({
+      id: i,
+      datetime: typeof r === 'string' ? r : (r.datetime || ''),
+      error: '',
+      subject: (typeof r === 'object' && r.subject) ? r.subject : userTpls.reminder.subject,
+      body: (typeof r === 'object' && r.body) ? r.body : userTpls.reminder.body,
+      emailExpanded: false,
+    })) || []
   );
   const [alertEnabled, setAlertEnabled] = useState(Boolean(existingWaveConfig?.responseRateAlert));
   const [alertThreshold, setAlertThreshold] = useState(existingWaveConfig?.responseRateAlert?.threshold || 50);
@@ -1183,7 +1190,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
     emailSubject,
     senderName,
     emailBody,
-    reminders: reminders.map(r => r.datetime).filter(Boolean),
+    reminders: reminders.filter(r => r.datetime).map(r => ({ datetime: r.datetime, subject: r.subject, body: r.body })),
     responseRateAlert: alertEnabled ? { threshold: alertThreshold, daysRemaining: alertDaysRemaining } : null,
   });
 
@@ -1200,7 +1207,7 @@ export default function SurveyBuilder({ mode = 'create' }) {
 
   const addReminder = () => {
     if (reminders.length >= 3) return;
-    setReminders(prev => [...prev, { id: Date.now(), datetime: '', error: '' }]);
+    setReminders(prev => [...prev, { id: Date.now(), datetime: '', error: '', subject: userTpls.reminder.subject, body: userTpls.reminder.body, emailExpanded: false }]);
   };
   const removeReminder = (id) => setReminders(prev => prev.filter(r => r.id !== id));
   const updateReminder = (id, datetime) => {
@@ -1210,6 +1217,8 @@ export default function SurveyBuilder({ mode = 'create' }) {
       return { ...r, datetime, error };
     }));
   };
+  const updateReminderField = (id, field, value) =>
+    setReminders(prev => prev.map(r => r.id !== id ? r : { ...r, [field]: value }));
 
   const toggleExpert = (id) => {
     setSelectedExperts(prev => {
@@ -1862,19 +1871,43 @@ export default function SurveyBuilder({ mode = 'create' }) {
                 <p className="text-sm text-gray-400 italic">No reminders configured. Add up to 3 reminder emails.</p>
               )}
               {reminders.map((reminder, idx) => (
-                <div key={reminder.id} className="flex items-start gap-3">
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Reminder {idx + 1}</label>
-                    <div className="flex items-center gap-2">
-                      <input type="datetime-local" value={reminder.datetime}
-                        onChange={e => updateReminder(reminder.id, e.target.value)}
-                        className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none ${reminder.error ? 'border-red-300' : 'border-gray-200 focus:border-purple-400'}`} />
-                      <button onClick={() => removeReminder(reminder.id)} className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                    {reminder.error && <p className="text-xs text-red-500 mt-1">{reminder.error}</p>}
+                <div key={reminder.id} className="border border-gray-100 rounded-xl p-3 bg-gray-50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-semibold text-gray-500">Reminder {idx + 1}</span>
+                    <button onClick={() => removeReminder(reminder.id)} className="ml-auto p-0.5 text-gray-300 hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
                   </div>
+                  <input type="datetime-local" value={reminder.datetime}
+                    onChange={e => updateReminder(reminder.id, e.target.value)}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none bg-white ${reminder.error ? 'border-red-300' : 'border-gray-200 focus:border-purple-400'}`} />
+                  {reminder.error && <p className="text-xs text-red-500 mt-1.5">{reminder.error}</p>}
+                  <button
+                    onClick={() => updateReminderField(reminder.id, 'emailExpanded', !reminder.emailExpanded)}
+                    className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 transition-colors mt-2">
+                    <Mail size={11} />
+                    {reminder.emailExpanded ? 'Hide email template' : 'Customise email template'}
+                    <ChevronDown size={11} className={`transition-transform ${reminder.emailExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+                  {reminder.emailExpanded && (
+                    <div className="mt-2 p-3 rounded-xl bg-white border border-gray-200 space-y-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Subject line</label>
+                        <input type="text" value={reminder.subject || ''} onChange={e => updateReminderField(reminder.id, 'subject', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-purple-400 focus:outline-none" />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-medium text-gray-500">Email body</label>
+                          <div className="flex items-center gap-1 flex-wrap justify-end">
+                            {['expert_name', 'survey_name', 'survey_link', 'close_date'].map(t => (
+                              <span key={t} className="px-1.5 py-0.5 rounded text-xs font-mono border border-purple-100 bg-purple-50 text-purple-700">{`{{${t}}}`}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <textarea value={reminder.body || ''} onChange={e => updateReminderField(reminder.id, 'body', e.target.value)} rows={5}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono resize-none focus:border-purple-400 focus:outline-none" />
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

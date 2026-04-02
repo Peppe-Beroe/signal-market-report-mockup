@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { FileText, Download, Send, RefreshCcw, Check } from 'lucide-react';
+import { FileText, Download, Send, RefreshCcw, Check, ChevronDown, Mail } from 'lucide-react';
 import Button from './ui/Button';
 import Card from './ui/Card';
+import { useApp } from '../context/AppContext';
 
 const PRESETS = {
   expert: {
@@ -22,11 +23,19 @@ const TOGGLES = [
   { key: 'showOpenText', label: 'Show open-text responses', hint: 'Include verbatim answers in the report' },
 ];
 
+const REPORT_MERGE_TAGS = ['{{expert_name}}', '{{report_title}}', '{{download_link}}', '{{expiry_date}}'];
+
 export function GenerateReportSection({ survey, addToast }) {
+  const { getUserEmailTemplates, currentUser } = useApp();
+  const userTpls = getUserEmailTemplates(currentUser?.id);
+
   const [phase, setPhase] = useState('config');
   const [preset, setPreset] = useState('expert');
   const [options, setOptions] = useState(PRESETS.expert.defaults);
   const [sent, setSent] = useState(false);
+  const [emailExpanded, setEmailExpanded] = useState(false);
+  const [reportEmailSubject, setReportEmailSubject] = useState(userTpls.reportSharing.subject);
+  const [reportEmailBody, setReportEmailBody] = useState(userTpls.reportSharing.body);
 
   const handlePreset = (key) => {
     setPreset(key);
@@ -121,6 +130,53 @@ export function GenerateReportSection({ survey, addToast }) {
                 {options.includeExcluded ? ' · All responses' : ''}
               </p>
             </div>
+          </div>
+
+          {/* Report sharing email editor */}
+          <div className="border border-gray-100 rounded-xl overflow-hidden">
+            <button
+              onClick={() => setEmailExpanded(v => !v)}
+              className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              <span className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                <Mail size={12} className="text-purple-500" />
+                Customise report sharing email
+              </span>
+              <ChevronDown size={12} className={`text-gray-400 transition-transform ${emailExpanded ? 'rotate-180' : ''}`} />
+            </button>
+            {emailExpanded && (
+              <div className="p-3 space-y-2 bg-white">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Subject</label>
+                  <input
+                    type="text"
+                    value={reportEmailSubject}
+                    onChange={e => setReportEmailSubject(e.target.value)}
+                    className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-purple-300"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Body</label>
+                  <textarea
+                    value={reportEmailBody}
+                    onChange={e => setReportEmailBody(e.target.value)}
+                    rows={5}
+                    className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-purple-300 resize-none font-mono"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {REPORT_MERGE_TAGS.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => setReportEmailBody(b => b + tag)}
+                      className="text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded px-1.5 py-0.5 hover:bg-purple-100 transition-colors font-mono"
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2">
