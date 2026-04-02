@@ -1187,6 +1187,21 @@ export default function SurveyBuilder({ mode = 'create' }) {
   const allDesignations = [...new Set(experts.map(e => e.title).filter(Boolean))].sort();
   const allGeographies = [...new Set(experts.map(e => e.geography).filter(Boolean))].sort();
 
+  const MIN_DATA_POINTS = 3;
+  const reactionRate = (e) =>
+    e.surveysSent >= MIN_DATA_POINTS
+      ? Math.round((e.surveysResponded / e.surveysSent) * 100)
+      : null;
+  const acceptanceRate = (e) =>
+    e.surveysResponded >= MIN_DATA_POINTS
+      ? Math.round((e.responsesAccepted / e.surveysResponded) * 100)
+      : null;
+  const kpiColor = (pct) => {
+    if (pct >= 75) return { bg: '#DCFCE7', text: '#16A34A' };
+    if (pct >= 50) return { bg: '#FEF3C7', text: '#D97706' };
+    return { bg: '#FEE2E2', text: '#DC2626' };
+  };
+
   const nameSuggestions = expertSearch.length >= 1
     ? experts.filter(e => e.name.toLowerCase().includes(expertSearch.toLowerCase())).slice(0, 6)
     : [];
@@ -2089,6 +2104,30 @@ export default function SurveyBuilder({ mode = 'create' }) {
                       <p className="text-xs text-gray-400 mt-0.5">
                         {[expert.spendingPool, expert.category, expert.geography].filter(Boolean).join(' · ')}
                       </p>
+                    </div>
+                    <div className="flex flex-col gap-1 items-end flex-shrink-0">
+                      {(() => {
+                        const rr = reactionRate(expert);
+                        const ar = acceptanceRate(expert);
+                        return (
+                          <>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-gray-400 whitespace-nowrap">RR</span>
+                              {rr === null
+                                ? <span className="text-xs text-gray-300 italic">N/A</span>
+                                : <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: kpiColor(rr).bg, color: kpiColor(rr).text }}>{rr}%</span>
+                              }
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-gray-400 whitespace-nowrap">DAR</span>
+                              {ar === null
+                                ? <span className="text-xs text-gray-300 italic">N/A</span>
+                                : <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: kpiColor(ar).bg, color: kpiColor(ar).text }}>{ar}%</span>
+                              }
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
