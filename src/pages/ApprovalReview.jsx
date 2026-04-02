@@ -1060,27 +1060,32 @@ export default function ApprovalReview() {
                     </div>
                     {survey.waveConfig.reminders?.length > 0 ? (
                       <div className="space-y-3">
-                        {survey.waveConfig.reminders.map((r, i) => (
-                          <div key={i} className="border border-gray-100 rounded-xl p-3 bg-gray-50">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Bell size={11} className="text-gray-400 flex-shrink-0" />
-                              <span className="text-xs font-semibold text-gray-700">Reminder {i + 1}</span>
-                              <span className="text-xs text-gray-400">· {r.datetime ? new Date(r.datetime).toLocaleDateString() : '—'}</span>
+                        {survey.waveConfig.reminders.map((r, i) => {
+                          const rem = typeof r === 'string' ? { datetime: r, subject: null, body: null } : r;
+                          return (
+                            <div key={i} className="border border-gray-100 rounded-xl p-3 bg-gray-50">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Bell size={11} className="text-gray-400 flex-shrink-0" />
+                                <span className="text-xs font-semibold text-gray-700">Reminder {i + 1}</span>
+                                <span className="text-xs text-gray-400">· {rem.datetime ? new Date(rem.datetime).toLocaleDateString() : '—'}</span>
+                              </div>
+                              {rem.subject ? (
+                                <div className="flex gap-2 mb-1">
+                                  <span className="text-xs text-gray-400 w-12 flex-shrink-0 pt-0.5">Subject</span>
+                                  <span className="text-xs text-gray-700">{rem.subject}</span>
+                                </div>
+                              ) : (
+                                <p className="text-xs text-gray-400 italic">Using sender's personal reminder template default</p>
+                              )}
+                              {rem.body && (
+                                <div className="flex gap-2 mt-1">
+                                  <span className="text-xs text-gray-400 w-12 flex-shrink-0 pt-0.5">Body</span>
+                                  <div className="bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-xs text-gray-600 whitespace-pre-wrap flex-1">{rem.body}</div>
+                                </div>
+                              )}
                             </div>
-                            {r.subject && (
-                              <div className="flex gap-2 mb-1">
-                                <span className="text-xs text-gray-400 w-12 flex-shrink-0 pt-0.5">Subject</span>
-                                <span className="text-xs text-gray-700">{r.subject}</span>
-                              </div>
-                            )}
-                            {r.body && (
-                              <div className="flex gap-2">
-                                <span className="text-xs text-gray-400 w-12 flex-shrink-0 pt-0.5">Body</span>
-                                <div className="bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-xs text-gray-600 whitespace-pre-wrap flex-1">{r.body}</div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">No reminder emails were configured for this survey.</p>

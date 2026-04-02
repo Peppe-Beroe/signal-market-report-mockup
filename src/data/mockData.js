@@ -112,7 +112,13 @@ export const SURVEYS = [
       emailSubject: 'Steel Supply Chain Risk — Expert Perspective Survey',
       senderName: 'Marco Rossi, Beroe',
       emailBody: 'Dear {{EXPERT_FIRST_NAME}},\n\nWe are studying the current steel supply chain risk landscape. Your perspective is invaluable to our analysis.\n\nPlease complete this short survey by {{CLOSE_DATE}}.\n\nKind regards,\n{{SENDER_NAME}}',
-      reminders: ['2026-04-05'],
+      reminders: [
+        {
+          datetime: '2026-04-05T09:00',
+          subject: 'Reminder: Steel Supply Chain Risk Survey closes soon',
+          body: 'Dear {{expert_name}},\n\nThis is a friendly reminder that the survey below is still open for your response.\n\nSurvey: {{survey_name}}\nClose date: {{close_date}}\n\nParticipate here:\n{{survey_link}}\n\nThank you for your continued support.\n\nBest regards,\nMarco Rossi, Beroe',
+        },
+      ],
       alertEnabled: false,
       alertThreshold: 50,
       alertDaysRemaining: 3,
