@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { User, Bell, Sliders, Save, CheckCircle, Globe, List, Mail, Plus, X, Edit2, Info, BookTemplate, Trash2, Lock, Users, Eye, ThumbsUp, ThumbsDown, Paperclip, ToggleLeft, ToggleRight, ArrowUpRight, History, FileText, ChevronRight, ChevronDown, Download } from 'lucide-react';
+import { useState, useMemo, useRef } from 'react';
+import { User, Bell, Sliders, Save, CheckCircle, Globe, List, Mail, Plus, X, Edit2, Info, BookTemplate, Trash2, Lock, Users, Eye, ThumbsUp, ThumbsDown, Paperclip, ToggleLeft, ToggleRight, ArrowUpRight, History, FileText, ChevronRight, ChevronDown, Download, Send, RefreshCw, Monitor } from 'lucide-react';
 
 const MOCK_TAXONOMY_LOG = [
   { id: 'tl1', ts: '31 Mar 2026, 14:22', actor: 'Maria Santos', level: 'Category',     action: 'Added',       name: 'Rigid Packaging',     before: null,        after: null,       parent: 'Packaging' },
@@ -9,7 +9,7 @@ const MOCK_TAXONOMY_LOG = [
   { id: 'tl5', ts: '27 Mar 2026, 11:30', actor: 'Maria Santos', level: 'Category',     action: 'Renamed',     name: null,                  before: 'Feedstocks',after: 'Chemical Feedstocks', parent: 'Chemicals' },
   { id: 'tl6', ts: '25 Mar 2026, 15:00', actor: 'Maria Santos', level: 'Category',     action: 'Activated',   name: 'Agriculture',         before: null,        after: null,       parent: 'Indirect' },
 ];
-import { useApp } from '../context/AppContext';
+import { useApp, DEFAULT_EXTERNAL_TEMPLATES } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -26,6 +26,193 @@ const TIMEZONES = [
 ];
 
 const MERGE_TAGS_EMAIL = ['expert_name', 'survey_name', 'survey_link', 'close_date'];
+const MERGE_TAGS_REMINDER = ['expert_name', 'survey_name', 'survey_link', 'close_date'];
+const MERGE_TAGS_REPORT = ['expert_name', 'report_title', 'download_link', 'expiry_date'];
+
+const INTERNAL_NOTIF_EVENTS = [
+  { key: 'survey_approved',        label: 'Survey approved',                          channels: ['email', 'in-platform'] },
+  { key: 'survey_rejected',        label: 'Survey rejected',                          channels: ['email', 'in-platform'] },
+  { key: 'response_rate_alert',    label: 'Response rate threshold alert',            channels: ['email', 'in-platform'] },
+  { key: 'proposal_approved',      label: 'Membership proposal approved',             channels: ['email', 'in-platform'] },
+  { key: 'proposal_rejected',      label: 'Membership proposal rejected',             channels: ['email', 'in-platform'] },
+  { key: 'proposal_auto_cancelled',label: 'Membership proposal auto-cancelled',       channels: ['email', 'in-platform'] },
+  { key: 'new_proposal_received',  label: 'New membership proposal received',         channels: ['email', 'in-platform'] },
+  { key: 'invite_approved',        label: 'Platform invite request approved',         channels: ['email', 'in-platform'] },
+  { key: 'invite_rejected',        label: 'Platform invite request rejected',         channels: ['email', 'in-platform'] },
+  { key: 'expert_change_resolved', label: 'Expert change request resolved',           channels: ['email', 'in-platform'] },
+  { key: 'wave_closed',            label: 'Wave closed',                              channels: ['email', 'in-platform'] },
+  { key: 'org_wide_proposal_result',label: 'Org-Wide template proposal result',       channels: ['email', 'in-platform'] },
+];
+
+const SAMPLE_DATA = {
+  expert_name: 'Dr. Sarah Johnson', survey_name: 'Steel Market Outlook Q2 2026',
+  survey_link: 'https://survey.beroe-inc.com/s/abc123', close_date: '30 Apr 2026',
+  report_title: 'Steel Market Outlook Q2 2026 — Expert Insights',
+  download_link: 'https://reports.beroe-inc.com/dl/xyz789', expiry_date: '30 May 2026',
+  user_name: 'Alice Chen', project_name: 'Steel 2026',
+  actor_name: 'Maria Santos', reason: 'Survey scope needs narrowing to specific geography',
+  response_rate: '62', threshold: '70', target_user: 'James Okafor',
+  proposed_role: 'Project Editor', decision: 'approved',
+  template_name: 'Steel Quarterly MSR', expert_name_internal: 'Dr. Sarah Johnson',
+};
+
+function applyPreviewData(text) {
+  return (text || '').replace(/\{\{(\w+)\}\}/g, (_, k) => SAMPLE_DATA[k] || `{{${k}}}`);
+}
+
+function EmailPreviewPane({ subject, body }) {
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden text-sm">
+      <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 space-y-1">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-gray-400 w-12">From</span>
+          <span className="text-gray-700">Beroe Research Team &lt;noreply@beroe-inc.com&gt;</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-gray-400 w-12">Subject</span>
+          <span className="font-medium text-gray-900">{applyPreviewData(subject)}</span>
+        </div>
+      </div>
+      <div className="px-4 py-4 bg-white">
+        <pre className="whitespace-pre-wrap font-sans text-gray-700 leading-relaxed text-sm">{applyPreviewData(body)}</pre>
+      </div>
+    </div>
+  );
+}
+
+function InPlatformPreviewPane({ text }) {
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 flex items-center gap-2">
+        <Bell size={14} className="text-gray-400" />
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">In-platform notification panel</span>
+      </div>
+      <div className="px-4 py-4 bg-white">
+        <div className="flex items-start gap-3 p-3 rounded-lg border border-purple-100 bg-purple-50">
+          <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: '#4A00F8' }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900">{applyPreviewData(text)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">Just now</p>
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 mt-3">Sample — actual notification links to the relevant action.</p>
+      </div>
+    </div>
+  );
+}
+
+function PreviewModal({ config, onClose, onSave, addToast }) {
+  const isInternal = config.type === 'internal';
+  const [tab, setTab] = useState('email');
+  const [subject, setSubject] = useState(config.subject || '');
+  const [body, setBody] = useState(config.body || '');
+  const [inPlatformText, setInPlatformText] = useState(config.inPlatformText || '');
+  const [dirty, setDirty] = useState(false);
+  const bodyRef = useRef(null);
+
+  const mergeTags = config.mergeTags || [];
+
+  const insertTag = (tag) => {
+    if (!bodyRef.current) return;
+    const el = bodyRef.current;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const val = body.slice(0, start) + `{{${tag}}}` + body.slice(end);
+    setBody(val);
+    setDirty(true);
+    setTimeout(() => { el.focus(); el.setSelectionRange(start + tag.length + 4, start + tag.length + 4); }, 0);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">{config.label}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">{isInternal ? 'Org-wide template — changes affect all internal users' : 'Your personal template'}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><X size={16} /></button>
+        </div>
+
+        {isInternal && (
+          <div className="mx-6 mt-4 flex gap-1 border-b border-gray-100">
+            {['email', 'in-platform'].map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === t ? 'border-purple-600 text-purple-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                {t === 'email' ? 'Email' : 'In-platform'}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="p-6 space-y-4">
+          {(tab === 'email' || !isInternal) && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Subject line</label>
+                <input type="text" value={subject} onChange={e => { setSubject(e.target.value); setDirty(true); }}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-medium text-gray-700">Email body</label>
+                  {mergeTags.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap justify-end">
+                      <span className="text-xs text-gray-400">Insert:</span>
+                      {mergeTags.map(t => (
+                        <button key={t} onClick={() => insertTag(t)}
+                          className="px-1.5 py-0.5 rounded text-xs font-mono border border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors">
+                          {`{{${t}}}`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <textarea ref={bodyRef} value={body} onChange={e => { setBody(e.target.value); setDirty(true); }} rows={7}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono resize-none focus:border-purple-400 focus:outline-none bg-gray-50 focus:bg-white transition-colors" />
+              </div>
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs text-gray-500 font-medium mb-3">Preview (sample data)</p>
+                <EmailPreviewPane subject={subject} body={body} />
+              </div>
+            </>
+          )}
+
+          {isInternal && tab === 'in-platform' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Notification text</label>
+                <input type="text" value={inPlatformText} onChange={e => { setInPlatformText(e.target.value); setDirty(true); }}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none" />
+                <p className="text-xs text-gray-400 mt-1">Keep it concise — this is the short bell-panel message. It automatically deep-links to the relevant action.</p>
+              </div>
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs text-gray-500 font-medium mb-3">Preview (sample data)</p>
+                <InPlatformPreviewPane text={inPlatformText} />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+          <button onClick={() => { addToast(`Test email sent to you`); }} className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors">
+            <Send size={13} /> Send me a test email
+          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+            {dirty && (
+              <button onClick={() => { onSave({ subject, body, inPlatformText }); onClose(); }}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors"
+                style={{ backgroundColor: '#4A00F8' }}>
+                <Save size={13} /> Save changes
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function SectionHeader({ icon: Icon, title, description }) {
   return (
@@ -60,17 +247,6 @@ function Toggle({ checked, onChange, label, description }) {
     </div>
   );
 }
-
-const DEFAULT_EMAIL_BODY = `Dear {{expert_name}},
-
-We are conducting a research survey and would value your expert perspective.
-
-Survey: {{survey_name}}
-Close date: {{close_date}}
-Link: {{survey_link}}
-
-Thank you,
-Beroe Research Team`;
 
 function TemplateTable({
   templates, showOwner, showMakePrivate, showProposeOrgWide, pendingProposalTemplateIds,
@@ -368,7 +544,7 @@ function TemplateDetailModal({ template, onClose, onRevert, categories, internal
 }
 
 export default function Settings() {
-  const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs, categories, setCategories, taxonomy, setTaxonomy, templates, deleteTemplate, renameTemplate, updateTemplateQuestions, revertTemplateToPrivate, revertTemplateVersion, proposeOrgWide, approveOrgWide, rejectOrgWide, orgWideProposals, typologyConfig, updateTypologyConfig, projects, internalUsers } = useApp();
+  const { currentUser, addToast, orgTimezone, setOrgTimezone, notificationPrefs, setNotificationPrefs, categories, setCategories, taxonomy, setTaxonomy, templates, deleteTemplate, renameTemplate, updateTemplateQuestions, revertTemplateToPrivate, revertTemplateVersion, proposeOrgWide, approveOrgWide, rejectOrgWide, orgWideProposals, typologyConfig, updateTypologyConfig, projects, internalUsers, getUserEmailTemplates, setUserEmailTemplate, internalNotifTemplates, setInternalNotifTemplates } = useApp();
   const isSuperAdmin = currentUser.role === 'Super Admin';
   const isAdmin = currentUser.role === 'Admin';
   const isStandardUser = currentUser.role === 'Standard User';
@@ -396,6 +572,27 @@ export default function Settings() {
 
   const [profile] = useState({ name: currentUser.name, email: currentUser.email });
   const [editProfile, setEditProfile] = useState({ name: currentUser.name, email: currentUser.email });
+
+  // External notification templates — per-user personal defaults (P1-F-96)
+  const [extTpls, setExtTpls] = useState(() => getUserEmailTemplates(currentUser.id));
+  const [extTplTab, setExtTplTab] = useState('invitation');
+  const [extPreviewOpen, setExtPreviewOpen] = useState(null); // 'invitation' | 'reminder' | 'reportSharing'
+
+  // Internal notification templates — SA only, org-wide (P1-F-95)
+  const [intPreviewOpen, setIntPreviewOpen] = useState(null); // eventKey string
+
+  const saveExtTemplate = (type) => {
+    setUserEmailTemplate(currentUser.id, type, extTpls[type]);
+    addToast('Template saved');
+  };
+
+  const saveIntTemplate = (eventKey, { subject, body, inPlatformText }) => {
+    setInternalNotifTemplates(prev => ({
+      ...prev,
+      [eventKey]: { ...prev[eventKey], emailSubject: subject, emailBody: body, inPlatformText },
+    }));
+    addToast('Internal notification template updated');
+  };
 
   const ALL_NOTIFICATION_EVENTS = [
     { key: 'survey_approved', label: 'Survey approved' },
@@ -545,9 +742,6 @@ export default function Settings() {
       )}
     </div>
   );
-  const [defaultEmailSubject, setDefaultEmailSubject] = useState(`You're invited: {{survey_name}}`);
-  const [defaultEmailBody, setDefaultEmailBody] = useState(DEFAULT_EMAIL_BODY);
-
   // Template management state
   const [renamingTplId, setRenamingTplId] = useState(null);
   const [renameTplValue, setRenameTplValue] = useState('');
@@ -571,7 +765,6 @@ export default function Settings() {
   const saveProfile = () => addToast('Profile updated successfully');
   const saveDefaults = () => addToast('Survey defaults saved');
   const saveTimezone = () => addToast(`Timezone updated to ${orgTimezone}`);
-  const saveDefaultEmail = () => addToast('Default email template saved');
 
   const addCategory = () => {
     if (!newCategoryName.trim()) return;
@@ -726,6 +919,55 @@ export default function Settings() {
           </table>
         </div>
       </Card>
+
+      {/* Internal Notification Templates — Super Admin only (P1-F-95) */}
+      {isSuperAdmin && (
+        <Card className="p-6">
+          <SectionHeader icon={Bell} title="Internal Notification Templates" description="Org-wide email and in-platform notification templates for internal platform events. Changes apply to all users." />
+          <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-100 mb-4">
+            <Info size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-amber-800">These are <strong>org-wide templates</strong>. Editing them changes the notification wording received by all internal users. Individual users control which events they receive (toggles above) — but not the template content.</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Event</th>
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider w-40">Channels</th>
+                  <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider w-32">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {INTERNAL_NOTIF_EVENTS.map(({ key, label, channels }) => (
+                  <tr key={key} className="hover:bg-gray-50 transition-colors">
+                    <td className="py-3 px-3 text-sm text-gray-700">{label}</td>
+                    <td className="py-3 px-3">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {channels.includes('email') && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                            <Mail size={10} /> Email
+                          </span>
+                        )}
+                        {channels.includes('in-platform') && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
+                            <Monitor size={10} /> In-platform
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <button onClick={() => setIntPreviewOpen(key)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-100 rounded-lg hover:bg-purple-100 transition-colors">
+                        <Eye size={11} /> Preview &amp; Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       {/* Category Taxonomy — Super Admin only */}
       {isSuperAdmin && (
@@ -924,40 +1166,71 @@ export default function Settings() {
         </Card>
       )}
 
-      {/* Default Email Template */}
+      {/* External Notification Templates — all users, per-user personal defaults (P1-F-96) */}
       <Card className="p-6">
-        <SectionHeader icon={Mail} title="Default Email Template" description="Pre-fill template used when setting up new survey waves" />
-        <div className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-medium text-gray-700">Default subject line</label>
-            </div>
-            <input
-              type="text"
-              value={defaultEmailSubject}
-              onChange={e => setDefaultEmailSubject(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none transition-colors"
-            />
-          </div>
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-medium text-gray-700">Default email body</label>
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-gray-400">Merge tags:</span>
-                {MERGE_TAGS_EMAIL.map(t => (
-                  <span key={t} className="px-1.5 py-0.5 rounded text-xs font-mono bg-purple-50 border border-purple-100 text-purple-700">{`{{${t}}}`}</span>
-                ))}
+        <SectionHeader icon={Mail} title="Expert Communication Templates" description="Your personal default email templates for expert outreach. Changes only affect your own future surveys — other users are not impacted." />
+        <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-blue-50 border border-blue-100 mb-5">
+          <Info size={14} className="text-blue-400 mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-blue-700">These are <strong>your personal defaults</strong>. They pre-fill when you set up a new survey wave. You can still adjust them per-survey in Schedule Setup. Other users manage their own templates independently.</p>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-gray-100 mb-5">
+          {[
+            { key: 'invitation',    label: 'Survey invitation',   icon: Mail },
+            { key: 'reminder',      label: 'Reminder',            icon: Bell },
+            { key: 'reportSharing', label: 'Report sharing',      icon: FileText },
+          ].map(({ key, label, icon: Icon }) => (
+            <button key={key} onClick={() => setExtTplTab(key)}
+              className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${extTplTab === key ? 'border-purple-600 text-purple-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              <Icon size={13} /> {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Template editor */}
+        {(() => {
+          const type = extTplTab;
+          const mergeTags = type === 'reportSharing' ? MERGE_TAGS_REPORT : MERGE_TAGS_REMINDER;
+          const tpl = extTpls[type] || {};
+          return (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Subject line</label>
+                <input type="text" value={tpl.subject || ''} onChange={e => setExtTpls(p => ({ ...p, [type]: { ...p[type], subject: e.target.value } }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-purple-400 focus:outline-none transition-colors" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-medium text-gray-700">Email body</label>
+                  <div className="flex items-center gap-1 flex-wrap justify-end">
+                    <span className="text-xs text-gray-400">Merge tags:</span>
+                    {mergeTags.map(t => (
+                      <span key={t} className="px-1.5 py-0.5 rounded text-xs font-mono bg-purple-50 border border-purple-100 text-purple-700">{`{{${t}}}`}</span>
+                    ))}
+                  </div>
+                </div>
+                <textarea value={tpl.body || ''} onChange={e => setExtTpls(p => ({ ...p, [type]: { ...p[type], body: e.target.value } }))} rows={7}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono resize-none focus:border-purple-400 focus:outline-none bg-gray-50 focus:bg-white transition-colors" />
+              </div>
+              <div className="flex items-center gap-3 pt-1">
+                <Button size="sm" onClick={() => saveExtTemplate(type)}><Save size={14} /> Save Template</Button>
+                <button onClick={() => setExtPreviewOpen(type)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-100 rounded-lg hover:bg-purple-100 transition-colors">
+                  <Eye size={12} /> Preview
+                </button>
+                <button onClick={() => addToast(`Test email sent to ${currentUser.email}`)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">
+                  <Send size={12} /> Send me a test
+                </button>
+                <button onClick={() => { const def = { invitation: { ...DEFAULT_EXTERNAL_TEMPLATES.invitation }, reminder: { ...DEFAULT_EXTERNAL_TEMPLATES.reminder }, reportSharing: { ...DEFAULT_EXTERNAL_TEMPLATES.reportSharing } }; setExtTpls(p => ({ ...p, [type]: def[type] })); addToast('Reset to default'); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors">
+                  <RefreshCw size={12} /> Reset to default
+                </button>
               </div>
             </div>
-            <textarea
-              value={defaultEmailBody}
-              onChange={e => setDefaultEmailBody(e.target.value)}
-              rows={8}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono resize-none focus:border-purple-400 focus:outline-none bg-gray-50 focus:bg-white transition-colors"
-            />
-          </div>
-          <Button size="sm" onClick={saveDefaultEmail}><Save size={14} /> Save Template</Button>
-        </div>
+          );
+        })()}
       </Card>
 
       {/* ── TEMPLATES ─────────────────────────────────────────────────────── */}
@@ -1196,6 +1469,48 @@ export default function Settings() {
         </div>
         <Button size="sm" onClick={saveDefaults}><Save size={14} /> Save Defaults</Button>
       </Card>
+
+      {/* External template preview modal */}
+      {extPreviewOpen && (() => {
+        const type = extPreviewOpen;
+        const tpl = extTpls[type] || {};
+        const mergeTags = type === 'reportSharing' ? MERGE_TAGS_REPORT : MERGE_TAGS_REMINDER;
+        const labels = { invitation: 'Survey invitation email', reminder: 'Reminder email', reportSharing: 'Report sharing email' };
+        return (
+          <PreviewModal
+            config={{ type: 'external', label: labels[type], subject: tpl.subject, body: tpl.body, mergeTags }}
+            onClose={() => setExtPreviewOpen(null)}
+            onSave={({ subject, body }) => { setExtTpls(p => ({ ...p, [type]: { ...p[type], subject, body } })); saveExtTemplate(type); }}
+            addToast={addToast}
+          />
+        );
+      })()}
+
+      {/* Internal notification template preview modal — SA only */}
+      {intPreviewOpen && (() => {
+        const evt = INTERNAL_NOTIF_EVENTS.find(e => e.key === intPreviewOpen);
+        const tpl = internalNotifTemplates[intPreviewOpen] || {};
+        const intMergeTags = [...new Set([
+          'user_name', 'survey_name', 'project_name', 'actor_name', 'reason',
+          'target_user', 'proposed_role', 'response_rate', 'threshold',
+          'expert_name', 'decision', 'template_name',
+        ])];
+        return (
+          <PreviewModal
+            config={{
+              type: 'internal',
+              label: evt?.label || intPreviewOpen,
+              subject: tpl.emailSubject,
+              body: tpl.emailBody,
+              inPlatformText: tpl.inPlatformText,
+              mergeTags: intMergeTags,
+            }}
+            onClose={() => setIntPreviewOpen(null)}
+            onSave={(updates) => saveIntTemplate(intPreviewOpen, updates)}
+            addToast={addToast}
+          />
+        );
+      })()}
     </div>
   );
 }

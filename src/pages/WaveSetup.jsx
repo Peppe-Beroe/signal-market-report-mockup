@@ -63,7 +63,8 @@ const MERGE_TAGS = ['expert_name', 'survey_name', 'survey_link', 'close_date'];
 export default function WaveSetup() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, experts, currentUser, launchSurveyWithConfig, saveWaveSetup, addToast, orgTimezone } = useApp();
+  const { surveys, projects, experts, currentUser, launchSurveyWithConfig, saveWaveSetup, addToast, orgTimezone, getUserEmailTemplates } = useApp();
+  const userTpls = getUserEmailTemplates(currentUser.id);
 
   const survey = surveys.find(s => s.id === surveyId);
   const project = projects.find(p => p.id === projectId);
@@ -112,10 +113,10 @@ export default function WaveSetup() {
   const selectAll = () => setSelectedExperts(new Set(experts.filter(e => e.status !== 'Opted-out').map(e => e.id)));
   const deselectAll = () => setSelectedExperts(new Set());
 
-  // Section 3 — Email Template
-  const [emailSubject, setEmailSubject] = useState(existingConfig?.emailSubject || `You're invited: ${survey?.name || 'Survey'}`);
+  // Section 3 — Email Template (pre-fills from user's personal default; falls back to system default)
+  const [emailSubject, setEmailSubject] = useState(existingConfig?.emailSubject || userTpls.invitation.subject);
   const [senderName, setSenderName] = useState(existingConfig?.senderName || 'Beroe Research Team');
-  const [emailBody, setEmailBody] = useState(existingConfig?.emailBody || DEFAULT_EMAIL_BODY);
+  const [emailBody, setEmailBody] = useState(existingConfig?.emailBody || userTpls.invitation.body);
   const bodyRef = useRef(null);
 
   const insertMergeTag = (tag) => {

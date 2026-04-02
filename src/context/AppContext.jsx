@@ -70,6 +70,88 @@ const DEFAULT_TYPOLOGY_CONFIG = {
   },
 };
 
+// Per-user external email templates (P1-F-96) — personal defaults for expert outreach emails.
+// Each user owns their own copy; changes do not cascade to other users.
+export const DEFAULT_EXTERNAL_TEMPLATES = {
+  invitation: {
+    subject: "You're invited: {{survey_name}}",
+    body: `Dear {{expert_name}},\n\nWe are conducting a research survey as part of the Beroe Signal intelligence programme and would value your expert perspective.\n\nSurvey: {{survey_name}}\nClose date: {{close_date}}\n\nPlease click the link below to participate (estimated time: 5–8 minutes):\n{{survey_link}}\n\nYour responses are completely confidential and will only be used in aggregate for research purposes.\n\nThank you for your continued support.\n\nBest regards,\nBeroe Research Team`,
+  },
+  reminder: {
+    subject: 'Reminder: {{survey_name}} closes on {{close_date}}',
+    body: `Dear {{expert_name}},\n\nThis is a friendly reminder that the survey below is still open for your response.\n\nSurvey: {{survey_name}}\nClose date: {{close_date}}\n\nParticipate here:\n{{survey_link}}\n\nThank you for your continued support.\n\nBest regards,\nBeroe Research Team`,
+  },
+  reportSharing: {
+    subject: 'Your expert report is ready: {{report_title}}',
+    body: `Dear {{expert_name}},\n\nThank you for participating in our research. Your exclusive copy of the report is now available.\n\nReport: {{report_title}}\n\nDownload your copy here:\n{{download_link}}\n\nThis link expires on: {{expiry_date}}\n\nBest regards,\nBeroe Research Team`,
+  },
+};
+
+// Org-wide internal notification templates (P1-F-95) — Super Admin controlled.
+// Changes made by SA apply to the notification emails received by all internal users.
+export const DEFAULT_INTERNAL_NOTIF_TEMPLATES = {
+  survey_approved: {
+    emailSubject: 'Your survey "{{survey_name}}" has been approved',
+    emailBody: `Hi {{user_name}},\n\nYour survey "{{survey_name}}" in project "{{project_name}}" has been approved by {{actor_name}}.\n\nYou can now launch the wave from your project dashboard.\n\nBeroe Signal Platform`,
+    inPlatformText: 'Survey "{{survey_name}}" approved by {{actor_name}}.',
+  },
+  survey_rejected: {
+    emailSubject: 'Your survey "{{survey_name}}" has been rejected',
+    emailBody: `Hi {{user_name}},\n\nYour survey "{{survey_name}}" in project "{{project_name}}" was rejected by {{actor_name}}.\n\nReason: {{reason}}\n\nPlease update the survey and resubmit.\n\nBeroe Signal Platform`,
+    inPlatformText: 'Survey "{{survey_name}}" rejected. Reason: {{reason}}',
+  },
+  response_rate_alert: {
+    emailSubject: 'Response rate alert: "{{survey_name}}" below threshold',
+    emailBody: `Hi {{user_name}},\n\nThe response rate for "{{survey_name}}" has fallen below your configured threshold.\n\nCurrent rate: {{response_rate}}%  |  Threshold: {{threshold}}%\n\nBeroe Signal Platform`,
+    inPlatformText: '"{{survey_name}}" response rate ({{response_rate}}%) is below threshold.',
+  },
+  proposal_approved: {
+    emailSubject: 'Your membership proposal was approved',
+    emailBody: `Hi {{user_name}},\n\nYour proposal to add {{target_user}} to "{{project_name}}" as {{proposed_role}} has been approved by {{actor_name}}.\n\nBeroe Signal Platform`,
+    inPlatformText: 'Membership proposal for {{target_user}} in "{{project_name}}" approved.',
+  },
+  proposal_rejected: {
+    emailSubject: 'Your membership proposal was rejected',
+    emailBody: `Hi {{user_name}},\n\nYour proposal to add {{target_user}} to "{{project_name}}" as {{proposed_role}} was rejected. Reason: {{reason}}\n\nBeroe Signal Platform`,
+    inPlatformText: 'Membership proposal for {{target_user}} rejected. Reason: {{reason}}',
+  },
+  proposal_auto_cancelled: {
+    emailSubject: 'Your membership proposal was auto-cancelled',
+    emailBody: `Hi {{user_name}},\n\nYour membership proposal for {{target_user}} in "{{project_name}}" was automatically cancelled because the target user has been deactivated.\n\nBeroe Signal Platform`,
+    inPlatformText: 'Membership proposal for {{target_user}} auto-cancelled (user deactivated).',
+  },
+  new_proposal_received: {
+    emailSubject: 'New membership proposal for "{{project_name}}"',
+    emailBody: `Hi {{user_name}},\n\n{{actor_name}} has proposed adding {{target_user}} to "{{project_name}}" as {{proposed_role}}.\n\nReview this request in your project settings.\n\nBeroe Signal Platform`,
+    inPlatformText: '{{actor_name}} proposed adding {{target_user}} to "{{project_name}}" as {{proposed_role}}.',
+  },
+  invite_approved: {
+    emailSubject: 'Your platform invite request was approved',
+    emailBody: `Hi {{user_name}},\n\nYour request to invite {{target_user}} as {{proposed_role}} has been approved. The invitation has been sent.\n\nBeroe Signal Platform`,
+    inPlatformText: 'Invite request for {{target_user}} approved.',
+  },
+  invite_rejected: {
+    emailSubject: 'Your platform invite request was rejected',
+    emailBody: `Hi {{user_name}},\n\nYour request to invite {{target_user}} as {{proposed_role}} was rejected. Reason: {{reason}}\n\nBeroe Signal Platform`,
+    inPlatformText: 'Invite request for {{target_user}} rejected. Reason: {{reason}}',
+  },
+  expert_change_resolved: {
+    emailSubject: 'Your expert change request has been resolved',
+    emailBody: `Hi {{user_name}},\n\nYour change request for expert "{{expert_name}}" has been {{decision}} by {{actor_name}}.\n\nBeroe Signal Platform`,
+    inPlatformText: 'Expert change request for "{{expert_name}}" was {{decision}}.',
+  },
+  wave_closed: {
+    emailSubject: '"{{survey_name}}" has closed',
+    emailBody: `Hi {{user_name}},\n\nThe survey "{{survey_name}}" in project "{{project_name}}" has closed.\n\nFinal response rate: {{response_rate}}%\n\nResults are now available for review.\n\nBeroe Signal Platform`,
+    inPlatformText: '"{{survey_name}}" closed. Final response rate: {{response_rate}}%.',
+  },
+  org_wide_proposal_result: {
+    emailSubject: 'Your Org-Wide template proposal was {{decision}}',
+    emailBody: `Hi {{user_name}},\n\nYour proposal to promote template "{{template_name}}" to Org-Wide was {{decision}} by {{actor_name}}.\n\nBeroe Signal Platform`,
+    inPlatformText: 'Org-Wide proposal for "{{template_name}}" was {{decision}} by {{actor_name}}.',
+  },
+};
+
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
@@ -97,6 +179,23 @@ export function AppProvider({ children }) {
     return Object.fromEntries(events.map(e => [e, { email: true, inPlatform: true }]));
   });
   const [notifications, setNotifications] = useState(NOTIFICATIONS);
+
+  // Per-user external email templates (P1-F-96). Keyed by userId; seeded from DEFAULT_EXTERNAL_TEMPLATES on first access.
+  const [userEmailTemplatesState, setUserEmailTemplatesState] = useState({});
+  const getUserEmailTemplates = (userId) => ({
+    invitation:    { ...DEFAULT_EXTERNAL_TEMPLATES.invitation,    ...(userEmailTemplatesState[userId]?.invitation    || {}) },
+    reminder:      { ...DEFAULT_EXTERNAL_TEMPLATES.reminder,      ...(userEmailTemplatesState[userId]?.reminder      || {}) },
+    reportSharing: { ...DEFAULT_EXTERNAL_TEMPLATES.reportSharing, ...(userEmailTemplatesState[userId]?.reportSharing || {}) },
+  });
+  const setUserEmailTemplate = (userId, type, tpl) => {
+    setUserEmailTemplatesState(prev => ({
+      ...prev,
+      [userId]: { ...(prev[userId] || {}), [type]: tpl },
+    }));
+  };
+
+  // Org-wide internal notification templates (P1-F-95). Super Admin controlled.
+  const [internalNotifTemplates, setInternalNotifTemplates] = useState(DEFAULT_INTERNAL_NOTIF_TEMPLATES);
 
   const markNotificationRead = (id) =>
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
@@ -751,6 +850,8 @@ export function AppProvider({ children }) {
       taxonomy, setTaxonomy,
       orgTimezone, setOrgTimezone,
       notificationPrefs, setNotificationPrefs,
+      getUserEmailTemplates, setUserEmailTemplate,
+      internalNotifTemplates, setInternalNotifTemplates,
       toasts, addToast, removeToast,
     }}>
       {children}
