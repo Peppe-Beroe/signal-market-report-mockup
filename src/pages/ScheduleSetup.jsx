@@ -91,15 +91,11 @@ export default function ScheduleSetup() {
       : new Set(activeExperts.map(e => e.id))
   );
   const [expertSearch, setExpertSearch] = useState('');
-  const [tagFilter, setTagFilter] = useState('');
 
-  const allTags = [...new Set(experts.flatMap(e => e.tags))];
   const filteredExperts = experts.filter(e => {
-    const matchSearch = !expertSearch ||
+    return !expertSearch ||
       e.name.toLowerCase().includes(expertSearch.toLowerCase()) ||
       e.company.toLowerCase().includes(expertSearch.toLowerCase());
-    const matchTag = !tagFilter || e.tags.includes(tagFilter);
-    return matchSearch && matchTag;
   });
 
   const toggleExpert = (id) => {
@@ -291,14 +287,6 @@ export default function ScheduleSetup() {
               className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:border-purple-400 focus:outline-none transition-colors"
             />
           </div>
-          <select
-            value={tagFilter}
-            onChange={e => setTagFilter(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-purple-400 focus:outline-none"
-          >
-            <option value="">All tags</option>
-            {allTags.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
           <Button variant="secondary" size="sm" onClick={selectAll}>Select all</Button>
           <Button variant="ghost" size="sm" onClick={deselectAll}>Deselect all</Button>
         </div>
@@ -339,14 +327,7 @@ export default function ScheduleSetup() {
                   </div>
                   <p className="text-xs text-gray-400">{expert.title} · {expert.company}</p>
                 </div>
-                <div className="flex flex-wrap gap-1 justify-end max-w-xs">
-                  {expert.expertise.slice(0, 2).map(ex => (
-                    <Badge key={ex} color="purple" size="xs">{ex}</Badge>
-                  ))}
-                  {expert.tags.slice(0, 1).map(t => (
-                    <span key={t} className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{t}</span>
-                  ))}
-                </div>
+                <div className="text-xs text-gray-400 text-right">{expert.category || ''}</div>
               </div>
             );
           })}

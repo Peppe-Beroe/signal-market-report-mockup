@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Mail, Building2, Tag, ArrowLeft, Edit2, Save, X,
+  Mail, Building2, ArrowLeft, Edit2, Save, X,
   CheckCircle, MousePointerClick, Truck, XCircle, MessageSquare,
   AlertTriangle, Send, History, MapPin, Layers
 } from 'lucide-react';
@@ -327,13 +327,6 @@ export default function ExpertDetail() {
                       {expert.geography}
                     </div>
                   )}
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    {expert.tags.map(t => (
-                      <span key={t} className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                        <Tag size={10} /> {t}
-                      </span>
-                    ))}
-                  </div>
                   <p className="text-xs text-gray-400 mt-3">
                     Participated in <span className="font-semibold text-gray-700">{expert.waves}</span> wave{expert.waves !== 1 ? 's' : ''}
                   </p>

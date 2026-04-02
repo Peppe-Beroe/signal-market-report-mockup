@@ -13,7 +13,7 @@ import Badge from '../components/ui/Badge';
 import StatusBadge from '../components/ui/StatusBadge';
 import Button from '../components/ui/Button';
 
-const EMPTY_FORM = { name: '', email: '', company: '', title: '', domain: '', spendingPool: '', category: '', geography: '', tags: '' };
+const EMPTY_FORM = { name: '', email: '', company: '', title: '', domain: '', spendingPool: '', category: '', geography: '' };
 
 // Mock CSV rows demonstrating all data quality scenarios
 const MOCK_PREFLIGHT = [
@@ -224,7 +224,6 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
         company: inviteForm.company.trim(), title: inviteForm.title.trim(),
         domain: inviteForm.domain, spendingPool: inviteForm.spendingPool,
         category: inviteForm.category, geography: inviteForm.geography.trim(),
-        tags: [],
       });
       setInviteSubmitted(true);
     } else {
@@ -248,14 +247,23 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
   const [reqForm, setReqForm] = useState({ details: '', justification: '' });
   const [editSubmitted, setEditSubmitted] = useState(false);
 
+  const editPools = useMemo(() =>
+    activeTaxDomains.find(d => d.name === editForm?.domain)?.spendingPools.filter(sp => sp.active) || [],
+    [activeTaxDomains, editForm?.domain]);
+  const editCats = useMemo(() =>
+    editPools.find(sp => sp.name === editForm?.spendingPool)?.categories.filter(c => c.active) || [],
+    [editPools, editForm?.spendingPool]);
+  const handleEditDomain = (val) => setEditForm(f => ({ ...f, domain: val, spendingPool: '', category: '' }));
+  const handleEditPool = (val) => setEditForm(f => ({ ...f, spendingPool: val, category: '' }));
+
   const suggestions = useMemo(() => {
     const q = expertSearch.trim().toLowerCase();
     if (q.length < 2) return [];
     return experts.filter(e => e.name.toLowerCase().includes(q)).slice(0, 8);
   }, [experts, expertSearch]);
 
-  const editInPerimeter = !forceRequestOnly && (noPerimiterRestriction || (selectedExpert
-    ? adminPerimeter.some(rc => rc.category === selectedExpert.category)
+  const editInPerimeter = !forceRequestOnly && (noPerimiterRestriction || (editForm
+    ? adminPerimeter.some(rc => rc.category === editForm.category)
     : false));
 
   const handleExpertSelect = (expert) => {
@@ -265,8 +273,8 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
     setEditForm({
       name: expert.name, email: expert.email,
       company: expert.company, title: expert.title,
+      domain: expert.domain || '', spendingPool: expert.spendingPool || '', category: expert.category || '',
       geography: expert.geography || '',
-      tags: (expert.tags || []).join(', '),
     });
     setEditErrors({});
     setReqForm({ details: '', justification: '' });
@@ -291,8 +299,8 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
       onDirectEdit(selectedExpert.id, {
         name: editForm.name.trim(), email: editForm.email.trim(),
         company: editForm.company.trim(), title: editForm.title.trim(),
+        domain: editForm.domain, spendingPool: editForm.spendingPool, category: editForm.category,
         geography: editForm.geography.trim(),
-        tags: editForm.tags.split(',').map(s => s.trim()).filter(Boolean),
       });
       setEditSubmitted(true);
     } else {
@@ -543,12 +551,39 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
                             {editField('company', 'Company *')}
                             {editField('title', 'Designation *')}
                           </div>
-                          {editField('geography', 'Geography')}
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Domain</label>
+                              <select value={editForm.domain} onChange={e => handleEditDomain(e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none">
+                                <option value="">Select…</option>
+                                {activeTaxDomains.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Spending Pool</label>
+                              <select value={editForm.spendingPool} onChange={e => handleEditPool(e.target.value)}
+                                disabled={!editForm.domain}
+                                className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none disabled:opacity-40">
+                                <option value="">Select…</option>
+                                {editPools.map(sp => <option key={sp.id} value={sp.name}>{sp.name}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                              <select value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))}
+                                disabled={!editForm.spendingPool}
+                                className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-purple-400 focus:outline-none disabled:opacity-40">
+                                <option value="">Select…</option>
+                                {editCats.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                              </select>
+                            </div>
+                          </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Tags <span className="text-gray-400 font-normal">(comma-separated)</span></label>
-                            <input type="text" value={editForm.tags}
-                              onChange={e => setEditForm(f => ({ ...f, tags: e.target.value }))}
-                              placeholder="Tier 1, EU Region…"
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Geography</label>
+                            <input type="text" value={editForm.geography}
+                              onChange={e => setEditForm(f => ({ ...f, geography: e.target.value }))}
+                              placeholder="North America, Europe…"
                               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors" />
                           </div>
                           <div className="flex gap-2 pt-1">
@@ -1023,7 +1058,7 @@ export default function ExpertDatabase() {
     submitChangeRequest({
       requestType: 'Add expert',
       expertName: form.name,
-      details: `Add new expert: ${form.name} (${form.email}) — ${form.company}, ${form.title}. Category: ${form.domain} › ${form.spendingPool} › ${form.category}. Geography: ${form.geography || '—'}. Tags: ${form.tags || '—'}.`,
+      details: `Add new expert: ${form.name} (${form.email}) — ${form.company}, ${form.title}. Category: ${form.domain} › ${form.spendingPool} › ${form.category}. Geography: ${form.geography || '—'}.`,
       justification: `Expert addition in category outside submitter's perimeter (${form.category}). Requires approval by category Admin or Super Admin.`,
     });
     setShowModal(false);

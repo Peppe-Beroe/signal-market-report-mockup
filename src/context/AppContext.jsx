@@ -275,7 +275,6 @@ export function AppProvider({ children }) {
       spendingPool: data.spendingPool || '',
       category: data.category || '',
       geography: data.geography || '',
-      tags: data.tags ? data.tags.split(',').map(s => s.trim()).filter(Boolean) : [],
       status: 'Active',
       waves: 0,
     };
