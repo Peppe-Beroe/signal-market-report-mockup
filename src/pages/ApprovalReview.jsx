@@ -1049,12 +1049,16 @@ export default function ApprovalReview() {
                     </div>
                   </div>
 
-                  {survey.waveConfig.reminders?.length > 0 && (
-                    <div className="border-t border-gray-100 pt-4 mt-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Bell size={14} className="text-gray-400" />
-                        <span className="text-sm font-semibold text-gray-700">Reminders ({survey.waveConfig.reminders.length})</span>
-                      </div>
+                  {/* Reminders — always shown */}
+                  <div className="border-t border-gray-100 pt-4 mt-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Bell size={14} className="text-gray-400" />
+                      <span className="text-sm font-semibold text-gray-700">Reminders</span>
+                      {(!survey.waveConfig.reminders || survey.waveConfig.reminders.length === 0) && (
+                        <span className="text-xs text-gray-400 italic ml-1">— none configured</span>
+                      )}
+                    </div>
+                    {survey.waveConfig.reminders?.length > 0 ? (
                       <div className="space-y-3">
                         {survey.waveConfig.reminders.map((r, i) => (
                           <div key={i} className="border border-gray-100 rounded-xl p-3 bg-gray-50">
@@ -1072,16 +1076,16 @@ export default function ApprovalReview() {
                             {r.body && (
                               <div className="flex gap-2">
                                 <span className="text-xs text-gray-400 w-12 flex-shrink-0 pt-0.5">Body</span>
-                                <div className="bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-xs text-gray-600 whitespace-pre-wrap flex-1">
-                                  {r.body}
-                                </div>
+                                <div className="bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-xs text-gray-600 whitespace-pre-wrap flex-1">{r.body}</div>
                               </div>
                             )}
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <p className="text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">No reminder emails were configured for this survey.</p>
+                    )}
+                  </div>
 
                   {survey.waveConfig.alertEnabled && (
                     <div className="border-t border-gray-100 pt-4 mt-4">
