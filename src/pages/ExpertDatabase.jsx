@@ -173,10 +173,11 @@ function RequestChangeModal({ onClose, onSubmit, taxonomy }) {
 // Tab 2 "Edit existing expert": autocomplete search, direct edit within perimeter,
 //   request change outside — same validation constraints as SA edit in ExpertDetail.
 
-function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDirectAdd, onDirectEdit, onRequestChange, isSuperAdmin: callerIsSuperAdmin }) {
+function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDirectAdd, onDirectEdit, onRequestChange, isSuperAdmin: callerIsSuperAdmin, forceRequestOnly = false }) {
   const adminPerimeter = currentUser.responsibleCategories || [];
   // SA bypasses all perimeter restrictions — always direct add/edit
-  const noPerimiterRestriction = callerIsSuperAdmin || false;
+  // forceRequestOnly = true for Standard Users: all actions routed as requests regardless of perimeter
+  const noPerimiterRestriction = !forceRequestOnly && (callerIsSuperAdmin || false);
   const [activeTab, setActiveTab] = useState('invite');
 
   // ── Invite tab ──────────────────────────────────────────────────────────────
@@ -198,11 +199,11 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
   const handleInviteDomain = (val) => setInviteForm(f => ({ ...f, domain: val, spendingPool: '', category: '' }));
   const handleInvitePool = (val) => setInviteForm(f => ({ ...f, spendingPool: val, category: '' }));
 
-  const inviteInPerimeter = noPerimiterRestriction || !inviteForm.category || adminPerimeter.some(rc =>
+  const inviteInPerimeter = !forceRequestOnly && (noPerimiterRestriction || !inviteForm.category || adminPerimeter.some(rc =>
     rc.domain === inviteForm.domain &&
     rc.spendingPool === inviteForm.spendingPool &&
     rc.category === inviteForm.category
-  );
+  ));
 
   const validateInvite = () => {
     const errs = {};
@@ -253,9 +254,9 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
     return experts.filter(e => e.name.toLowerCase().includes(q)).slice(0, 8);
   }, [experts, expertSearch]);
 
-  const editInPerimeter = noPerimiterRestriction || (selectedExpert
+  const editInPerimeter = !forceRequestOnly && (noPerimiterRestriction || (selectedExpert
     ? adminPerimeter.some(rc => rc.category === selectedExpert.category)
-    : false);
+    : false));
 
   const handleExpertSelect = (expert) => {
     setSelectedExpert(expert);
@@ -386,6 +387,12 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
               ? successState(inviteInPerimeter ? 'Expert added to the panel!' : 'Approval request submitted!')
               : (
                 <div className="space-y-4">
+                  {forceRequestOnly && (
+                    <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg p-3">
+                      <FileText size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-blue-700">Your submission will be routed as an approval request to the category Admin or Super Admin.</p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-3">
                     {inviteField('name', 'Full name', 'Dr. Jane Smith', true)}
                     {inviteField('email', 'Email address', 'jane@company.com', true)}
@@ -457,6 +464,12 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
               ? successState(editInPerimeter ? 'Expert record updated!' : 'Change request submitted!')
               : (
                 <div className="space-y-4">
+                  {forceRequestOnly && (
+                    <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg p-3">
+                      <FileText size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-blue-700">Your submission will be routed as an approval request to the category Admin or Super Admin.</p>
+                    </div>
+                  )}
                   {/* Expert search */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Find expert <span className="text-red-400">*</span></label>
@@ -509,7 +522,7 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
                       </div>
 
                       {/* Out-of-perimeter disclaimer */}
-                      {!editInPerimeter && (
+                      {!editInPerimeter && !forceRequestOnly && (
                         <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
                           <AlertTriangle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
                           <div>
@@ -1064,20 +1077,13 @@ export default function ExpertDatabase() {
               <Upload size={15} /> CSV Import
             </Button>
           )}
-          {(isSuperAdmin || isAdmin) && (
-            <button
-              onClick={() => setShowChangeExpertListModal(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors hover:opacity-90"
-              style={{ backgroundColor: '#1D4ED8' }}
-            >
-              <List size={15} /> Change expert list
-            </button>
-          )}
-          {!isAdmin && !isSuperAdmin && isAdminOrResearcher && (
-            <Button variant="secondary" onClick={() => setShowRequestModal(true)}>
-              Request Change
-            </Button>
-          )}
+          <button
+            onClick={() => setShowChangeExpertListModal(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors hover:opacity-90"
+            style={{ backgroundColor: '#1D4ED8' }}
+          >
+            <List size={15} /> Change expert list
+          </button>
         </div>
       </div>
 
@@ -1489,7 +1495,7 @@ export default function ExpertDatabase() {
         />
       )}
 
-      {/* Change Expert List Modal (Admin only) */}
+      {/* Change Expert List Modal (all roles) */}
       {showChangeExpertListModal && (
         <ChangeExpertListModal
           onClose={() => setShowChangeExpertListModal(false)}
@@ -1497,6 +1503,7 @@ export default function ExpertDatabase() {
           experts={experts}
           taxonomy={taxonomy}
           isSuperAdmin={isSuperAdmin}
+          forceRequestOnly={!isSuperAdmin && !isAdmin}
           onDirectAdd={(expertData) => {
             createExpert(expertData);
             addToast(`${expertData.name} added to the expert panel`);
