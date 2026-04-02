@@ -1019,7 +1019,8 @@ export default function SurveyBuilder({ mode = 'create' }) {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser, surveys, projects, experts, templates, categories, taxonomy, typologyConfig, orgTimezone, addToast, createSurvey, updateSurvey, saveTemplate, resolveAmendments } = useApp();
+  const { currentUser, surveys, projects, experts, templates, categories, taxonomy, typologyConfig, orgTimezone, addToast, createSurvey, updateSurvey, saveTemplate, resolveAmendments, getUserEmailTemplates } = useApp();
+  const userTpls = getUserEmailTemplates(currentUser.id);
   const myTemplates = templates.filter(t => t.ownerId === currentUser.id);
   const projectTemplates = templates.filter(t => t.visibility === 'project' && t.projectId === projectId && t.ownerId !== currentUser.id);
   const orgWideTemplates = templates.filter(t => t.visibility === 'org_wide');
@@ -1145,9 +1146,9 @@ export default function SurveyBuilder({ mode = 'create' }) {
   const closeDefaultStr = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
   const [sendDate, setSendDate] = useState(existingWaveConfig?.sendDate || todayStr);
   const [closeDate, setCloseDate] = useState(existingWaveConfig?.closeDate || closeDefaultStr);
-  const [emailSubject, setEmailSubject] = useState(existingWaveConfig?.emailSubject || `You're invited: ${existingSurvey?.name || 'Survey'}`);
+  const [emailSubject, setEmailSubject] = useState(existingWaveConfig?.emailSubject || userTpls.invitation.subject);
   const [senderName, setSenderName] = useState(existingWaveConfig?.senderName || 'Beroe Research Team');
-  const [emailBody, setEmailBody] = useState(existingWaveConfig?.emailBody || DEFAULT_EMAIL_BODY);
+  const [emailBody, setEmailBody] = useState(existingWaveConfig?.emailBody || userTpls.invitation.body);
   const [reminders, setReminders] = useState(
     existingWaveConfig?.reminders?.map((dt, i) => ({ id: i, datetime: dt, error: '' })) || []
   );
