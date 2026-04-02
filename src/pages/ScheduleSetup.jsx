@@ -423,13 +423,12 @@ export default function ScheduleSetup() {
               )}
               <button
                 onClick={() => updateReminderField(reminder.id, 'emailExpanded', !reminder.emailExpanded)}
-                className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 transition-colors mt-2">
-                <Mail size={11} />
-                {reminder.emailExpanded ? 'Hide email template' : 'Customise email template'}
-                <ChevronDown size={11} className={`transition-transform ${reminder.emailExpanded ? 'rotate-180' : ''}`} />
+                className={`mt-3 w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${reminder.emailExpanded ? 'border-purple-300 bg-purple-100 text-purple-700' : 'border-purple-200 bg-white text-purple-600 hover:bg-purple-50'}`}>
+                <span className="flex items-center gap-1.5"><Mail size={12} />{reminder.emailExpanded ? 'Hide email template' : 'Customise reminder email'}</span>
+                <ChevronDown size={12} className={`transition-transform ${reminder.emailExpanded ? 'rotate-180' : ''}`} />
               </button>
               {reminder.emailExpanded && (
-                <div className="mt-2 p-3 rounded-xl bg-white border border-gray-200 space-y-2">
+                <div className="mt-2 p-3 rounded-xl bg-purple-50/50 border border-purple-200 space-y-2">
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Subject line</label>
                     <input type="text" value={reminder.subject || ''} onChange={e => updateReminderField(reminder.id, 'subject', e.target.value)}

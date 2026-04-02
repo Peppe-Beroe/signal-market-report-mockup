@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { FileText, Download, Send, RefreshCcw, Check, ChevronDown, Mail } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { FileText, Download, Send, RefreshCcw, Check, ChevronDown, Mail, Paperclip, X } from 'lucide-react';
 import Button from './ui/Button';
 import Card from './ui/Card';
 import { useApp } from '../context/AppContext';
@@ -36,6 +36,16 @@ export function GenerateReportSection({ survey, addToast }) {
   const [emailExpanded, setEmailExpanded] = useState(false);
   const [reportEmailSubject, setReportEmailSubject] = useState(userTpls.reportSharing.subject);
   const [reportEmailBody, setReportEmailBody] = useState(userTpls.reportSharing.body);
+  const [attachments, setAttachments] = useState([]);
+  const attachmentsRef = useRef(null);
+
+  const handleAttachFiles = (e) => {
+    const files = Array.from(e.target.files);
+    setAttachments(prev => [...prev, ...files.map(f => ({ name: f.name, size: f.size }))]);
+    e.target.value = '';
+  };
+  const removeAttachment = (idx) => setAttachments(prev => prev.filter((_, i) => i !== idx));
+  const formatSize = (bytes) => bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes/1024).toFixed(0)} KB` : `${(bytes/1048576).toFixed(1)} MB`;
 
   const handlePreset = (key) => {
     setPreset(key);
@@ -133,47 +143,72 @@ export function GenerateReportSection({ survey, addToast }) {
           </div>
 
           {/* Report sharing email editor */}
-          <div className="border border-gray-100 rounded-xl overflow-hidden">
+          <div className={`rounded-xl border-2 overflow-hidden transition-colors ${emailExpanded ? 'border-purple-300' : 'border-purple-200'}`}>
             <button
               onClick={() => setEmailExpanded(v => !v)}
-              className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+              className={`w-full flex items-center justify-between px-3 py-2.5 transition-colors ${emailExpanded ? 'bg-purple-100' : 'bg-purple-50 hover:bg-purple-100'}`}
             >
-              <span className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                <Mail size={12} className="text-purple-500" />
+              <span className="flex items-center gap-2 text-xs font-semibold text-purple-700">
+                <Mail size={13} className="text-purple-500" />
                 Customise report sharing email
               </span>
-              <ChevronDown size={12} className={`text-gray-400 transition-transform ${emailExpanded ? 'rotate-180' : ''}`} />
+              <ChevronDown size={13} className={`text-purple-400 transition-transform ${emailExpanded ? 'rotate-180' : ''}`} />
             </button>
             {emailExpanded && (
-              <div className="p-3 space-y-2 bg-white">
+              <div className="p-3 space-y-2.5 bg-white">
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Subject</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Subject</label>
                   <input
                     type="text"
                     value={reportEmailSubject}
                     onChange={e => setReportEmailSubject(e.target.value)}
-                    className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-purple-300"
+                    className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-200"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Body</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-gray-600">Body</label>
+                    <div className="flex flex-wrap gap-1 justify-end">
+                      {REPORT_MERGE_TAGS.map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => setReportEmailBody(b => b + tag)}
+                          className="text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded px-1.5 py-0.5 hover:bg-purple-100 transition-colors font-mono"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <textarea
                     value={reportEmailBody}
                     onChange={e => setReportEmailBody(e.target.value)}
                     rows={5}
-                    className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-purple-300 resize-none font-mono"
+                    className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-200 resize-none font-mono"
                   />
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  {REPORT_MERGE_TAGS.map(tag => (
-                    <button
-                      key={tag}
-                      onClick={() => setReportEmailBody(b => b + tag)}
-                      className="text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded px-1.5 py-0.5 hover:bg-purple-100 transition-colors font-mono"
-                    >
-                      {tag}
-                    </button>
-                  ))}
+                {/* Attachments */}
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1.5 block flex items-center gap-1"><Paperclip size={11} /> Additional attachments</label>
+                  {attachments.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {attachments.map((f, i) => (
+                        <span key={i} className="flex items-center gap-1 text-xs bg-gray-100 text-gray-700 border border-gray-200 px-2 py-1 rounded-lg max-w-full">
+                          <Paperclip size={10} className="flex-shrink-0 text-gray-400" />
+                          <span className="truncate max-w-[120px]">{f.name}</span>
+                          <span className="text-gray-400 flex-shrink-0">· {formatSize(f.size)}</span>
+                          <button onClick={() => removeAttachment(i)} className="ml-0.5 text-gray-400 hover:text-red-500 flex-shrink-0 transition-colors"><X size={10} /></button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <input ref={attachmentsRef} type="file" multiple className="hidden" onChange={handleAttachFiles} />
+                  <button
+                    onClick={() => attachmentsRef.current?.click()}
+                    className="text-xs text-purple-600 border border-purple-200 bg-purple-50 hover:bg-purple-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 transition-colors font-medium"
+                  >
+                    <Paperclip size={11} /> Attach files
+                  </button>
                 </div>
               </div>
             )}
