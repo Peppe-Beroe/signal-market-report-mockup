@@ -927,6 +927,54 @@ export default function ApprovalReview() {
                     </div>
                   </div>
 
+                  {/* Post-submission email preview */}
+                  {survey.waveConfig.postSubSubject && (
+                    <div className="border-t border-gray-100 pt-4 mt-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Mail size={14} className="text-gray-400" />
+                        <span className="text-sm font-semibold text-gray-700">Post-submission thank-you email</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex gap-3">
+                          <span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">Subject</span>
+                          <span className="text-gray-700 text-xs">{survey.waveConfig.postSubSubject}</span>
+                        </div>
+                        {survey.waveConfig.postSubBody && (
+                          <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs text-gray-600 whitespace-pre-wrap">{survey.waveConfig.postSubBody}</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Survey-closed email preview */}
+                  {survey.waveConfig.surveyClosedSubject && (
+                    <div className="border-t border-gray-100 pt-4 mt-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Mail size={14} className="text-gray-400" />
+                        <span className="text-sm font-semibold text-gray-700">Survey-closed report-ready email</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex gap-3">
+                          <span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">Subject</span>
+                          <span className="text-gray-700 text-xs">{survey.waveConfig.surveyClosedSubject}</span>
+                        </div>
+                        {survey.waveConfig.surveyClosedBody && (
+                          <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs text-gray-600 whitespace-pre-wrap">{survey.waveConfig.surveyClosedBody}</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Note on report-sharing override */}
+                  <div className="border-t border-gray-100 pt-4 mt-4">
+                    <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2.5">
+                      <Mail size={13} className="text-blue-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-blue-600">
+                        <strong>Report-sharing override email</strong> — configured in the Review panel after survey closes. Not part of this submission snapshot.
+                      </p>
+                    </div>
+                  </div>
+
                   {survey.waveConfig.reminders?.length > 0 && (
                     <div className="border-t border-gray-100 pt-4 mt-4">
                       <div className="flex items-center gap-2 mb-3">

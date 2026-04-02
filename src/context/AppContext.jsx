@@ -81,6 +81,16 @@ export const DEFAULT_EXTERNAL_TEMPLATES = {
     subject: 'Reminder: {{survey_name}} closes on {{close_date}}',
     body: `Dear {{expert_name}},\n\nThis is a friendly reminder that the survey below is still open for your response.\n\nSurvey: {{survey_name}}\nClose date: {{close_date}}\n\nParticipate here:\n{{survey_link}}\n\nThank you for your continued support.\n\nBest regards,\nBeroe Research Team`,
   },
+  // P1-F-100 — post-submission thank-you email
+  postSubmission: {
+    subject: 'Thank you for participating in {{survey_name}}',
+    body: `Dear {{expert_name}},\n\nThank you for completing the {{survey_name}} survey. Your response has been recorded.\n\nYou can view the live aggregated results from other experts at any time using the link below:\n{{results_hub_link}}\n\nWe will also send you an email notification when the survey closes on {{survey_close_date}} and the final report is available for download.\n\nBest regards,\nBeroe Research Team`,
+  },
+  // P1-F-101 — survey-closed report-ready email
+  surveyClosed: {
+    subject: '{{survey_name}} has closed — your report is ready',
+    body: `Dear {{expert_name}},\n\nThe {{survey_name}} survey has now closed. As a thank-you for your participation, the final Signal Market Report is now available for download.\n\nView results and download your report here:\n{{results_hub_link}}\n\nThis link expires on: {{expiry_date}}\n\nBest regards,\nBeroe Research Team`,
+  },
   reportSharing: {
     subject: 'Your expert report is ready: {{report_title}}',
     body: `Dear {{expert_name}},\n\nThank you for participating in our research. Your exclusive copy of the report is now available.\n\nReport: {{report_title}}\n\nDownload your copy here:\n{{download_link}}\n\nThis link expires on: {{expiry_date}}\n\nBest regards,\nBeroe Research Team`,
@@ -150,6 +160,12 @@ export const DEFAULT_INTERNAL_NOTIF_TEMPLATES = {
     emailBody: `Hi {{user_name}},\n\nYour proposal to promote template "{{template_name}}" to Org-Wide was {{decision}} by {{actor_name}}.\n\nBeroe Signal Platform`,
     inPlatformText: 'Org-Wide proposal for "{{template_name}}" was {{decision}} by {{actor_name}}.',
   },
+  // P1-F-61 13th event — auto-report live (non-suppressible, fires to Project Editors/Owner on survey Close)
+  auto_report_live: {
+    emailSubject: 'Auto-report is live on the Expert Results Hub — {{survey_name}}',
+    emailBody: `Hi {{user_name}},\n\nAn auto-generated report for "{{survey_name}}" is now live on the Expert Results Hub. Experts who responded have already been notified.\n\nOnly send a revised version from the Review panel if it adds genuine value beyond what experts can already see.\n\nBeroe Signal Platform`,
+    inPlatformText: 'Auto-report for "{{survey_name}}" is live on the Expert Results Hub. Experts have been notified.',
+  },
 };
 
 const AppContext = createContext();
@@ -183,9 +199,11 @@ export function AppProvider({ children }) {
   // Per-user external email templates (P1-F-96). Keyed by userId; seeded from DEFAULT_EXTERNAL_TEMPLATES on first access.
   const [userEmailTemplatesState, setUserEmailTemplatesState] = useState({});
   const getUserEmailTemplates = (userId) => ({
-    invitation:    { ...DEFAULT_EXTERNAL_TEMPLATES.invitation,    ...(userEmailTemplatesState[userId]?.invitation    || {}) },
-    reminder:      { ...DEFAULT_EXTERNAL_TEMPLATES.reminder,      ...(userEmailTemplatesState[userId]?.reminder      || {}) },
-    reportSharing: { ...DEFAULT_EXTERNAL_TEMPLATES.reportSharing, ...(userEmailTemplatesState[userId]?.reportSharing || {}) },
+    invitation:     { ...DEFAULT_EXTERNAL_TEMPLATES.invitation,     ...(userEmailTemplatesState[userId]?.invitation     || {}) },
+    reminder:       { ...DEFAULT_EXTERNAL_TEMPLATES.reminder,       ...(userEmailTemplatesState[userId]?.reminder       || {}) },
+    postSubmission: { ...DEFAULT_EXTERNAL_TEMPLATES.postSubmission, ...(userEmailTemplatesState[userId]?.postSubmission || {}) },
+    surveyClosed:   { ...DEFAULT_EXTERNAL_TEMPLATES.surveyClosed,   ...(userEmailTemplatesState[userId]?.surveyClosed   || {}) },
+    reportSharing:  { ...DEFAULT_EXTERNAL_TEMPLATES.reportSharing,  ...(userEmailTemplatesState[userId]?.reportSharing  || {}) },
   });
   const setUserEmailTemplate = (userId, type, tpl) => {
     setUserEmailTemplatesState(prev => ({

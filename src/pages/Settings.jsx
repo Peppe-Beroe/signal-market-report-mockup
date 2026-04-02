@@ -27,6 +27,8 @@ const TIMEZONES = [
 
 const MERGE_TAGS_EMAIL = ['expert_name', 'survey_name', 'survey_link', 'close_date'];
 const MERGE_TAGS_REMINDER = ['expert_name', 'survey_name', 'survey_link', 'close_date'];
+const MERGE_TAGS_POST_SUB = ['expert_name', 'survey_name', 'results_hub_link', 'survey_close_date'];
+const MERGE_TAGS_SURVEY_CLOSED = ['expert_name', 'survey_name', 'results_hub_link', 'expiry_date'];
 const MERGE_TAGS_REPORT = ['expert_name', 'report_title', 'download_link', 'expiry_date'];
 
 const INTERNAL_NOTIF_EVENTS = [
@@ -42,11 +44,14 @@ const INTERNAL_NOTIF_EVENTS = [
   { key: 'expert_change_resolved', label: 'Expert change request resolved',           channels: ['email', 'in-platform'] },
   { key: 'wave_closed',            label: 'Wave closed',                              channels: ['email', 'in-platform'] },
   { key: 'org_wide_proposal_result',label: 'Org-Wide template proposal result',       channels: ['email', 'in-platform'] },
+  { key: 'auto_report_live',        label: 'Auto-report live on Expert Results Hub',  channels: ['email', 'in-platform'], nonConfigurable: true },
 ];
 
 const SAMPLE_DATA = {
   expert_name: 'Dr. Sarah Johnson', survey_name: 'Steel Market Outlook Q2 2026',
   survey_link: 'https://survey.beroe-inc.com/s/abc123', close_date: '30 Apr 2026',
+  results_hub_link: 'https://survey.beroe-inc.com/s/abc123/results',
+  survey_close_date: '30 Apr 2026',
   report_title: 'Steel Market Outlook Q2 2026 — Expert Insights',
   download_link: 'https://reports.beroe-inc.com/dl/xyz789', expiry_date: '30 May 2026',
   user_name: 'Alice Chen', project_name: 'Steel 2026',
@@ -938,9 +943,16 @@ export default function Settings() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {INTERNAL_NOTIF_EVENTS.map(({ key, label, channels }) => (
+                {INTERNAL_NOTIF_EVENTS.map(({ key, label, channels, nonConfigurable }) => (
                   <tr key={key} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-3 text-sm text-gray-700">{label}</td>
+                    <td className="py-3 px-3 text-sm text-gray-700">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {label}
+                        {nonConfigurable && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">Non-configurable</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {channels.includes('email') && (
@@ -958,7 +970,7 @@ export default function Settings() {
                     <td className="py-3 px-3 text-right">
                       <button onClick={() => setIntPreviewOpen(key)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-100 rounded-lg hover:bg-purple-100 transition-colors">
-                        <Eye size={11} /> Preview &amp; Edit
+                        <Eye size={11} /> {nonConfigurable ? 'Preview & Edit copy' : 'Preview & Edit'}
                       </button>
                     </td>
                   </tr>
@@ -1175,14 +1187,16 @@ export default function Settings() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-gray-100 mb-5">
+        <div className="flex flex-wrap gap-1 border-b border-gray-100 mb-5">
           {[
-            { key: 'invitation',    label: 'Survey invitation',   icon: Mail },
-            { key: 'reminder',      label: 'Reminder',            icon: Bell },
-            { key: 'reportSharing', label: 'Report sharing',      icon: FileText },
+            { key: 'invitation',     label: 'Survey invitation',   icon: Mail },
+            { key: 'postSubmission', label: 'Post-submission',     icon: Mail },
+            { key: 'reminder',       label: 'Reminder',            icon: Bell },
+            { key: 'surveyClosed',   label: 'Survey-closed',       icon: Mail },
+            { key: 'reportSharing',  label: 'Report sharing',      icon: FileText },
           ].map(({ key, label, icon: Icon }) => (
             <button key={key} onClick={() => setExtTplTab(key)}
-              className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${extTplTab === key ? 'border-purple-600 text-purple-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${extTplTab === key ? 'border-purple-600 text-purple-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
               <Icon size={13} /> {label}
             </button>
           ))}
@@ -1191,7 +1205,10 @@ export default function Settings() {
         {/* Template editor */}
         {(() => {
           const type = extTplTab;
-          const mergeTags = type === 'reportSharing' ? MERGE_TAGS_REPORT : MERGE_TAGS_REMINDER;
+          const mergeTags = type === 'reportSharing' ? MERGE_TAGS_REPORT
+            : type === 'postSubmission' ? MERGE_TAGS_POST_SUB
+            : type === 'surveyClosed' ? MERGE_TAGS_SURVEY_CLOSED
+            : MERGE_TAGS_REMINDER;
           const tpl = extTpls[type] || {};
           return (
             <div className="space-y-4">
@@ -1474,8 +1491,11 @@ export default function Settings() {
       {extPreviewOpen && (() => {
         const type = extPreviewOpen;
         const tpl = extTpls[type] || {};
-        const mergeTags = type === 'reportSharing' ? MERGE_TAGS_REPORT : MERGE_TAGS_REMINDER;
-        const labels = { invitation: 'Survey invitation email', reminder: 'Reminder email', reportSharing: 'Report sharing email' };
+        const mergeTags = type === 'reportSharing' ? MERGE_TAGS_REPORT
+          : type === 'postSubmission' ? MERGE_TAGS_POST_SUB
+          : type === 'surveyClosed' ? MERGE_TAGS_SURVEY_CLOSED
+          : MERGE_TAGS_REMINDER;
+        const labels = { invitation: 'Survey invitation email', postSubmission: 'Post-submission thank-you email', reminder: 'Reminder email', surveyClosed: 'Survey-closed report-ready email', reportSharing: 'Report sharing email' };
         return (
           <PreviewModal
             config={{ type: 'external', label: labels[type], subject: tpl.subject, body: tpl.body, mergeTags }}

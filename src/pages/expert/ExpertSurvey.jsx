@@ -123,10 +123,17 @@ export default function ExpertSurvey() {
             <Check size={28} className="text-green-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Already submitted</h1>
-          <p className="text-sm text-gray-500 mb-6">
+          <p className="text-sm text-gray-500 mb-4">
             You have already submitted your response to this survey.
             {submittedAt && ` Submitted on ${submittedAt}.`}
           </p>
+          <button
+            onClick={() => navigate(`/survey/${token}/results`)}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold text-sm transition-opacity hover:opacity-90 shadow-sm mb-3"
+            style={{ backgroundColor: '#4A00F8' }}
+          >
+            View results
+          </button>
           <p className="text-xs text-gray-400">Your answers have been recorded. Thank you for your participation.</p>
         </div>
       </div>

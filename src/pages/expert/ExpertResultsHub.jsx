@@ -1,5 +1,5 @@
 import { useParams, useSearchParams } from 'react-router-dom';
-import { Download, Lock, CheckCircle, Mail } from 'lucide-react';
+import { Download, Lock, CheckCircle, Mail, PenLine } from 'lucide-react';
 import { SURVEYS } from '../../data/mockData';
 
 const DEMO_SURVEY = SURVEYS[0];
@@ -113,6 +113,8 @@ export default function ExpertResultsHub() {
   const { token } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const isClosed = searchParams.get('state') === 'closed' || token === 'demo-closed';
+  // Demo: simulate "edited by Beroe research team" when ?edited=true is in the URL
+  const isEdited = searchParams.get('edited') === 'true';
 
   const survey = DEMO_SURVEY;
   const aggregates = computeAggregates(survey);
@@ -155,6 +157,14 @@ export default function ExpertResultsHub() {
       </div>
 
       <div className="max-w-lg mx-auto px-5 py-6">
+
+        {/* Results curation banner — shown only after Admin override (P1-F-98) */}
+        {isEdited && isClosed && (
+          <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 mb-3 text-xs text-blue-700">
+            <PenLine size={13} className="text-blue-500 flex-shrink-0" />
+            <span>Results last updated 2026-04-02 — <strong>edited by Beroe research team</strong></span>
+          </div>
+        )}
 
         {/* Status banner */}
         {!isClosed ? (

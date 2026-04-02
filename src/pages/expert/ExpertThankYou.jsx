@@ -76,11 +76,17 @@ export default function ExpertThankYou() {
           {token === 'demo-closed' ? 'View final results & download report' : 'View live results'}
         </button>
 
-        <p className="text-xs text-gray-400 mb-6">
+        <p className="text-xs text-gray-400 mb-3">
           {token === 'demo-closed'
             ? 'The survey has closed — download the final Signal Market Report.'
             : 'See how other experts responded — results are updated in real time.'}
         </p>
+
+        {token !== 'demo-closed' && (
+          <p className="text-xs text-gray-400 mb-6 italic">
+            We'll also send you an email notification when the survey closes so you can return at any time.
+          </p>
+        )}
 
         <button
           onClick={() => navigate('/dashboard')}
