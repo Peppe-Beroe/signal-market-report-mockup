@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, AlertTriangle, Check, List, CheckSquare, Star, AlignLeft, Info, GitCompare, Plus, Minus, Edit3, Calendar, Users, Mail, Bell, Send, RotateCcw, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Check, List, CheckSquare, Star, AlignLeft, Info, GitCompare, Plus, Minus, Edit3, Calendar, Users, Mail, Bell, Send, RotateCcw, ChevronDown, ChevronUp, Trash2, Search } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -93,6 +93,11 @@ export default function ApprovalReview() {
   const [amendedExperts, setAmendedExperts] = useState(null);
   const [amendNotes, setAmendNotes] = useState({ questions: '', wave: '', experts: '' });
   const [expertSearch, setExpertSearch] = useState('');
+  const [expertSpendingPoolFilter, setExpertSpendingPoolFilter] = useState('');
+  const [expertCategoryFilter, setExpertCategoryFilter] = useState('');
+  const [expertDesignationFilter, setExpertDesignationFilter] = useState('');
+  const [expertGeographyFilter, setExpertGeographyFilter] = useState('');
+  const [showExpertSuggestions, setShowExpertSuggestions] = useState(false);
 
   // PO responses to editor feedback (rejected/overridden amendments)
   const [poFeedback, setPoFeedback] = useState({}); // { [amendId]: { decision, newAfter, note } }
@@ -104,6 +109,45 @@ export default function ApprovalReview() {
       <p className="text-gray-500">Survey not found.</p>
     </div>
   );
+
+  // Expert quality metrics (same logic as ExpertDatabase)
+  const MIN_DATA_POINTS = 3;
+  const reactionRate = (e) => e.surveysSent >= MIN_DATA_POINTS ? Math.round((e.surveysResponded / e.surveysSent) * 100) : null;
+  const acceptanceRate = (e) => e.surveysResponded >= MIN_DATA_POINTS ? Math.round((e.responsesAccepted / e.surveysResponded) * 100) : null;
+  const kpiColor = (pct) => {
+    if (pct >= 75) return { bg: '#DCFCE7', text: '#16A34A' };
+    if (pct >= 50) return { bg: '#FEF3C7', text: '#D97706' };
+    return { bg: '#FEE2E2', text: '#DC2626' };
+  };
+
+  // Expert filter options derived from the full experts list
+  const allExpertSpendingPools = [...new Set(experts.map(e => e.spendingPool).filter(Boolean))].sort();
+  const allExpertCategories = [...new Set(
+    experts.filter(e => !expertSpendingPoolFilter || e.spendingPool === expertSpendingPoolFilter)
+      .map(e => e.category).filter(Boolean)
+  )].sort();
+  const allExpertDesignations = [...new Set(experts.map(e => e.title).filter(Boolean))].sort();
+  const allExpertGeographies = [...new Set(experts.map(e => e.geography).filter(Boolean))].sort();
+
+  const expertNameSuggestions = expertSearch.length >= 1
+    ? experts.filter(e => e.name.toLowerCase().includes(expertSearch.toLowerCase())).slice(0, 6)
+    : [];
+
+  // Enrich a stored expert snapshot with live data from the experts list
+  const enrich = (e) => experts.find(x => x.id === e.id) || e;
+
+  // Filter for the "Add experts" panel in amend mode
+  const filteredAvailableExperts = experts.filter(e => {
+    if ((amendedExperts || []).find(ae => ae.id === e.id)) return false;
+    const matchSearch = !expertSearch ||
+      e.name.toLowerCase().includes(expertSearch.toLowerCase()) ||
+      e.company.toLowerCase().includes(expertSearch.toLowerCase());
+    const matchSP = !expertSpendingPoolFilter || e.spendingPool === expertSpendingPoolFilter;
+    const matchCat = !expertCategoryFilter || e.category === expertCategoryFilter;
+    const matchDesig = !expertDesignationFilter || e.title === expertDesignationFilter;
+    const matchGeo = !expertGeographyFilter || e.geography === expertGeographyFilter;
+    return matchSearch && matchSP && matchCat && matchDesig && matchGeo;
+  });
 
   const handleApprove = () => {
     approveSurvey(surveyId);
@@ -148,7 +192,7 @@ export default function ApprovalReview() {
     });
 
     if (survey.waveConfig && amendedWaveConfig) {
-      [['sendDate','Send date'],['closeDate','Close date'],['emailSubject','Email subject'],['senderName','Sender name']].forEach(([key, label]) => {
+      [['sendDate','Send date'],['closeDate','Close date'],['emailSubject','Email subject'],['senderName','Sender name'],['emailBody','Email body']].forEach(([key, label]) => {
         if ((survey.waveConfig[key] || '') !== (amendedWaveConfig[key] || '')) {
           amendments.push({ type: 'wave_setting', target: key, label, before: survey.waveConfig[key] || '—', after: amendedWaveConfig[key] || '—', note: amendNotes.wave });
         }
@@ -475,30 +519,97 @@ export default function ApprovalReview() {
             <div className="space-y-4">
               <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
                 <Edit3 size={14} className="text-amber-600 flex-shrink-0" />
-                <p className="text-xs text-amber-700"><strong>Amend mode:</strong> Edit schedule settings. Changes will be tracked.</p>
+                <p className="text-xs text-amber-700"><strong>Amend mode:</strong> Edit schedule settings and email templates. Changes will be tracked.</p>
               </div>
               <Card className="p-5 space-y-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Dates</p>
                 {[
                   { label: 'Send date', key: 'sendDate', type: 'date' },
                   { label: 'Close date', key: 'closeDate', type: 'date' },
-                  { label: 'Email subject', key: 'emailSubject', type: 'text' },
-                  { label: 'Sender name', key: 'senderName', type: 'text' },
                 ].map(({ label, key, type }) => (
                   <div key={key}>
                     <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400 line-through w-40 truncate">{(survey.waveConfig?.[key] || '—').slice(0, 20)}</span>
+                      <span className="text-xs text-gray-400 line-through w-36 truncate">{survey.waveConfig?.[key] ? new Date(survey.waveConfig[key]).toLocaleDateString() : '—'}</span>
                       <span className="text-gray-300">→</span>
-                      <input
-                        type={type}
-                        value={amendedWaveConfig?.[key] || ''}
+                      <input type={type} value={amendedWaveConfig?.[key] || ''}
                         onChange={e => setAmendedWaveConfig(prev => ({ ...prev, [key]: e.target.value }))}
-                        className="flex-1 border border-amber-200 rounded-lg px-3 py-1.5 text-sm focus:border-amber-400 focus:outline-none bg-amber-50"
-                      />
+                        className="flex-1 border border-amber-200 rounded-lg px-3 py-1.5 text-sm focus:border-amber-400 focus:outline-none bg-amber-50" />
                     </div>
                   </div>
                 ))}
               </Card>
+              <Card className="p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Mail size={14} className="text-gray-400" />
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Email Template</p>
+                </div>
+                {[
+                  { label: 'Sender name', key: 'senderName', type: 'text' },
+                  { label: 'Subject', key: 'emailSubject', type: 'text' },
+                ].map(({ label, key, type }) => (
+                  <div key={key}>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400 line-through w-36 truncate">{(survey.waveConfig?.[key] || '—').slice(0, 24)}</span>
+                      <span className="text-gray-300">→</span>
+                      <input type={type} value={amendedWaveConfig?.[key] || ''}
+                        onChange={e => setAmendedWaveConfig(prev => ({ ...prev, [key]: e.target.value }))}
+                        className="flex-1 border border-amber-200 rounded-lg px-3 py-1.5 text-sm focus:border-amber-400 focus:outline-none bg-amber-50" />
+                    </div>
+                  </div>
+                ))}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Body</label>
+                  <div className="space-y-1.5">
+                    <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs text-gray-400 whitespace-pre-wrap max-h-28 overflow-y-auto line-through">
+                      {survey.waveConfig?.emailBody || '—'}
+                    </div>
+                    <textarea
+                      value={amendedWaveConfig?.emailBody || ''}
+                      onChange={e => setAmendedWaveConfig(prev => ({ ...prev, emailBody: e.target.value }))}
+                      rows={6}
+                      className="w-full border border-amber-200 rounded-lg px-3 py-2 text-xs resize-none focus:border-amber-400 focus:outline-none bg-amber-50"
+                    />
+                  </div>
+                </div>
+              </Card>
+              {(amendedWaveConfig?.reminders?.length > 0) && (
+                <Card className="p-5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Bell size={14} className="text-gray-400" />
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Reminders</p>
+                  </div>
+                  {amendedWaveConfig.reminders.map((r, i) => (
+                    <div key={i} className="border border-amber-100 rounded-xl p-3 bg-amber-50/40 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Bell size={11} className="text-amber-500 flex-shrink-0" />
+                        <span className="text-xs font-semibold text-gray-700">Reminder {i + 1}</span>
+                        <span className="text-xs text-gray-400">· {r.datetime ? new Date(r.datetime).toLocaleDateString() : '—'}</span>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Subject</label>
+                        <input type="text" value={r.subject || ''}
+                          onChange={e => setAmendedWaveConfig(prev => ({
+                            ...prev,
+                            reminders: prev.reminders.map((rem, idx) => idx === i ? { ...rem, subject: e.target.value } : rem)
+                          }))}
+                          className="w-full border border-amber-200 rounded-lg px-3 py-1.5 text-xs focus:border-amber-400 focus:outline-none bg-white" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Body</label>
+                        <textarea value={r.body || ''}
+                          onChange={e => setAmendedWaveConfig(prev => ({
+                            ...prev,
+                            reminders: prev.reminders.map((rem, idx) => idx === i ? { ...rem, body: e.target.value } : rem)
+                          }))}
+                          rows={4}
+                          className="w-full border border-amber-200 rounded-lg px-3 py-2 text-xs resize-none focus:border-amber-400 focus:outline-none bg-white" />
+                      </div>
+                    </div>
+                  ))}
+                </Card>
+              )}
             </div>
           )}
 
@@ -509,45 +620,154 @@ export default function ApprovalReview() {
                 <Edit3 size={14} className="text-amber-600 flex-shrink-0" />
                 <p className="text-xs text-amber-700"><strong>Amend mode:</strong> Add or remove experts. Changes will be tracked.</p>
               </div>
+
+              {/* Current expert list */}
               <Card className="p-5">
-                <h3 className="text-sm font-semibold text-gray-800 mb-3">Current expert list</h3>
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">Current expert list <span className="text-gray-400 font-normal">({(amendedExperts || []).length})</span></h3>
                 <div className="divide-y divide-gray-50">
-                  {(amendedExperts || []).map(e => (
-                    <div key={e.id} className="flex items-center gap-3 py-2">
-                      <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center text-xs font-semibold text-purple-700 flex-shrink-0">
-                        {e.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  {(amendedExperts || []).map(e => {
+                    const full = enrich(e);
+                    const isOptedOut = full.status === 'Opted-out';
+                    const rr = reactionRate(full);
+                    const ar = acceptanceRate(full);
+                    return (
+                      <div key={e.id} className="flex items-center gap-3 py-2.5">
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
+                          style={{ backgroundColor: isOptedOut ? '#9CA3AF' : '#4A00F8' }}>
+                          {full.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-medium text-gray-800">{full.name}</p>
+                            {isOptedOut && <span className="text-xs text-red-500 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded">Opted-out</span>}
+                          </div>
+                          <p className="text-xs text-gray-500">{full.title} · {full.company}</p>
+                          <p className="text-xs text-gray-400">{[full.spendingPool, full.category, full.geography].filter(Boolean).join(' · ')}</p>
+                        </div>
+                        <div className="flex flex-col gap-1 items-end flex-shrink-0 mr-2">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400">RR</span>
+                            {rr === null ? <span className="text-xs text-gray-300 italic">N/A</span>
+                              : <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: kpiColor(rr).bg, color: kpiColor(rr).text }}>{rr}%</span>}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400">DAR</span>
+                            {ar === null ? <span className="text-xs text-gray-300 italic">N/A</span>
+                              : <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: kpiColor(ar).bg, color: kpiColor(ar).text }}>{ar}%</span>}
+                          </div>
+                        </div>
+                        <button onClick={() => setAmendedExperts(prev => prev.filter(ae => ae.id !== e.id))}
+                          className="text-xs text-red-400 hover:text-red-600 border border-red-200 rounded px-2 py-0.5 flex-shrink-0">
+                          Remove
+                        </button>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800">{e.name}</p>
-                        <p className="text-xs text-gray-400">{e.company}</p>
-                      </div>
-                      <button onClick={() => setAmendedExperts(prev => prev.filter(ae => ae.id !== e.id))} className="text-xs text-red-400 hover:text-red-600 border border-red-200 rounded px-2 py-0.5">Remove</button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </Card>
+
+              {/* Add experts */}
               <Card className="p-5">
                 <h3 className="text-sm font-semibold text-gray-800 mb-3">Add experts</h3>
-                <input value={expertSearch} onChange={e => setExpertSearch(e.target.value)} placeholder="Search experts..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 focus:border-amber-400 focus:outline-none" />
-                <div className="divide-y divide-gray-50 max-h-48 overflow-y-auto">
-                  {experts.filter(e =>
-                    !(amendedExperts || []).find(ae => ae.id === e.id) &&
-                    (!expertSearch || e.name.toLowerCase().includes(expertSearch.toLowerCase()) || e.company.toLowerCase().includes(expertSearch.toLowerCase()))
-                  ).map(e => (
-                    <div key={e.id} className="flex items-center gap-3 py-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800">{e.name}</p>
-                        <p className="text-xs text-gray-400">{e.company} · {e.status}</p>
-                      </div>
-                      <button
-                        onClick={() => setAmendedExperts(prev => [...(prev || []), { id: e.id, name: e.name, email: e.email, company: e.company, status: e.status }])}
-                        disabled={e.status === 'Opted-out'}
-                        className="text-xs text-purple-600 hover:text-purple-800 border border-purple-200 rounded px-2 py-0.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {e.status === 'Opted-out' ? 'Opted-out' : 'Add'}
-                      </button>
+                {/* Search with autocomplete */}
+                <div className="relative mb-3">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search by name or company..."
+                    value={expertSearch}
+                    onChange={e => { setExpertSearch(e.target.value); setShowExpertSuggestions(true); }}
+                    onFocus={() => setShowExpertSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowExpertSuggestions(false), 150)}
+                    className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:border-amber-400 focus:outline-none"
+                  />
+                  {showExpertSuggestions && expertNameSuggestions.length > 0 && (
+                    <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                      {expertNameSuggestions.filter(s => !(amendedExperts || []).find(ae => ae.id === s.id)).map(s => (
+                        <button key={s.id} onMouseDown={() => { setExpertSearch(s.name); setShowExpertSuggestions(false); }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                            style={{ backgroundColor: s.status === 'Opted-out' ? '#9CA3AF' : '#4A00F8' }}>
+                            {s.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          </div>
+                          <span className="font-medium text-gray-800">{s.name}</span>
+                          <span className="text-gray-400 text-xs ml-1">{s.title} · {s.company}</span>
+                        </button>
+                      ))}
                     </div>
-                  ))}
+                  )}
+                </div>
+                {/* Taxonomy + attribute filters */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <select value={expertSpendingPoolFilter}
+                    onChange={e => { setExpertSpendingPoolFilter(e.target.value); setExpertCategoryFilter(''); }}
+                    className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-amber-400 focus:outline-none">
+                    <option value="">All Spending Pools</option>
+                    {allExpertSpendingPools.map(sp => <option key={sp} value={sp}>{sp}</option>)}
+                  </select>
+                  <select value={expertCategoryFilter} onChange={e => setExpertCategoryFilter(e.target.value)}
+                    className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-amber-400 focus:outline-none">
+                    <option value="">All Categories</option>
+                    {allExpertCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <select value={expertDesignationFilter} onChange={e => setExpertDesignationFilter(e.target.value)}
+                    className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-amber-400 focus:outline-none">
+                    <option value="">All Designations</option>
+                    {allExpertDesignations.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                  <select value={expertGeographyFilter} onChange={e => setExpertGeographyFilter(e.target.value)}
+                    className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:border-amber-400 focus:outline-none">
+                    <option value="">All Geographies</option>
+                    {allExpertGeographies.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                  {(expertSpendingPoolFilter || expertCategoryFilter || expertDesignationFilter || expertGeographyFilter) && (
+                    <button onClick={() => { setExpertSpendingPoolFilter(''); setExpertCategoryFilter(''); setExpertDesignationFilter(''); setExpertGeographyFilter(''); }}
+                      className="text-xs text-amber-600 hover:text-amber-800 underline">Clear</button>
+                  )}
+                </div>
+                <div className="divide-y divide-gray-50 max-h-64 overflow-y-auto border border-gray-100 rounded-xl">
+                  {filteredAvailableExperts.length === 0 && (
+                    <p className="px-4 py-6 text-center text-xs text-gray-400">No experts match the current filters.</p>
+                  )}
+                  {filteredAvailableExperts.map(e => {
+                    const isOptedOut = e.status === 'Opted-out';
+                    const rr = reactionRate(e);
+                    const ar = acceptanceRate(e);
+                    return (
+                      <div key={e.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50">
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
+                          style={{ backgroundColor: isOptedOut ? '#9CA3AF' : '#4A00F8' }}>
+                          {e.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-medium text-gray-800">{e.name}</p>
+                            {isOptedOut && <span className="text-xs text-red-500 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded">Opted-out</span>}
+                          </div>
+                          <p className="text-xs text-gray-500">{e.title} · {e.company}</p>
+                          <p className="text-xs text-gray-400">{[e.spendingPool, e.category, e.geography].filter(Boolean).join(' · ')}</p>
+                        </div>
+                        <div className="flex flex-col gap-1 items-end flex-shrink-0 mr-2">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400">RR</span>
+                            {rr === null ? <span className="text-xs text-gray-300 italic">N/A</span>
+                              : <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: kpiColor(rr).bg, color: kpiColor(rr).text }}>{rr}%</span>}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400">DAR</span>
+                            {ar === null ? <span className="text-xs text-gray-300 italic">N/A</span>
+                              : <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: kpiColor(ar).bg, color: kpiColor(ar).text }}>{ar}%</span>}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setAmendedExperts(prev => [...(prev || []), e])}
+                          disabled={isOptedOut}
+                          className="text-xs text-purple-600 hover:text-purple-800 border border-purple-200 rounded px-2 py-0.5 flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
+                          {isOptedOut ? 'Opted-out' : 'Add'}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </Card>
             </div>
@@ -699,7 +919,7 @@ export default function ApprovalReview() {
                       {survey.waveConfig.emailBody && (
                         <div className="mt-2">
                           <span className="text-xs text-gray-400 block mb-1">Body preview</span>
-                          <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs text-gray-600 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                          <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs text-gray-600 whitespace-pre-wrap">
                             {survey.waveConfig.emailBody}
                           </div>
                         </div>
@@ -713,11 +933,28 @@ export default function ApprovalReview() {
                         <Bell size={14} className="text-gray-400" />
                         <span className="text-sm font-semibold text-gray-700">Reminders ({survey.waveConfig.reminders.length})</span>
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-3">
                         {survey.waveConfig.reminders.map((r, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
-                            <Bell size={11} className="text-gray-400 flex-shrink-0" />
-                            Reminder {i + 1}: {new Date(r).toLocaleDateString()}
+                          <div key={i} className="border border-gray-100 rounded-xl p-3 bg-gray-50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Bell size={11} className="text-gray-400 flex-shrink-0" />
+                              <span className="text-xs font-semibold text-gray-700">Reminder {i + 1}</span>
+                              <span className="text-xs text-gray-400">· {r.datetime ? new Date(r.datetime).toLocaleDateString() : '—'}</span>
+                            </div>
+                            {r.subject && (
+                              <div className="flex gap-2 mb-1">
+                                <span className="text-xs text-gray-400 w-12 flex-shrink-0 pt-0.5">Subject</span>
+                                <span className="text-xs text-gray-700">{r.subject}</span>
+                              </div>
+                            )}
+                            {r.body && (
+                              <div className="flex gap-2">
+                                <span className="text-xs text-gray-400 w-12 flex-shrink-0 pt-0.5">Body</span>
+                                <div className="bg-white border border-gray-100 rounded-lg px-2 py-1.5 text-xs text-gray-600 whitespace-pre-wrap flex-1">
+                                  {r.body}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -765,20 +1002,40 @@ export default function ApprovalReview() {
                     <p className="text-xs text-amber-600 mb-3">Includes opted-out expert(s) — will be suppressed at send time.</p>
                   )}
                   <div className="divide-y divide-gray-50">
-                    {survey.waveConfig.selectedExperts.map(e => (
-                      <div key={e.id} className="flex items-center gap-3 py-2.5">
-                        <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center text-xs font-semibold text-purple-700 flex-shrink-0">
-                          {e.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    {survey.waveConfig.selectedExperts.map(e => {
+                      const full = enrich(e);
+                      const isOptedOut = full.status === 'Opted-out';
+                      const rr = reactionRate(full);
+                      const ar = acceptanceRate(full);
+                      return (
+                        <div key={e.id} className="flex items-center gap-3 py-2.5">
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
+                            style={{ backgroundColor: isOptedOut ? '#9CA3AF' : '#4A00F8' }}>
+                            {full.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-medium text-gray-800">{full.name}</p>
+                              {isOptedOut && <span className="text-xs text-red-500 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded">Opted-out</span>}
+                            </div>
+                            <p className="text-xs text-gray-500">{full.title} · {full.company}</p>
+                            <p className="text-xs text-gray-400">{[full.spendingPool, full.category, full.geography].filter(Boolean).join(' · ')}</p>
+                          </div>
+                          <div className="flex flex-col gap-1 items-end flex-shrink-0">
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-gray-400">RR</span>
+                              {rr === null ? <span className="text-xs text-gray-300 italic">N/A</span>
+                                : <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: kpiColor(rr).bg, color: kpiColor(rr).text }}>{rr}%</span>}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-gray-400">DAR</span>
+                              {ar === null ? <span className="text-xs text-gray-300 italic">N/A</span>
+                                : <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: kpiColor(ar).bg, color: kpiColor(ar).text }}>{ar}%</span>}
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800">{e.name}</p>
-                          <p className="text-xs text-gray-400">{e.company} · {e.email}</p>
-                        </div>
-                        {e.status === 'Opted-out' && (
-                          <span className="text-xs bg-amber-50 text-amber-600 border border-amber-100 px-1.5 py-0.5 rounded flex-shrink-0">Opted-out</span>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </Card>
               ) : (
