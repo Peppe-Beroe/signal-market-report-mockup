@@ -9,6 +9,7 @@ import SurveyBuilder from './pages/SurveyBuilder';
 import ApprovalReview from './pages/ApprovalReview';
 import SurveyResults from './pages/SurveyResults';
 import PostCloseReview from './pages/PostCloseReview';
+import DataHubPreview from './pages/DataHubPreview';
 import ExpertDatabase from './pages/ExpertDatabase';
 import ExpertDetail from './pages/ExpertDetail';
 import Settings from './pages/Settings';
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="projects/:projectId/surveys/:surveyId/results" element={<SurveyResults />} />
             <Route path="projects/:projectId/surveys/:surveyId/review" element={<PostCloseReview />} />
             <Route path="projects/:projectId/surveys/:surveyId/schedule-setup" element={<ScheduleSetup />} />
+            <Route path="projects/:projectId/surveys/:surveyId/datahub-preview" element={<DataHubPreview />} />
             <Route path="experts" element={<ExpertDatabase />} />
             <Route path="experts/:expertId" element={<ExpertDetail />} />
             <Route path="people" element={<PeoplePage />} />

@@ -832,6 +832,36 @@ export function AppProvider({ children }) {
     addToast('Responses recorded');
   };
 
+  const updateAttachmentSummary = (surveyId, questionId, summary, source) => {
+    setSurveys(prev => prev.map(s =>
+      s.id === surveyId
+        ? {
+            ...s,
+            questions: s.questions.map(q =>
+              q.id === questionId
+                ? { ...q, attachment: { ...q.attachment, attachmentSummary: summary, summarySource: source, summaryStatus: 'validated' } }
+                : q
+            )
+          }
+        : s
+    ));
+  };
+
+  const setResearcherNote = (surveyId, expertId, questionId, note) => {
+    setSurveys(prev => prev.map(s =>
+      s.id === surveyId
+        ? {
+            ...s,
+            responses: s.responses.map(r =>
+              r.expertId === expertId
+                ? { ...r, notes: { ...(r.notes || {}), [questionId]: note } }
+                : r
+            )
+          }
+        : s
+    ));
+  };
+
   const transferToDataHub = (surveyId) => {
     const survey = surveys.find(s => s.id === surveyId);
     setSurveys(prev => prev.map(s =>
@@ -862,6 +892,7 @@ export function AppProvider({ children }) {
       deactivateUser, updateUserRole, updateUserCategory,
       attachReport, shareReport,
       toggleExclusion, updateAnnotation, transferToDataHub,
+      updateAttachmentSummary, setResearcherNote,
       proposeAmendments, resolveAmendments, respondToEditorFeedback,
       categories, setCategories,
       taxonomy, setTaxonomy,

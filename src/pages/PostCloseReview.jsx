@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, CheckCircle, AlertTriangle, X, ChevronDown, ChevronUp, Edit2, Eye, EyeOff, Paperclip, Share2 } from 'lucide-react';
+import { Clock, CheckCircle, AlertTriangle, X, ChevronDown, ChevronUp, Edit2, Eye, EyeOff, Paperclip, Share2, FileWarning, MessageSquare, ExternalLink } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -43,8 +43,148 @@ function KpiBadge({ label, value }) {
   );
 }
 
-function ResponseRow({ response, survey, canExclude, onToggleExclusion, expertKpis }) {
+function getMimeLabel(mimeType) {
+  if (!mimeType) return 'File';
+  if (mimeType === 'application/pdf') return 'PDF';
+  if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || mimeType.endsWith('.xlsx')) return 'Excel';
+  if (mimeType.includes('word')) return 'Word';
+  return 'File';
+}
+
+function AttachmentValidationCard({ questions, surveyId, onUpdateSummary }) {
+  const resolvedCount = questions.filter(q =>
+    q.attachment.summaryStatus === 'validated' || q.attachment.summaryStatus === 'ai_complete'
+  ).length;
+
+  // Per-question UI state
+  const [editStates, setEditStates] = useState(() =>
+    Object.fromEntries(questions.map(q => [q.id, { editing: false, text: q.attachment.attachmentSummary || '' }]))
+  );
+
+  const startEdit = (qId, prefill) => {
+    setEditStates(prev => ({ ...prev, [qId]: { editing: true, text: prefill || '' } }));
+  };
+
+  const cancelEdit = (qId) => {
+    setEditStates(prev => ({ ...prev, [qId]: { ...prev[qId], editing: false } }));
+  };
+
+  const handleSave = (qId) => {
+    const text = editStates[qId]?.text || '';
+    onUpdateSummary(surveyId, qId, text, 'researcher');
+    setEditStates(prev => ({ ...prev, [qId]: { editing: false, text } }));
+  };
+
+  return (
+    <Card className="mb-5">
+      <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h2 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+          <Paperclip size={14} style={{ color: '#4A00F8' }} />
+          Attachment Validation
+        </h2>
+        <Badge color={resolvedCount === questions.length ? 'green' : 'amber'} size="xs">
+          {resolvedCount} / {questions.length} resolved
+        </Badge>
+      </div>
+      <div className="divide-y divide-gray-50">
+        {questions.map(q => {
+          const att = q.attachment;
+          const state = editStates[q.id] || { editing: false, text: att.attachmentSummary || '' };
+          const mimeLabel = getMimeLabel(att.mimeType);
+
+          return (
+            <div key={q.id} className="px-5 py-4">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <p className="text-sm text-gray-700 font-medium truncate flex-1">{q.text}</p>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Badge color="gray" size="xs">{mimeLabel}</Badge>
+                  {att.summaryStatus === 'needs_review' && <Badge color="red" size="xs">Needs review</Badge>}
+                  {att.summaryStatus === 'ai_complete' && <Badge color="green" size="xs">AI validated</Badge>}
+                  {att.summaryStatus === 'validated' && <Badge color="green" size="xs">Validated</Badge>}
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mb-3 flex items-center gap-1">
+                <Paperclip size={10} /> {att.fileName}
+              </p>
+
+              {att.summaryStatus === 'needs_review' && (
+                <div>
+                  {state.editing ? (
+                    <div>
+                      <textarea
+                        className="w-full text-sm border border-gray-200 rounded-lg p-2 resize-none focus:outline-none focus:ring-1 focus:ring-purple-400"
+                        rows={3}
+                        value={state.text}
+                        onChange={e => setEditStates(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
+                        placeholder="Enter a summary of this attachment's content…"
+                        autoFocus
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <Button variant="primary" size="xs" onClick={() => handleSave(q.id)}>Save & validate</Button>
+                        <Button variant="secondary" size="xs" onClick={() => cancelEdit(q.id)}>Cancel</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button variant="secondary" size="xs" onClick={() => startEdit(q.id, '')}>
+                      <FileWarning size={11} /> Add summary & validate
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {(att.summaryStatus === 'ai_complete' || att.summaryStatus === 'validated') && (
+                <div>
+                  {state.editing ? (
+                    <div>
+                      <textarea
+                        className="w-full text-sm border border-gray-200 rounded-lg p-2 resize-none focus:outline-none focus:ring-1 focus:ring-purple-400"
+                        rows={3}
+                        value={state.text}
+                        onChange={e => setEditStates(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
+                        autoFocus
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <Button variant="primary" size="xs" onClick={() => handleSave(q.id)}>Save & validate</Button>
+                        <Button variant="secondary" size="xs" onClick={() => cancelEdit(q.id)}>Cancel</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm text-gray-600">{att.attachmentSummary}</p>
+                      <button
+                        onClick={() => startEdit(q.id, att.attachmentSummary || '')}
+                        className="text-xs text-purple-600 hover:text-purple-800 mt-1"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+function ResponseRow({ response, survey, canExclude, onToggleExclusion, expertKpis, onSetNote, surveyId }) {
   const [expanded, setExpanded] = useState(false);
+  const [editingNote, setEditingNote] = useState(null); // questionId being edited
+  const [noteText, setNoteText] = useState('');
+
+  const handleEditNote = (qId) => {
+    setNoteText((response.notes || {})[qId] || '');
+    setEditingNote(qId);
+  };
+
+  const handleSaveNote = (qId) => {
+    onSetNote(surveyId, response.expertId, qId, noteText);
+    setEditingNote(null);
+    setNoteText('');
+  };
+
   return (
     <>
       <tr className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${response.excluded ? 'opacity-60' : ''}`}>
@@ -97,8 +237,8 @@ function ResponseRow({ response, survey, canExclude, onToggleExclusion, expertKp
       </tr>
       {expanded && (
         <tr className="bg-purple-50/30">
-          <td colSpan={4} className="px-5 py-3">
-            <div className="grid grid-cols-2 gap-3">
+          <td colSpan={4} className="px-5 py-4">
+            <div className="grid grid-cols-2 gap-3 mb-4">
               {survey.questions.map(q => {
                 const ans = response.answers[q.id];
                 if (!ans && ans !== 0) return null;
@@ -112,6 +252,66 @@ function ResponseRow({ response, survey, canExclude, onToggleExclusion, expertKp
                 );
               })}
             </div>
+            <div className="border-t border-purple-100 pt-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+                <MessageSquare size={11} /> Researcher Notes
+              </p>
+              <div className="space-y-2">
+                {survey.questions.map(q => {
+                  const existingNote = (response.notes || {})[q.id];
+                  const isEditing = editingNote === q.id;
+                  return (
+                    <div key={q.id} className="bg-white rounded-lg p-3 border border-gray-100">
+                      <p className="text-xs text-gray-500 truncate mb-1">{q.text}</p>
+                      {isEditing ? (
+                        <div className="mt-1">
+                          <textarea
+                            className="w-full text-xs border border-gray-200 rounded p-2 resize-none focus:outline-none focus:ring-1 focus:ring-purple-400"
+                            rows={2}
+                            value={noteText}
+                            onChange={e => setNoteText(e.target.value)}
+                            placeholder="Add a researcher note…"
+                            autoFocus
+                          />
+                          <div className="flex gap-2 mt-1">
+                            <button
+                              onClick={() => handleSaveNote(q.id)}
+                              className="text-xs font-medium text-white px-2 py-1 rounded"
+                              style={{ backgroundColor: '#4A00F8' }}
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingNote(null)}
+                              className="text-xs text-gray-500 hover:text-gray-700"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : existingNote ? (
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-xs text-gray-700 italic">"{existingNote}"</p>
+                          <button
+                            onClick={() => handleEditNote(q.id)}
+                            className="text-xs text-purple-600 hover:text-purple-800 flex-shrink-0"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleEditNote(q.id)}
+                          className="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                        >
+                          <MessageSquare size={10} /> + Add note
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </td>
         </tr>
       )}
@@ -122,7 +322,7 @@ function ResponseRow({ response, survey, canExclude, onToggleExclusion, expertKp
 export default function PostCloseReview() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { surveys, projects, currentUser, toggleExclusion, addToast, experts } = useApp();
+  const { surveys, projects, currentUser, toggleExclusion, addToast, experts, updateAttachmentSummary, setResearcherNote } = useApp();
 
   const survey = surveys.find(s => s.id === surveyId);
   const project = projects.find(p => p.id === projectId);
@@ -143,6 +343,7 @@ export default function PostCloseReview() {
   const excludedCount = survey.responses.filter(r => r.excluded).length;
   const includedCount = survey.responses.length - excludedCount;
   const includedResponses = survey.responses.filter(r => !r.excluded);
+  const questionsWithAttachments = survey.questions.filter(q => q.attachment);
 
   const q1Data = {};
   survey.questions[0]?.options?.forEach(o => q1Data[o] = 0);
@@ -201,6 +402,15 @@ export default function PostCloseReview() {
             </div>
           )}
 
+          {/* Attachment Validation */}
+          {questionsWithAttachments.length > 0 && (
+            <AttachmentValidationCard
+              questions={questionsWithAttachments}
+              surveyId={survey.id}
+              onUpdateSummary={updateAttachmentSummary}
+            />
+          )}
+
           {/* Response table */}
           <Card className="mb-5">
             <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -219,7 +429,7 @@ export default function PostCloseReview() {
                 </thead>
                 <tbody>
                   {survey.responses.map(r => (
-                    <ResponseRow key={r.expertId} response={r} survey={survey} canExclude={canExclude} onToggleExclusion={(expertId) => toggleExclusion(survey.id, expertId)} expertKpis={getExpertKpis(r.expertId)} />
+                    <ResponseRow key={r.expertId} response={r} survey={survey} canExclude={canExclude} onToggleExclusion={(expertId) => toggleExclusion(survey.id, expertId)} expertKpis={getExpertKpis(r.expertId)} onSetNote={setResearcherNote} surveyId={survey.id} />
                   ))}
                 </tbody>
               </table>
@@ -285,6 +495,15 @@ export default function PostCloseReview() {
             </div>
           </div>
 
+          <Button
+            variant="primary"
+            size="sm"
+            className="w-full mb-3"
+            onClick={() => navigate(`/projects/${projectId}/surveys/${surveyId}/datahub-preview`)}
+          >
+            Preview Intelligence Export →
+          </Button>
+
           <div className="p-3 rounded-xl bg-purple-50 border border-purple-100">
             <p className="text-xs font-semibold text-purple-700 mb-0.5">Phase 1 — Review is terminal</p>
             <p className="text-xs text-purple-600">DataHub transfer will be available in Phase 2.</p>
@@ -299,6 +518,7 @@ export default function PostCloseReview() {
               { label: 'Responses verified', ok: survey.responses.length > 0 },
               { label: 'Outliers reviewed', ok: true },
               { label: 'Annotations complete', ok: true },
+              { label: 'Attachments validated', ok: questionsWithAttachments.every(q => q.attachment.summaryStatus === 'validated' || q.attachment.summaryStatus === 'ai_complete') || questionsWithAttachments.length === 0 },
             ].map(({ label, ok }) => (
               <div key={label} className="flex items-center gap-2 text-xs text-gray-600">
                 <div className={`w-4 h-4 rounded-full flex items-center justify-center ${ok ? 'bg-green-100' : 'bg-gray-100'}`}>
