@@ -837,7 +837,7 @@ export default function SurveyResults() {
                                   {e.status === 'opted_out' && <Badge color="orange" size="xs">Opted out</Badge>}
                                   {canLogProxy && (
                                     <button
-                                      onClick={() => onResearcherAction(e.expertId)}
+                                      onClick={() => handleResearcherAction(e.expertId)}
                                       className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg border border-purple-200 text-purple-700 hover:bg-purple-50 transition-colors"
                                       title="Log a response received from this expert offline"
                                     >
