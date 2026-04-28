@@ -4,7 +4,7 @@ import {
   Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Save,
   Send, Eye, EyeOff, X, Check, Smartphone, Monitor,
   AlignLeft, List, CheckSquare, Star, Type, AlignJustify,
-  BarChart2, Calendar, Hash, BookTemplate, ChevronUp as Up, ChevronDown as Down,
+  BarChart2, Calendar, Hash, ToggleLeft, BookTemplate, ChevronUp as Up, ChevronDown as Down,
   Mail, Bell, AlertTriangle, Search, Tag, Users, Edit3, GitCompare, XCircle,
   Paperclip, FileText, Globe, ChevronRight
 } from 'lucide-react';
@@ -41,6 +41,7 @@ const QUESTION_TYPES = [
   { value: 'long_text', label: 'Long Text', icon: AlignJustify, description: 'Multi-line textarea' },
   { value: 'ranking', label: 'Ranking', icon: BarChart2, description: 'Order options by preference' },
   { value: 'date_picker', label: 'Date Picker', icon: Calendar, description: 'Select a date' },
+  { value: 'yes_no', label: 'Yes / No', icon: ToggleLeft, description: 'Binary yes or no answer' },
   { value: 'number', label: 'Number', icon: Hash, description: 'Numeric input with optional range' },
   { value: 'file_attachment', label: 'File Attachment', icon: Paperclip, description: 'Attach a reference file for experts' },
 ];
@@ -71,6 +72,7 @@ function QuestionTypeIcon({ type }) {
     multi_choice: 'bg-blue-50 text-blue-600',
     rating_scale: 'bg-amber-50 text-amber-600',
     open_text: 'bg-green-50 text-green-600',
+    yes_no: 'bg-teal-50 text-teal-600',
     short_text: 'bg-teal-50 text-teal-600',
     long_text: 'bg-emerald-50 text-emerald-600',
     ranking: 'bg-indigo-50 text-indigo-600',
@@ -280,6 +282,23 @@ function QuestionCard({ question, index, total, onChange, onDelete, dragHandlers
                   className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-gray-50"
                   placeholder="e.g. Very high"
                 />
+              </div>
+            </div>
+          )}
+
+          {/* Yes / No type — fixed options preview */}
+          {question.type === 'yes_no' && (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Expert response</label>
+              <div className="flex gap-6">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 flex-shrink-0 border-2 border-gray-300 rounded-full" />
+                  <span className="text-sm text-gray-600">Yes</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 flex-shrink-0 border-2 border-gray-300 rounded-full" />
+                  <span className="text-sm text-gray-600">No</span>
+                </div>
               </div>
             </div>
           )}

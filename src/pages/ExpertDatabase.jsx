@@ -212,6 +212,7 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
     else if (!/\S+@\S+\.\S+/.test(inviteForm.email)) errs.email = 'Enter a valid email';
     if (!inviteForm.company.trim()) errs.company = 'Company is required';
     if (!inviteForm.title.trim()) errs.title = 'Designation is required';
+    if (!inviteForm.geography.trim()) errs.geography = 'Geography is required';
     return errs;
   };
 
@@ -288,6 +289,7 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
     else if (!/\S+@\S+\.\S+/.test(editForm.email)) errs.email = 'Enter a valid email';
     if (!editForm.company.trim()) errs.company = 'Company is required';
     if (!editForm.title.trim()) errs.title = 'Designation is required';
+    if (!editForm.geography.trim()) errs.geography = 'Geography is required';
     return errs;
   };
 
@@ -438,9 +440,10 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Geography</label>
                     <input type="text" value={inviteForm.geography}
-                      onChange={e => setInviteForm(f => ({ ...f, geography: e.target.value }))}
+                      onChange={e => { setInviteForm(f => ({ ...f, geography: e.target.value })); setInviteErrors(er => ({ ...er, geography: '' })); }}
                       placeholder="North America, Europe…"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors" />
+                      className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors ${inviteErrors.geography ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-purple-400'}`} />
+                    {inviteErrors.geography && <p className="text-xs text-red-500 mt-0.5">{inviteErrors.geography}</p>}
                   </div>
                   {inviteForm.category && !inviteInPerimeter && (
                     <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
@@ -579,13 +582,7 @@ function ChangeExpertListModal({ onClose, currentUser, experts, taxonomy, onDire
                               </select>
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Geography</label>
-                            <input type="text" value={editForm.geography}
-                              onChange={e => setEditForm(f => ({ ...f, geography: e.target.value }))}
-                              placeholder="North America, Europe…"
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 transition-colors" />
-                          </div>
+                          {editField('geography', 'Geography')}
                           <div className="flex gap-2 pt-1">
                             <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
                             <Button className="flex-1" onClick={handleSubmitEdit}>
