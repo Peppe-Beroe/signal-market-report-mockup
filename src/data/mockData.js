@@ -41,10 +41,10 @@ export const SURVEYS = [
     sendDate: '2026-03-05', closeDate: '2026-05-31',
     expertsTargeted: 6, responsesReceived: 4, responseRate: 67,
     questions: [
-      { id: 'q1', type: 'single_choice', required: true, text: 'How do you expect hot-rolled coil (HRC) prices to trend in Q3 2026?', options: ['Increase >10%', 'Increase 5–10%', 'Stay flat (±5%)', 'Decrease 5–10%', 'Decrease >10%'] },
+      { id: 'q1', type: 'single_choice', required: true, text: 'How do you expect hot-rolled coil (HRC) prices to trend in Q3 2026?', options: ['Increase >10%', 'Increase 5–10%', 'Stay flat (±5%)', 'Decrease 5–10%', 'Decrease >10%'], benchmark: { value: 'Increase 5–10%', rationale: 'Beroe Q2 base case: tighter supply, energy cost pass-through; modest upward bias.', setByName: 'Sarah Chen', setAt: '2026-03-04 17:10' } },
       { id: 'q2', type: 'single_choice', required: true, text: 'What is your primary steel procurement region?', options: ['North America', 'Europe', 'Asia-Pacific', 'Latin America', 'Middle East & Africa'] },
-      { id: 'q3', type: 'rating_scale', required: true, text: 'How confident are you in your supply chain stability over the next 6 months?', scale: 5, labels: ['Very low', 'Very high'] },
-      { id: 'q4', type: 'multi_choice', required: false, text: 'Which factors are most influencing your steel procurement strategy? (select all that apply)', options: ['Energy costs', 'Raw material availability', 'Logistics disruptions', 'Currency fluctuations', 'Geopolitical risk', 'Demand shifts'] },
+      { id: 'q3', type: 'rating_scale', required: true, text: 'How confident are you in your supply chain stability over the next 6 months?', scale: 5, labels: ['Very low', 'Very high'], benchmark: { value: 3.5, rationale: 'Beroe house view: residual geopolitical risk caps confidence above mid-range.', setByName: 'Sarah Chen', setAt: '2026-03-04 17:12' } },
+      { id: 'q4', type: 'multi_choice', required: false, text: 'Which factors are most influencing your steel procurement strategy? (select all that apply)', options: ['Energy costs', 'Raw material availability', 'Logistics disruptions', 'Currency fluctuations', 'Geopolitical risk', 'Demand shifts'], benchmark: { value: ['Energy costs', 'Geopolitical risk'], rationale: 'Top two factors per Beroe Q1 client conversations.', setByName: 'Sarah Chen', setAt: '2026-03-04 17:14' } },
       { id: 'q5', type: 'open_text', required: false, text: 'What are the top 1–2 risks you are monitoring in the steel market over the next quarter?' },
     ],
     responses: [

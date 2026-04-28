@@ -6,7 +6,7 @@ import {
   AlignLeft, List, CheckSquare, Star, Type, AlignJustify,
   BarChart2, Calendar, Hash, ToggleLeft, BookTemplate, ChevronUp as Up, ChevronDown as Down,
   Mail, Bell, AlertTriangle, Search, Tag, Users, Edit3, GitCompare, XCircle,
-  Paperclip, FileText, Globe, ChevronRight
+  Paperclip, FileText, Globe, ChevronRight, Target
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Button from '../components/ui/Button';
@@ -85,6 +85,112 @@ function QuestionTypeIcon({ type }) {
       <Icon size={11} />
       {t?.label || type}
     </span>
+  );
+}
+
+function BenchmarkEditor({ question, onChange }) {
+  const supportedTypes = ['single_choice', 'multi_choice', 'rating_scale', 'open_text'];
+  const [open, setOpen] = useState(!!question.benchmark);
+
+  if (!supportedTypes.includes(question.type)) return null;
+
+  const benchmark = question.benchmark;
+  const updateBenchmark = (patch) => {
+    onChange({ ...question, benchmark: { ...(benchmark || {}), ...patch } });
+  };
+  const removeBenchmark = () => {
+    onChange({ ...question, benchmark: null });
+    setOpen(false);
+  };
+
+  if (!benchmark) {
+    return (
+      <div className="pt-2">
+        <button
+          onClick={() => { setOpen(true); updateBenchmark({ value: null, rationale: '' }); }}
+          className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border border-dashed border-purple-200 text-purple-600 hover:bg-purple-50 transition-colors"
+        >
+          <Target size={12} /> Add Beroe benchmark
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pt-2 mt-2 border-t border-gray-100">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          <Target size={13} className="text-purple-600" />
+          <span className="text-xs font-semibold text-gray-700">Beroe benchmark</span>
+        </div>
+        <button onClick={removeBenchmark} className="text-xs text-gray-400 hover:text-red-500">Remove</button>
+      </div>
+
+      {question.type === 'single_choice' && (
+        <select
+          value={benchmark.value || ''}
+          onChange={e => updateBenchmark({ value: e.target.value || null })}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400"
+        >
+          <option value="">— Select expected option —</option>
+          {(question.options || []).map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
+        </select>
+      )}
+
+      {question.type === 'multi_choice' && (
+        <div className="space-y-1.5 max-h-44 overflow-y-auto border border-gray-200 rounded-lg p-2.5">
+          {(question.options || []).map((opt, i) => {
+            const arr = Array.isArray(benchmark.value) ? benchmark.value : [];
+            const checked = arr.includes(opt);
+            return (
+              <label key={i} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => updateBenchmark({ value: checked ? arr.filter(v => v !== opt) : [...arr, opt] })}
+                  className="accent-purple-600"
+                />
+                {opt}
+              </label>
+            );
+          })}
+        </div>
+      )}
+
+      {question.type === 'rating_scale' && (
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            step="0.1"
+            min={1}
+            max={question.scale || 5}
+            value={benchmark.value === null || benchmark.value === undefined ? '' : benchmark.value}
+            onChange={e => updateBenchmark({ value: e.target.value === '' ? null : Number(e.target.value) })}
+            placeholder={`1 – ${question.scale || 5}`}
+            className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400"
+          />
+          <span className="text-xs text-gray-400">on the {question.scale || 5}-point scale (decimals OK)</span>
+        </div>
+      )}
+
+      {question.type === 'open_text' && (
+        <textarea
+          value={benchmark.value || ''}
+          onChange={e => updateBenchmark({ value: e.target.value })}
+          rows={2}
+          placeholder="Expected themes or sample answer Beroe anticipates..."
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-purple-400"
+        />
+      )}
+
+      <input
+        type="text"
+        value={benchmark.rationale || ''}
+        onChange={e => updateBenchmark({ rationale: e.target.value })}
+        placeholder="Rationale (optional) — why this is the expected value"
+        className="w-full mt-2 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-600 focus:outline-none focus:border-purple-400"
+      />
+    </div>
   );
 }
 
@@ -470,6 +576,8 @@ function QuestionCard({ question, index, total, onChange, onDelete, dragHandlers
             </button>
             <span className="text-xs text-gray-500">Required</span>
           </div>
+
+          <BenchmarkEditor question={question} onChange={onChange} />
         </div>
       )}
     </div>

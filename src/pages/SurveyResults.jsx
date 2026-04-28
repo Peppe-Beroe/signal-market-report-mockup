@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, AlertTriangle, Mail, CheckCircle, MousePointerClick, Truck, XCircle, Edit2, EyeOff, Eye, Download, Send, Link, Paperclip, Share2, Clock, UserX, Filter, ArrowUpDown, FileEdit, UserPlus, ClipboardEdit } from 'lucide-react';
+import { ChevronDown, ChevronUp, AlertTriangle, Mail, CheckCircle, MousePointerClick, Truck, XCircle, Edit2, EyeOff, Eye, Download, Send, Link, Paperclip, Share2, Clock, UserX, Filter, ArrowUpDown, FileEdit, UserPlus, ClipboardEdit, Target } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -60,30 +60,74 @@ function EmailStatusIcon({ status }) {
   );
 }
 
-function BarChart({ data }) {
+function BarChart({ data, highlight = [] }) {
   const max = Math.max(...Object.values(data), 1);
+  const highlightSet = new Set(highlight);
   return (
     <div className="space-y-2">
-      {Object.entries(data).map(([label, count]) => (
-        <div key={label} className="flex items-center gap-3">
-          <span className="text-xs text-gray-600 w-44 flex-shrink-0 truncate" title={label}>{label}</span>
-          <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
-            <div
-              className="h-full rounded transition-all duration-500"
-              style={{ width: `${(count / max) * 100}%`, backgroundColor: '#4A00F8' }}
-            />
+      {Object.entries(data).map(([label, count]) => {
+        const isBenchmark = highlightSet.has(label);
+        return (
+          <div key={label} className="flex items-center gap-3">
+            <span className={`text-xs w-44 flex-shrink-0 truncate flex items-center gap-1 ${isBenchmark ? 'font-semibold text-purple-700' : 'text-gray-600'}`} title={label}>
+              {label}
+              {isBenchmark && <Target size={10} className="text-purple-500 flex-shrink-0" />}
+            </span>
+            <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
+              <div
+                className="h-full rounded transition-all duration-500"
+                style={{ width: `${(count / max) * 100}%`, backgroundColor: '#4A00F8' }}
+              />
+            </div>
+            <span className="text-xs font-semibold text-gray-700 w-5 text-right">{count}</span>
           </div>
-          <span className="text-xs font-semibold text-gray-700 w-5 text-right">{count}</span>
+        );
+      })}
+    </div>
+  );
+}
+
+function BenchmarkRow({ question, avg }) {
+  const b = question.benchmark;
+  if (!b || b.value === null || b.value === undefined || b.value === '') return null;
+
+  let displayValue;
+  if (Array.isArray(b.value)) displayValue = b.value.join(', ');
+  else if (typeof b.value === 'number') displayValue = b.value;
+  else displayValue = String(b.value);
+
+  let delta = null;
+  if (question.type === 'rating_scale' && typeof b.value === 'number' && avg !== '—') {
+    const numAvg = Number(avg);
+    const d = numAvg - b.value;
+    const sign = d > 0 ? '▲' : d < 0 ? '▼' : '–';
+    const color = d > 0 ? 'text-green-600' : d < 0 ? 'text-red-600' : 'text-gray-500';
+    delta = <span className={`text-xs font-medium ${color}`}>{sign} {Math.abs(d).toFixed(1)} vs Beroe</span>;
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-100">
+      <div className="flex items-start gap-2">
+        <Target size={13} className="text-purple-500 flex-shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-purple-700">Beroe benchmark:</span>
+            <span className="text-xs text-gray-800 font-medium">{displayValue}</span>
+            {delta}
+          </div>
+          {b.rationale && <p className="text-[11px] text-gray-500 italic mt-0.5">{b.rationale}</p>}
         </div>
-      ))}
+      </div>
     </div>
   );
 }
 
 function QuestionSummaryCard({ question, responses, excluded }) {
   const activeResponses = responses.filter(r => !r.excluded);
+  const benchmark = question.benchmark;
 
   let content = null;
+  let ratingAvg = '—';
   if (question.type === 'single_choice') {
     const counts = {};
     question.options.forEach(o => counts[o] = 0);
@@ -91,7 +135,8 @@ function QuestionSummaryCard({ question, responses, excluded }) {
       const ans = r.answers[question.id];
       if (ans) counts[ans] = (counts[ans] || 0) + 1;
     });
-    content = <BarChart data={counts} />;
+    const highlight = benchmark?.value ? [benchmark.value] : [];
+    content = <BarChart data={counts} highlight={highlight} />;
   } else if (question.type === 'multi_choice') {
     const counts = {};
     question.options.forEach(o => counts[o] = 0);
@@ -99,10 +144,12 @@ function QuestionSummaryCard({ question, responses, excluded }) {
       const ans = r.answers[question.id];
       if (Array.isArray(ans)) ans.forEach(a => counts[a] = (counts[a] || 0) + 1);
     });
-    content = <BarChart data={counts} />;
+    const highlight = Array.isArray(benchmark?.value) ? benchmark.value : [];
+    content = <BarChart data={counts} highlight={highlight} />;
   } else if (question.type === 'rating_scale') {
     const values = activeResponses.map(r => r.answers[question.id]).filter(Boolean);
     const avg = values.length > 0 ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1) : '—';
+    ratingAvg = avg;
     const counts = {};
     for (let i = 1; i <= question.scale; i++) counts[i] = 0;
     values.forEach(v => counts[v] = (counts[v] || 0) + 1);
@@ -160,6 +207,7 @@ function QuestionSummaryCard({ question, responses, excluded }) {
         </div>
       )}
       {content}
+      <BenchmarkRow question={question} avg={ratingAvg} />
     </Card>
   );
 }
@@ -532,7 +580,17 @@ export default function SurveyResults() {
 
   const handleExportCSV = () => {
     const sourceLabel = (s) => s === 'proxy' ? 'Offline by researcher' : s === 'overridden' ? 'Overridden by researcher' : 'Online from survey';
-    const headers = ['Expert', 'Company', 'Source', 'Last researcher', 'Last action at', 'Channel', 'Channel note', 'Status', 'Annotation', ...survey.questions.map(q => q.text)];
+    const fmtBenchmark = (q) => {
+      const b = q.benchmark;
+      if (!b || b.value === null || b.value === undefined || b.value === '') return '';
+      if (Array.isArray(b.value)) return b.value.join('; ');
+      return String(b.value);
+    };
+    const headers = [
+      'Expert', 'Company', 'Source', 'Last researcher', 'Last action at', 'Channel', 'Channel note', 'Status', 'Annotation',
+      ...survey.questions.map(q => q.text),
+      ...survey.questions.map(q => `Beroe benchmark — ${q.text}`),
+    ];
     const rows = survey.responses.map(r => {
       const src = r.source || 'direct';
       const lastActionAt = src === 'direct' ? (r.submittedAt || '') : (r.lastResearcherAt || '');
@@ -552,6 +610,7 @@ export default function SurveyResults() {
           if (Array.isArray(ans)) return ans.join('; ');
           return ans != null ? String(ans) : '';
         }),
+        ...survey.questions.map(fmtBenchmark),
       ];
     });
     const csv = [headers, ...rows]
