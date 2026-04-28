@@ -847,6 +847,82 @@ export function AppProvider({ children }) {
     ));
   };
 
+  // Researcher-driven response entry (proxy / override / edit) — Feature: offline response entry
+  // Shared writer: figures out source from current state and writes one immutable timestamp string.
+  const upsertResearcherResponse = (surveyId, expertId, payload) => {
+    const { answers, channel, channelNote, expertName, company } = payload;
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const survey = surveys.find(s => s.id === surveyId);
+    const existing = survey?.responses.find(r => r.expertId === expertId);
+    const existingSource = existing?.source || 'direct';
+
+    // Source rules (last-write-wins):
+    //  - no existing row              -> proxy
+    //  - existing source == direct    -> overridden
+    //  - existing source == proxy     -> proxy (still proxy, just edited)
+    //  - existing source == overridden -> overridden (still overridden, just edited)
+    let nextSource;
+    if (!existing) nextSource = 'proxy';
+    else if (existingSource === 'direct') nextSource = 'overridden';
+    else nextSource = existingSource;
+
+    setSurveys(prev => prev.map(s => {
+      if (s.id !== surveyId) return s;
+      const responses = s.responses || [];
+      const idx = responses.findIndex(r => r.expertId === expertId);
+      let newResponses;
+      if (idx === -1) {
+        newResponses = [
+          ...responses,
+          {
+            expertId,
+            expertName: expertName || expertId,
+            company: company || '',
+            submittedAt: ts,
+            answers,
+            excluded: false,
+            annotation: '',
+            source: nextSource,
+            lastResearcherBy: currentUser.name,
+            lastResearcherAt: ts,
+            channel,
+            channelNote: channelNote || '',
+          },
+        ];
+      } else {
+        newResponses = responses.map((r, i) => i === idx ? {
+          ...r,
+          answers,
+          source: nextSource,
+          lastResearcherBy: currentUser.name,
+          lastResearcherAt: ts,
+          channel,
+          channelNote: channelNote || '',
+        } : r);
+      }
+      const responsesReceived = newResponses.length;
+      const denominator = (s.waveConfig?.selectedExperts?.filter(e => e.status !== 'Opted-out').length) || s.expertsTargeted || 1;
+      const responseRate = Math.round((responsesReceived / denominator) * 100);
+      return { ...s, responses: newResponses, responsesReceived, responseRate };
+    }));
+
+    const expertLabel = expertName || expertId;
+    if (!existing) {
+      addAuditEvent('Offline response logged by researcher', survey?.name || surveyId, 'survey',
+        `${expertLabel} response logged via ${channel}${channelNote ? ' — ' + channelNote : ''}`);
+      addToast(`Offline response logged for ${expertLabel}`);
+    } else if (nextSource === 'overridden' && existingSource === 'direct') {
+      addAuditEvent('Response overridden by researcher', survey?.name || surveyId, 'survey',
+        `${expertLabel} response overridden via ${channel}${channelNote ? ' — ' + channelNote : ''}`);
+      addToast(`Response overridden for ${expertLabel}`);
+    } else {
+      addAuditEvent('Researcher response edited', survey?.name || surveyId, 'survey',
+        `${expertLabel} ${nextSource} response edited (${channel})`);
+      addToast(`Response updated for ${expertLabel}`);
+    }
+  };
+
   const setResearcherNote = (surveyId, expertId, questionId, note) => {
     setSurveys(prev => prev.map(s =>
       s.id === surveyId
@@ -892,7 +968,7 @@ export function AppProvider({ children }) {
       deactivateUser, updateUserRole, updateUserCategory,
       attachReport, shareReport,
       toggleExclusion, updateAnnotation, transferToDataHub,
-      updateAttachmentSummary, setResearcherNote,
+      updateAttachmentSummary, setResearcherNote, upsertResearcherResponse,
       proposeAmendments, resolveAmendments, respondToEditorFeedback,
       categories, setCategories,
       taxonomy, setTaxonomy,

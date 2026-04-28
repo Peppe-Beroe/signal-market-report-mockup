@@ -39,7 +39,7 @@ export const SURVEYS = [
     status: 'Running', wave: 1,
     createdBy: 'Marco Rossi', approvedBy: 'Sarah Chen',
     sendDate: '2026-03-05', closeDate: '2026-05-31',
-    expertsTargeted: 6, responsesReceived: 3, responseRate: 50,
+    expertsTargeted: 6, responsesReceived: 4, responseRate: 67,
     questions: [
       { id: 'q1', type: 'single_choice', required: true, text: 'How do you expect hot-rolled coil (HRC) prices to trend in Q3 2026?', options: ['Increase >10%', 'Increase 5–10%', 'Stay flat (±5%)', 'Decrease 5–10%', 'Decrease >10%'] },
       { id: 'q2', type: 'single_choice', required: true, text: 'What is your primary steel procurement region?', options: ['North America', 'Europe', 'Asia-Pacific', 'Latin America', 'Middle East & Africa'] },
@@ -48,9 +48,10 @@ export const SURVEYS = [
       { id: 'q5', type: 'open_text', required: false, text: 'What are the top 1–2 risks you are monitoring in the steel market over the next quarter?' },
     ],
     responses: [
-      { expertId: 'e1', expertName: 'Dr. James Wright', company: 'SteelCorp', submittedAt: '2026-03-06 09:12', answers: { q1: 'Increase 5–10%', q2: 'North America', q3: 4, q4: ['Energy costs', 'Logistics disruptions'], q5: 'Rising energy costs in EU and potential trade tariffs from US remain key watch points.' }, excluded: false, annotation: '' },
-      { expertId: 'e2', expertName: 'Anna Kowalski', company: 'EuroMfg', submittedAt: '2026-03-07 14:35', answers: { q1: 'Stay flat (±5%)', q2: 'Europe', q3: 3, q4: ['Geopolitical risk', 'Currency fluctuations'], q5: 'EU demand softness and geopolitical uncertainty around eastern Europe.' }, excluded: false, annotation: 'Outlook more conservative than panel average' },
-      { expertId: 'e3', expertName: 'Raj Patel', company: 'Tata Steel', submittedAt: '2026-03-08 11:20', answers: { q1: 'Increase >10%', q2: 'Asia-Pacific', q3: 4, q4: ['Raw material availability', 'Demand shifts'], q5: 'India infrastructure spend driving significant demand. Iron ore tightness is a real concern.' }, excluded: false, annotation: '' },
+      { expertId: 'e1', expertName: 'Dr. James Wright', company: 'SteelCorp', submittedAt: '2026-03-06 09:12', answers: { q1: 'Increase 5–10%', q2: 'North America', q3: 4, q4: ['Energy costs', 'Logistics disruptions'], q5: 'Rising energy costs in EU and potential trade tariffs from US remain key watch points.' }, excluded: false, annotation: '', source: 'direct', lastResearcherBy: null, lastResearcherAt: null, channel: null, channelNote: null },
+      { expertId: 'e2', expertName: 'Anna Kowalski', company: 'EuroMfg', submittedAt: '2026-03-07 14:35', answers: { q1: 'Stay flat (±5%)', q2: 'Europe', q3: 3, q4: ['Geopolitical risk', 'Currency fluctuations'], q5: 'EU demand softness and geopolitical uncertainty around eastern Europe — clarification provided by expert via follow-up call.' }, excluded: false, annotation: 'Outlook more conservative than panel average', source: 'overridden', lastResearcherBy: 'Sarah Chen', lastResearcherAt: '2026-03-09 11:20', channel: 'phone', channelNote: 'Expert clarified EU demand commentary on follow-up call' },
+      { expertId: 'e3', expertName: 'Raj Patel', company: 'Tata Steel', submittedAt: '2026-03-08 11:20', answers: { q1: 'Increase >10%', q2: 'Asia-Pacific', q3: 4, q4: ['Raw material availability', 'Demand shifts'], q5: 'India infrastructure spend driving significant demand. Iron ore tightness is a real concern.' }, excluded: false, annotation: '', source: 'direct', lastResearcherBy: null, lastResearcherAt: null, channel: null, channelNote: null },
+      { expertId: 'e4', expertName: 'Sophie Dubois', company: 'ArcelorMittal', submittedAt: '2026-03-10 16:05', answers: { q1: 'Increase 5–10%', q2: 'Europe', q3: 3, q4: ['Energy costs', 'Geopolitical risk'], q5: 'EU energy prices remain the dominant cost driver for flat steel mills.' }, excluded: false, annotation: '', source: 'proxy', lastResearcherBy: 'Sarah Chen', lastResearcherAt: '2026-03-10 16:05', channel: 'whatsapp', channelNote: 'Expert shared response via WhatsApp — too busy to fill the survey link' },
     ],
     amendments: [],
     archived: false,
@@ -410,6 +411,8 @@ export const AUDIT_EVENTS = [
   { id: 'a16', user: 'Sarah Chen', action: 'Project created', target: 'Q2 2026 Steel Market Signal', targetType: 'project', timestamp: '2026-03-01 09:00', details: 'New project under Metals & Mining category' },
   { id: 'a17', user: 'Raj Patel', action: 'Response submitted', target: 'Polypropylene Supply Outlook', targetType: 'survey', timestamp: '2026-02-25 11:30', details: 'Expert submitted 3 answers' },
   { id: 'a18', user: 'Sarah Chen', action: 'Dataset transferred to DataHub', target: 'Polypropylene Supply Outlook', targetType: 'survey', timestamp: '2026-03-15 10:00', details: '5 responses exported to DataHub' },
+  { id: 'a19', user: 'Sarah Chen', action: 'Response overridden by researcher', target: 'Steel Price Outlook', targetType: 'survey', timestamp: '2026-03-09 11:20', details: 'Anna Kowalski response overridden via phone — clarification on EU demand commentary' },
+  { id: 'a20', user: 'Sarah Chen', action: 'Offline response logged by researcher', target: 'Steel Price Outlook', targetType: 'survey', timestamp: '2026-03-10 16:05', details: 'Sophie Dubois response logged via whatsapp' },
 ];
 
 export const INTERNAL_USERS = [

@@ -8,6 +8,7 @@ import ProjectDetail from './pages/ProjectDetail';
 import SurveyBuilder from './pages/SurveyBuilder';
 import ApprovalReview from './pages/ApprovalReview';
 import SurveyResults from './pages/SurveyResults';
+import ProxyResponseForm from './pages/ProxyResponseForm';
 import PostCloseReview from './pages/PostCloseReview';
 import DataHubPreview from './pages/DataHubPreview';
 import ExpertDatabase from './pages/ExpertDatabase';
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="projects/:projectId/surveys/:surveyId/builder" element={<SurveyBuilder mode="edit" />} />
             <Route path="projects/:projectId/surveys/:surveyId/approve" element={<ApprovalReview />} />
             <Route path="projects/:projectId/surveys/:surveyId/results" element={<SurveyResults />} />
+            <Route path="projects/:projectId/surveys/:surveyId/respond/:expertId" element={<ProxyResponseForm />} />
             <Route path="projects/:projectId/surveys/:surveyId/review" element={<PostCloseReview />} />
             <Route path="projects/:projectId/surveys/:surveyId/schedule-setup" element={<ScheduleSetup />} />
             <Route path="projects/:projectId/surveys/:surveyId/datahub-preview" element={<DataHubPreview />} />

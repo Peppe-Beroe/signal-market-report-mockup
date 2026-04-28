@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, AlertTriangle, Mail, CheckCircle, MousePointerClick, Truck, XCircle, Edit2, EyeOff, Eye, Download, Send, Link, Paperclip, Share2, Clock, UserX, Filter, ArrowUpDown } from 'lucide-react';
+import { ChevronDown, ChevronUp, AlertTriangle, Mail, CheckCircle, MousePointerClick, Truck, XCircle, Edit2, EyeOff, Eye, Download, Send, Link, Paperclip, Share2, Clock, UserX, Filter, ArrowUpDown, FileEdit, UserPlus, ClipboardEdit } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 
-function ResponseRate({ value, total, received }) {
+function ResponseRate({ value, total, received, breakdown }) {
   const color = value >= 70 ? '#10B981' : value >= 40 ? '#F59E0B' : '#EF4444';
   return (
     <div className="text-center">
@@ -16,7 +16,28 @@ function ResponseRate({ value, total, received }) {
       <div className="h-2 bg-gray-100 rounded-full overflow-hidden mt-2 w-24 mx-auto">
         <div className="h-full rounded-full transition-all" style={{ width: `${value}%`, backgroundColor: color }} />
       </div>
+      {breakdown && (breakdown.proxy > 0 || breakdown.overridden > 0) && (
+        <div className="text-[10px] text-gray-400 mt-1.5 leading-tight">
+          {breakdown.direct} direct
+          {breakdown.proxy > 0 && <> · {breakdown.proxy} offline</>}
+          {breakdown.overridden > 0 && <> · {breakdown.overridden} overridden</>}
+        </div>
+      )}
     </div>
+  );
+}
+
+function SourceBadge({ source }) {
+  const config = {
+    direct: { label: 'Online from survey', color: 'bg-green-50 text-green-700 border-green-200' },
+    proxy: { label: 'Offline by researcher', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+    overridden: { label: 'Overridden by researcher', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  };
+  const c = config[source] || config.direct;
+  return (
+    <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border ${c.color}`}>
+      {c.label}
+    </span>
   );
 }
 
@@ -158,7 +179,7 @@ function KpiBadge({ label, value }) {
   );
 }
 
-function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, orgTimezone, canExclude, isRunning, expertKpis }) {
+function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, onResearcherAction, orgTimezone, canExclude, canResearcherEdit, isRunning, expertKpis }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [annotation, setAnnotation] = useState(response.annotation || '');
@@ -167,6 +188,10 @@ function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, 
     onAnnotationChange(response.expertId, annotation);
     setEditing(false);
   };
+
+  const source = response.source || 'direct';
+  const lastActionAt = source === 'direct' ? response.submittedAt : response.lastResearcherAt;
+  const lastActor = source === 'direct' ? null : response.lastResearcherBy;
 
   return (
     <>
@@ -193,7 +218,18 @@ function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, 
             </div>
           </div>
         </td>
-        <td className="px-4 py-3 text-sm text-gray-600">{response.submittedAt}{response.submittedAt ? ` (${orgTimezone})` : ''}</td>
+        <td className="px-4 py-3">
+          <div className="flex flex-col gap-1">
+            <SourceBadge source={source} />
+            <p className="text-xs text-gray-600">
+              {lastActor || <span className="text-gray-300">NA</span>}
+            </p>
+            <p className="text-xs text-gray-400">{lastActionAt}{lastActionAt ? ` (${orgTimezone})` : ''}</p>
+            {response.channel && (
+              <p className="text-[10px] text-gray-400 italic">via {response.channel}</p>
+            )}
+          </div>
+        </td>
         <td className="px-4 py-3">
           {!isRunning && response.excluded
             ? <Badge color="red" size="xs">Excluded</Badge>
@@ -228,6 +264,22 @@ function ResponseRow({ response, survey, onToggleExclusion, onAnnotationChange, 
         </td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-1.5">
+            {canResearcherEdit && isRunning && (
+              <button
+                onClick={() => onResearcherAction(response.expertId)}
+                className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg border transition-colors ${
+                  source === 'direct'
+                    ? 'border-amber-200 text-amber-700 hover:bg-amber-50'
+                    : 'border-purple-200 text-purple-700 hover:bg-purple-50'
+                }`}
+                title={source === 'direct' ? 'Override this expert\'s response' : 'Edit the offline-logged response'}
+              >
+                {source === 'direct'
+                  ? <><FileEdit size={11} /> Override</>
+                  : <><ClipboardEdit size={11} /> Edit</>
+                }
+              </button>
+            )}
             {canExclude && (
               <button
                 onClick={() => onToggleExclusion(response.expertId)}
@@ -464,24 +516,44 @@ export default function SurveyResults() {
   const bouncedCount = survey.emailStatus.filter(e => e.status === 'bounced').length;
   const isRunning = survey.status === 'Running';
   const canExclude = ['Super Admin', 'Admin', 'Standard User'].includes(currentUser.role) && survey.status === 'Review';
+  const canResearcherEdit = ['Super Admin', 'Admin', 'Standard User'].includes(currentUser.role);
   const nonResponding = survey.emailStatus.filter(e => !survey.responses.find(r => r.expertId === e.expertId)).length;
+
+  const responseBreakdown = survey.responses.reduce((acc, r) => {
+    const src = r.source || 'direct';
+    acc[src] = (acc[src] || 0) + 1;
+    return acc;
+  }, { direct: 0, proxy: 0, overridden: 0 });
+
+  const handleResearcherAction = (expertId) =>
+    navigate(`/projects/${projectId}/surveys/${surveyId}/respond/${expertId}`);
 
   const tabs = ['Responses', 'Summary'];
 
   const handleExportCSV = () => {
-    const headers = ['Expert', 'Company', 'Submitted At', 'Status', 'Annotation', ...survey.questions.map(q => q.text)];
-    const rows = survey.responses.map(r => [
-      r.expertName,
-      r.company || '',
-      r.submittedAt || '',
-      r.excluded ? 'Excluded' : 'Submitted',
-      r.annotation || '',
-      ...survey.questions.map(q => {
-        const ans = r.answers[q.id];
-        if (Array.isArray(ans)) return ans.join('; ');
-        return ans != null ? String(ans) : '';
-      }),
-    ]);
+    const sourceLabel = (s) => s === 'proxy' ? 'Offline by researcher' : s === 'overridden' ? 'Overridden by researcher' : 'Online from survey';
+    const headers = ['Expert', 'Company', 'Source', 'Last researcher', 'Last action at', 'Channel', 'Channel note', 'Status', 'Annotation', ...survey.questions.map(q => q.text)];
+    const rows = survey.responses.map(r => {
+      const src = r.source || 'direct';
+      const lastActionAt = src === 'direct' ? (r.submittedAt || '') : (r.lastResearcherAt || '');
+      const lastActor = src === 'direct' ? 'NA' : (r.lastResearcherBy || '');
+      return [
+        r.expertName,
+        r.company || '',
+        sourceLabel(src),
+        lastActor,
+        lastActionAt,
+        r.channel || '',
+        r.channelNote || '',
+        r.excluded ? 'Excluded' : 'Submitted',
+        r.annotation || '',
+        ...survey.questions.map(q => {
+          const ans = r.answers[q.id];
+          if (Array.isArray(ans)) return ans.join('; ');
+          return ans != null ? String(ans) : '';
+        }),
+      ];
+    });
     const csv = [headers, ...rows]
       .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       .join('\n');
@@ -569,7 +641,7 @@ export default function SurveyResults() {
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-4 mb-5">
         <Card className="p-4 text-center">
-          <ResponseRate value={survey.responseRate} total={survey.expertsTargeted} received={survey.responsesReceived} />
+          <ResponseRate value={survey.responseRate} total={survey.expertsTargeted} received={survey.responsesReceived} breakdown={responseBreakdown} />
           <p className="text-xs text-gray-400 mt-2">Response Rate</p>
         </Card>
         <Card className="p-4 text-center">
@@ -686,10 +758,10 @@ export default function SurveyResults() {
                 <thead>
                   <tr className="border-b border-gray-100">
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-5 py-3">Expert</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Submitted</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Source · Last action</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Status</th>
                     <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Annotation</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">{isRunning ? '' : 'Actions'}</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -734,34 +806,52 @@ export default function SurveyResults() {
                             survey={survey}
                             onToggleExclusion={(expertId) => toggleExclusion(surveyId, expertId)}
                             onAnnotationChange={(expertId, ann) => updateAnnotation(surveyId, expertId, ann)}
+                            onResearcherAction={handleResearcherAction}
                             orgTimezone={orgTimezone}
                             canExclude={canExclude}
+                            canResearcherEdit={canResearcherEdit}
                             isRunning={isRunning}
                             expertKpis={survey.status === 'Review' ? getExpertKpis(r.expertId) : null}
                           />
                         ))}
-                        {sortedEmails.map(e => (
-                          <tr key={e.expertId} className="border-b border-gray-50 opacity-60">
-                            <td className="px-5 py-3">
-                              <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">
-                                  {e.expertName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        {sortedEmails.map(e => {
+                          const canLogProxy = canResearcherEdit && isRunning && e.status !== 'opted_out';
+                          return (
+                            <tr key={e.expertId} className={`border-b border-gray-50 ${e.status === 'opted_out' ? 'opacity-60' : ''}`}>
+                              <td className="px-5 py-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">
+                                    {e.expertName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-500">{e.expertName}</p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="text-sm font-medium text-gray-500">{e.expertName}</p>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-400">—</td>
+                              <td className="px-4 py-3"><EmailStatusIcon status={e.status} /></td>
+                              <td className="px-4 py-3 text-xs text-gray-300 italic">—</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {e.status === 'bounced' && <Badge color="amber" size="xs">Email bounced</Badge>}
+                                  {e.status === 'opted_out' && <Badge color="orange" size="xs">Opted out</Badge>}
+                                  {canLogProxy && (
+                                    <button
+                                      onClick={() => onResearcherAction(e.expertId)}
+                                      className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg border border-purple-200 text-purple-700 hover:bg-purple-50 transition-colors"
+                                      title="Log a response received from this expert offline"
+                                    >
+                                      <UserPlus size={11} /> Log offline
+                                    </button>
+                                  )}
+                                  {!canLogProxy && e.status !== 'bounced' && e.status !== 'opted_out' && (
+                                    <span className="text-xs text-gray-400">Awaiting response</span>
+                                  )}
                                 </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-400">—</td>
-                            <td className="px-4 py-3"><EmailStatusIcon status={e.status} /></td>
-                            <td className="px-4 py-3 text-xs text-gray-300 italic">—</td>
-                            <td className="px-4 py-3 text-xs text-gray-400">
-                              {e.status === 'bounced' ? <Badge color="amber" size="xs">Email bounced</Badge> :
-                               e.status === 'opted_out' ? <Badge color="orange" size="xs">Opted out</Badge> :
-                               'Awaiting response'}
-                            </td>
-                          </tr>
-                        ))}
+                              </td>
+                            </tr>
+                          );
+                        })}
                         {sortedResponses.length === 0 && sortedEmails.length === 0 && (
                           <tr>
                             <td colSpan={5} className="px-5 py-8 text-center text-sm text-gray-400">
