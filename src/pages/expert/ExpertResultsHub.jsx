@@ -1,5 +1,5 @@
 import { useParams, useSearchParams } from 'react-router-dom';
-import { Download, Lock, CheckCircle, Mail, PenLine } from 'lucide-react';
+import { Download, Lock, CheckCircle, Mail, PenLine, Target } from 'lucide-react';
 import { SURVEYS } from '../../data/mockData';
 
 const DEMO_SURVEY = SURVEYS[0];
@@ -47,14 +47,17 @@ function computeAggregates(survey) {
   return result;
 }
 
-function ChoiceBar({ label, count, total, maxCount }) {
+function ChoiceBar({ label, count, total, maxCount, isBenchmark }) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
   const barWidth = maxCount > 0 ? (count / maxCount) * 100 : 0;
 
   return (
     <div className="mb-3">
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-sm text-gray-700 leading-tight pr-4">{label}</span>
+        <span className={`text-sm leading-tight pr-4 flex items-center gap-1 ${isBenchmark ? 'text-purple-700 font-semibold' : 'text-gray-700'}`}>
+          {label}
+          {isBenchmark && <Target size={11} className="text-purple-500 flex-shrink-0" />}
+        </span>
         <span className="text-sm font-semibold text-gray-900 whitespace-nowrap flex-shrink-0">
           {count} <span className="text-gray-400 font-normal text-xs">({pct}%)</span>
         </span>
@@ -64,6 +67,39 @@ function ChoiceBar({ label, count, total, maxCount }) {
           className="h-full rounded-full transition-all duration-700"
           style={{ width: `${barWidth}%`, backgroundColor: '#4A00F8' }}
         />
+      </div>
+    </div>
+  );
+}
+
+function BenchmarkBlock({ question, ratingAvg }) {
+  const b = question.benchmark;
+  if (!b || b.value === null || b.value === undefined || b.value === '') return null;
+
+  let displayValue;
+  if (Array.isArray(b.value)) displayValue = b.value.join(', ');
+  else displayValue = String(b.value);
+
+  let delta = null;
+  if (question.type === 'rating_scale' && typeof b.value === 'number' && ratingAvg !== null && ratingAvg !== undefined) {
+    const d = ratingAvg - b.value;
+    const sign = d > 0 ? '▲' : d < 0 ? '▼' : '–';
+    const color = d > 0 ? 'text-green-600' : d < 0 ? 'text-red-600' : 'text-gray-500';
+    delta = <span className={`text-xs font-medium ${color}`}>{sign} {Math.abs(d).toFixed(1)} vs Beroe</span>;
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-purple-100 bg-purple-50/40 -mx-5 -mb-5 px-5 py-3 rounded-b-xl">
+      <div className="flex items-start gap-2">
+        <Target size={13} className="text-purple-500 flex-shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-purple-700">Beroe benchmark:</span>
+            <span className="text-xs text-gray-800 font-medium">{displayValue}</span>
+            {delta}
+          </div>
+          {b.rationale && <p className="text-[11px] text-gray-500 italic mt-0.5">{b.rationale}</p>}
+        </div>
       </div>
     </div>
   );
@@ -216,6 +252,10 @@ export default function ExpertResultsHub() {
 
               {(agg.type === 'single_choice' || agg.type === 'multi_choice') && (() => {
                 const maxCount = Math.max(...Object.values(agg.counts), 1);
+                const benchmarkSet = new Set(
+                  Array.isArray(q.benchmark?.value) ? q.benchmark.value :
+                  q.benchmark?.value ? [q.benchmark.value] : []
+                );
                 return (
                   <div>
                     {agg.type === 'multi_choice' && (
@@ -228,6 +268,7 @@ export default function ExpertResultsHub() {
                         count={agg.counts[opt] || 0}
                         total={agg.type === 'single_choice' ? agg.total : agg.total}
                         maxCount={maxCount}
+                        isBenchmark={benchmarkSet.has(opt)}
                       />
                     ))}
                     <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-50">
@@ -270,6 +311,8 @@ export default function ExpertResultsHub() {
                   </p>
                 </div>
               )}
+
+              <BenchmarkBlock question={q} ratingAvg={agg.type === 'rating_scale' ? agg.avg : null} />
             </div>
           );
         })}
