@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, AlertTriangle, Check, List, CheckSquare, Star, AlignLeft, Info, GitCompare, Plus, Minus, Edit3, Calendar, Users, Mail, Bell, Send, RotateCcw, ChevronDown, ChevronUp, Trash2, Search } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Check, List, CheckSquare, Star, AlignLeft, Info, GitCompare, Plus, Minus, Edit3, Calendar, Users, Mail, Bell, Send, RotateCcw, ChevronDown, ChevronUp, Trash2, Search, Target } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -60,6 +60,28 @@ function QuestionPreview({ question, index }) {
       {question.type === 'open_text' && (
         <div className="h-16 border border-gray-200 rounded-lg bg-white flex items-center justify-center">
           <span className="text-xs text-gray-300 italic">Free-text response area</span>
+        </div>
+      )}
+
+      {question.benchmark && question.benchmark.value !== null && question.benchmark.value !== undefined && question.benchmark.value !== '' && (
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <div className="flex items-start gap-2">
+            <Target size={13} className="text-purple-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-xs font-semibold text-purple-700">Beroe benchmark:</span>
+                <span className="text-xs text-gray-800 font-medium">
+                  {Array.isArray(question.benchmark.value) ? question.benchmark.value.join(', ') : String(question.benchmark.value)}
+                </span>
+              </div>
+              {question.benchmark.rationale && (
+                <p className="text-[11px] text-gray-500 italic mt-0.5">{question.benchmark.rationale}</p>
+              )}
+              {question.benchmark.setByName && (
+                <p className="text-[10px] text-gray-400 mt-0.5">Set by {question.benchmark.setByName}{question.benchmark.setAt ? ` on ${question.benchmark.setAt}` : ''}</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

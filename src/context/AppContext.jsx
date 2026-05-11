@@ -847,6 +847,24 @@ export function AppProvider({ children }) {
     ));
   };
 
+  // Beroe benchmark per question (Draft state only — frozen at Approved with rest of survey content)
+  const setQuestionBenchmark = (surveyId, questionId, benchmark) => {
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    setSurveys(prev => prev.map(s => {
+      if (s.id !== surveyId) return s;
+      if (s.status !== 'Draft') return s;
+      return {
+        ...s,
+        questions: s.questions.map(q => q.id === questionId
+          ? { ...q, benchmark: benchmark
+              ? { ...benchmark, setByName: currentUser.name, setAt: ts }
+              : null }
+          : q),
+      };
+    }));
+  };
+
   const setResearcherNote = (surveyId, expertId, questionId, note) => {
     setSurveys(prev => prev.map(s =>
       s.id === surveyId
@@ -892,7 +910,7 @@ export function AppProvider({ children }) {
       deactivateUser, updateUserRole, updateUserCategory,
       attachReport, shareReport,
       toggleExclusion, updateAnnotation, transferToDataHub,
-      updateAttachmentSummary, setResearcherNote,
+      updateAttachmentSummary, setResearcherNote, setQuestionBenchmark,
       proposeAmendments, resolveAmendments, respondToEditorFeedback,
       categories, setCategories,
       taxonomy, setTaxonomy,
