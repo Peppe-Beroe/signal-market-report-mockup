@@ -956,6 +956,245 @@ export function AppProvider({ children }) {
     ));
   };
 
+  // ── Mid-Running expert addition (P1-F-110 / P1-F-111 / P1-F-112) ───────────
+  // Authority resolution: SA bypass → Admin in-perimeter direct → otherwise propose with routing
+  const resolveExpertAddAuthority = (user, expertCategory) => {
+    if (!user) return { canDirectAdd: false, adminIds: [], superAdminId: null };
+    if (user.role === 'Super Admin') return { canDirectAdd: true, adminIds: [], superAdminId: null };
+    const inPerimeter = user.role === 'Admin' && expertCategory && (user.responsibleCategories || []).some(rc => rc.category === expertCategory);
+    if (inPerimeter) return { canDirectAdd: true, adminIds: [], superAdminId: null };
+    // Routing: any Admin whose category covers + SA fallback
+    const adminIds = internalUsers
+      .filter(u => u.role === 'Admin' && u.status === 'Active' && (u.category === expertCategory))
+      .map(u => u.id);
+    const superAdminId = internalUsers.find(u => u.role === 'Super Admin' && u.status === 'Active')?.id || null;
+    return { canDirectAdd: false, adminIds, superAdminId };
+  };
+
+  const addNotification = (notif) => {
+    setNotifications(prev => [{ id: `n${Date.now()}`, read: false, timestamp: 'just now', ...notif }, ...prev]);
+  };
+
+  const buildPendingEntry = (mode, expertPayload, expertCategory) => {
+    const authority = resolveExpertAddAuthority(currentUser, expertCategory);
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    return {
+      id: `pwa${Date.now()}`,
+      mode,
+      proposedByUserId: currentUser.id,
+      proposedByName: currentUser.name,
+      proposedAt: ts,
+      expertPayload,
+      routedTo: { adminIds: authority.adminIds, superAdminId: authority.superAdminId },
+      status: 'pending',
+    };
+  };
+
+  // Direct add — existing expert into Running wave (SA or in-perimeter Admin)
+  const directAddExpertToWave = (surveyId, expertId) => {
+    const survey = surveys.find(s => s.id === surveyId);
+    const expert = experts.find(e => e.id === expertId);
+    if (!survey || !expert) return;
+    const now = new Date();
+    const sendDay = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    setSurveys(prev => prev.map(s => {
+      if (s.id !== surveyId) return s;
+      const alreadyTargeted = (s.waveConfig?.selectedExperts || []).some(e => e.id === expertId);
+      if (alreadyTargeted) return s;
+      const newSelected = [...(s.waveConfig?.selectedExperts || []), { id: expert.id, name: expert.name, email: expert.email, company: expert.company, status: expert.status }];
+      const newEmailStatus = [...(s.emailStatus || []), { expertId: expert.id, expertName: expert.name, status: 'delivered', lastEvent: sendDay }];
+      const denom = newSelected.filter(e => e.status !== 'Opted-out').length || 1;
+      const responseRate = Math.round(((s.responsesReceived || 0) / denom) * 100);
+      return { ...s, waveConfig: { ...s.waveConfig, selectedExperts: newSelected }, emailStatus: newEmailStatus, expertsTargeted: newSelected.length, responseRate };
+    }));
+    addAuditEvent('Mid-Running expert added to wave', survey.name, 'survey',
+      `${expert.name} added directly by ${currentUser.name} — invitation email sent`);
+    addToast(`${expert.name} added — invitation sent`);
+  };
+
+  // Direct add — brand-new expert into Running wave
+  const directAddNewExpertToWave = (surveyId, newExpertPayload) => {
+    const survey = surveys.find(s => s.id === surveyId);
+    if (!survey) return;
+    // Create the expert record first
+    const newExpert = {
+      id: `e${Date.now()}`,
+      name: newExpertPayload.name,
+      email: newExpertPayload.email,
+      company: newExpertPayload.company,
+      title: newExpertPayload.title,
+      domain: newExpertPayload.domain || '',
+      spendingPool: newExpertPayload.spendingPool || '',
+      category: newExpertPayload.category || '',
+      geography: newExpertPayload.geography || '',
+      status: 'Active',
+      waves: 0,
+      surveysSent: 0,
+      surveysResponded: 0,
+      responsesAccepted: 0,
+    };
+    setExperts(prev => [...prev, newExpert]);
+    const now = new Date();
+    const sendDay = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    setSurveys(prev => prev.map(s => {
+      if (s.id !== surveyId) return s;
+      const newSelected = [...(s.waveConfig?.selectedExperts || []), { id: newExpert.id, name: newExpert.name, email: newExpert.email, company: newExpert.company, status: 'Active' }];
+      const newEmailStatus = [...(s.emailStatus || []), { expertId: newExpert.id, expertName: newExpert.name, status: 'delivered', lastEvent: sendDay }];
+      const denom = newSelected.filter(e => e.status !== 'Opted-out').length || 1;
+      const responseRate = Math.round(((s.responsesReceived || 0) / denom) * 100);
+      return { ...s, waveConfig: { ...s.waveConfig, selectedExperts: newSelected }, emailStatus: newEmailStatus, expertsTargeted: newSelected.length, responseRate };
+    }));
+    addAuditEvent('Expert added', newExpert.name, 'expert', `New expert created and added directly to wave by ${currentUser.name}`);
+    addAuditEvent('Mid-Running expert added to wave', survey.name, 'survey',
+      `${newExpert.name} (new) added directly by ${currentUser.name} — invitation email sent`);
+    addToast(`${newExpert.name} added — invitation sent`);
+  };
+
+  // Propose addition — sits in pendingExpertAdditions awaiting approver action
+  const proposeAddExpertToWave = (surveyId, mode, expertPayload) => {
+    const survey = surveys.find(s => s.id === surveyId);
+    if (!survey) return;
+    let expertCategory = '';
+    let labelName = '';
+    if (mode === 'existing') {
+      const e = experts.find(x => x.id === expertPayload.expertId);
+      expertCategory = e?.category || '';
+      labelName = e?.name || expertPayload.expertId;
+    } else {
+      expertCategory = expertPayload.category || '';
+      labelName = expertPayload.name;
+    }
+    // Block duplicate pending for same existing expert
+    if (mode === 'existing') {
+      const dup = (survey.pendingExpertAdditions || []).some(p =>
+        p.status === 'pending' && p.mode === 'existing' && p.expertPayload?.expertId === expertPayload.expertId
+      );
+      if (dup) { addToast('A request is already pending for this expert', 'warning'); return; }
+    }
+    const entry = buildPendingEntry(mode, expertPayload, expertCategory);
+    setSurveys(prev => prev.map(s => s.id === surveyId
+      ? { ...s, pendingExpertAdditions: [...(s.pendingExpertAdditions || []), entry] }
+      : s
+    ));
+    addAuditEvent('Wave expert addition proposed', survey.name, 'survey',
+      `${mode === 'existing' ? 'Existing' : 'New'} expert ${labelName} (${expertCategory || '—'}) — routed to ${entry.routedTo.adminIds.length} admin(s) + SA`);
+    addNotification({
+      type: 'proposal',
+      message: `${currentUser.name} proposed adding ${labelName} to ${survey.name} (Running)`,
+      link: `/projects/${survey.projectId}/surveys/${survey.id}/results`,
+    });
+    addToast('Request submitted for approval');
+  };
+
+  const approveWaveExpertAddition = (surveyId, pendingId) => {
+    const survey = surveys.find(s => s.id === surveyId);
+    if (!survey) return;
+    const entry = (survey.pendingExpertAdditions || []).find(p => p.id === pendingId);
+    if (!entry || entry.status !== 'pending') return;
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const sendDay = ts.slice(0, 10);
+    const isRunning = survey.status === 'Running';
+
+    // Build the expert record we will add to the wave
+    let expertForWave = null;
+    let createdExpert = null;
+    if (entry.mode === 'existing') {
+      const e = experts.find(x => x.id === entry.expertPayload.expertId);
+      if (e) expertForWave = { id: e.id, name: e.name, email: e.email, company: e.company, status: e.status };
+    } else {
+      createdExpert = {
+        id: `e${Date.now()}`,
+        name: entry.expertPayload.name,
+        email: entry.expertPayload.email,
+        company: entry.expertPayload.company,
+        title: entry.expertPayload.title,
+        domain: entry.expertPayload.domain || '',
+        spendingPool: entry.expertPayload.spendingPool || '',
+        category: entry.expertPayload.category || '',
+        geography: entry.expertPayload.geography || '',
+        status: 'Active',
+        waves: 0,
+        surveysSent: 0,
+        surveysResponded: 0,
+        responsesAccepted: 0,
+      };
+      setExperts(prev => [...prev, createdExpert]);
+      expertForWave = { id: createdExpert.id, name: createdExpert.name, email: createdExpert.email, company: createdExpert.company, status: 'Active' };
+    }
+
+    setSurveys(prev => prev.map(s => {
+      if (s.id !== surveyId) return s;
+      const newPending = (s.pendingExpertAdditions || []).map(p =>
+        p.id === pendingId ? { ...p, status: 'approved', resolvedAt: ts, resolvedByName: currentUser.name } : p
+      );
+      if (!expertForWave) return { ...s, pendingExpertAdditions: newPending };
+      const alreadyTargeted = (s.waveConfig?.selectedExperts || []).some(e => e.id === expertForWave.id);
+      const newSelected = alreadyTargeted
+        ? s.waveConfig.selectedExperts
+        : [...(s.waveConfig?.selectedExperts || []), expertForWave];
+      // Only send email if still Running (edge case from §5.3)
+      const newEmailStatus = (isRunning && !alreadyTargeted)
+        ? [...(s.emailStatus || []), { expertId: expertForWave.id, expertName: expertForWave.name, status: 'delivered', lastEvent: sendDay }]
+        : (s.emailStatus || []);
+      const denom = newSelected.filter(e => e.status !== 'Opted-out').length || 1;
+      const responseRate = Math.round(((s.responsesReceived || 0) / denom) * 100);
+      return {
+        ...s,
+        waveConfig: { ...s.waveConfig, selectedExperts: newSelected },
+        emailStatus: newEmailStatus,
+        expertsTargeted: newSelected.length,
+        responseRate,
+        pendingExpertAdditions: newPending,
+      };
+    }));
+
+    const labelName = expertForWave?.name || entry.expertPayload.name || 'expert';
+    if (entry.mode === 'new' && createdExpert) {
+      addAuditEvent('Expert added', createdExpert.name, 'expert', `New expert created via approved wave addition by ${currentUser.name}`);
+    }
+    addAuditEvent('Wave expert addition approved', survey.name, 'survey',
+      `${labelName} approved by ${currentUser.name}${isRunning ? ' — invitation email sent' : ' — survey no longer Running, no email sent'}`);
+    addNotification({
+      type: 'approval',
+      message: `Your request to add ${labelName} to ${survey.name} was approved by ${currentUser.name}`,
+      link: `/projects/${survey.projectId}/surveys/${survey.id}/results`,
+    });
+    addToast(isRunning ? `${labelName} added — invitation sent` : `${labelName} approved — no email (survey is ${survey.status})`);
+  };
+
+  const rejectWaveExpertAddition = (surveyId, pendingId, reason) => {
+    const survey = surveys.find(s => s.id === surveyId);
+    if (!survey) return;
+    const entry = (survey.pendingExpertAdditions || []).find(p => p.id === pendingId);
+    if (!entry || entry.status !== 'pending') return;
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    setSurveys(prev => prev.map(s => s.id === surveyId
+      ? {
+          ...s,
+          pendingExpertAdditions: (s.pendingExpertAdditions || []).map(p =>
+            p.id === pendingId
+              ? { ...p, status: 'rejected', resolvedAt: ts, resolvedByName: currentUser.name, rejectionReason: reason || '' }
+              : p
+          ),
+        }
+      : s
+    ));
+    const labelName = entry.mode === 'existing'
+      ? (experts.find(x => x.id === entry.expertPayload.expertId)?.name || 'expert')
+      : (entry.expertPayload.name || 'expert');
+    addAuditEvent('Wave expert addition rejected', survey.name, 'survey',
+      `${labelName} rejected by ${currentUser.name}${reason ? ' — ' + reason : ''}`);
+    addNotification({
+      type: 'rejection',
+      message: `Your request to add ${labelName} to ${survey.name} was rejected${reason ? ': ' + reason : ''}`,
+      link: `/projects/${survey.projectId}/surveys/${survey.id}/results`,
+    });
+    addToast(`Request rejected`, 'warning');
+  };
+
   const transferToDataHub = (surveyId) => {
     const survey = surveys.find(s => s.id === surveyId);
     setSurveys(prev => prev.map(s =>
@@ -988,6 +1227,9 @@ export function AppProvider({ children }) {
       toggleExclusion, updateAnnotation, transferToDataHub,
       updateAttachmentSummary, setResearcherNote, upsertResearcherResponse, setQuestionBenchmark,
       proposeAmendments, resolveAmendments, respondToEditorFeedback,
+      resolveExpertAddAuthority,
+      directAddExpertToWave, directAddNewExpertToWave,
+      proposeAddExpertToWave, approveWaveExpertAddition, rejectWaveExpertAddition,
       categories, setCategories,
       taxonomy, setTaxonomy,
       orgTimezone, setOrgTimezone,

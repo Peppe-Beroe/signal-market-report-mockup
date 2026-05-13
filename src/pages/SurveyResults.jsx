@@ -6,6 +6,7 @@ import Card from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
+import AddExpertToWaveModal from './AddExpertToWaveModal';
 
 function ResponseRate({ value, total, received, breakdown }) {
   const color = value >= 70 ? '#10B981' : value >= 40 ? '#F59E0B' : '#EF4444';
@@ -535,10 +536,99 @@ function AttachReportSection({ addToast, responsesReceived }) {
   );
 }
 
+// Pending Invitations section for the Results Hub — surfaces wave-expert-addition requests
+// awaiting approval (P1-F-112). Hoisted to module scope per "no nested React components" rule.
+function PendingInvitationsSection({ survey, currentUser, experts, approveWaveExpertAddition, rejectWaveExpertAddition }) {
+  const pending = (survey.pendingExpertAdditions || []).filter(p => p.status === 'pending');
+  if (pending.length === 0) return null;
+
+  const canApprove = (entry) => {
+    if (currentUser.id === entry.proposedByUserId) return false; // no self-approve
+    if (currentUser.role === 'Super Admin') return true;
+    if (currentUser.role !== 'Admin') return false;
+    // Admin can approve if their perimeter covers the expert's category
+    const expertCategory = entry.mode === 'existing'
+      ? (experts.find(e => e.id === entry.expertPayload.expertId)?.category || '')
+      : (entry.expertPayload.category || '');
+    return (currentUser.responsibleCategories || []).some(rc => rc.category === expertCategory);
+  };
+
+  const renderEntry = (entry) => {
+    let displayName, displayMeta;
+    if (entry.mode === 'existing') {
+      const e = experts.find(x => x.id === entry.expertPayload.expertId);
+      displayName = e?.name || entry.expertPayload.expertId;
+      displayMeta = e ? `${e.title} · ${e.company} · ${e.category} · ${e.geography || '—'}` : 'expert no longer in database';
+    } else {
+      const p = entry.expertPayload;
+      displayName = p.name;
+      displayMeta = `${p.title} · ${p.company} · ${p.category || '—'} · ${p.geography || '—'}`;
+    }
+    const eligible = canApprove(entry);
+    const isProposer = currentUser.id === entry.proposedByUserId;
+    return (
+      <div key={entry.id} className="flex items-start gap-3 px-4 py-3 border-b border-gray-50 last:border-0">
+        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+          style={{ backgroundColor: '#D97706' }}>
+          {displayName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-medium text-gray-800">{displayName}</p>
+            <Badge color="amber" size="xs">{entry.mode === 'new' ? 'New expert' : 'Existing expert'}</Badge>
+            <Badge color="gray" size="xs">Pending approval</Badge>
+          </div>
+          <p className="text-xs text-gray-400 truncate mt-0.5">{displayMeta}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Proposed by <span className="font-medium">{entry.proposedByName}</span> · {entry.proposedAt}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {isProposer && <span className="text-xs text-gray-400 italic">awaiting reviewer</span>}
+          {!isProposer && !eligible && <span className="text-xs text-gray-400 italic">not in your category</span>}
+          {eligible && (
+            <>
+              <button
+                onClick={() => approveWaveExpertAddition(survey.id, entry.id)}
+                className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border border-green-200 text-green-700 hover:bg-green-50 transition-colors"
+              >
+                <CheckCircle size={11} /> Approve
+              </button>
+              <button
+                onClick={() => {
+                  const reason = window.prompt('Reason for rejection (optional):') || '';
+                  rejectWaveExpertAddition(survey.id, entry.id, reason);
+                }}
+                className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <XCircle size={11} /> Reject
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <Card className="overflow-hidden border-amber-200">
+      <div className="flex items-center justify-between px-4 py-3 bg-amber-50 border-b border-amber-100">
+        <div className="flex items-center gap-2">
+          <UserPlus size={15} className="text-amber-600" />
+          <span className="text-sm font-semibold text-gray-800">Pending invitations</span>
+          <Badge color="amber" size="xs">{pending.length} awaiting approval</Badge>
+        </div>
+      </div>
+      <div>{pending.map(renderEntry)}</div>
+    </Card>
+  );
+}
+
 export default function SurveyResults() {
   const { projectId, surveyId } = useParams();
   const navigate = useNavigate();
-  const { currentUser, surveys, projects, toggleExclusion, updateAnnotation, addToast, orgTimezone, experts } = useApp();
+  const { currentUser, surveys, projects, toggleExclusion, updateAnnotation, addToast, orgTimezone, experts, approveWaveExpertAddition, rejectWaveExpertAddition } = useApp();
+  const [showAddExpertModal, setShowAddExpertModal] = useState(false);
 
   const MIN_KPI = 3;
   const getExpertKpis = (expertId) => {
@@ -565,6 +655,8 @@ export default function SurveyResults() {
   const isRunning = survey.status === 'Running';
   const canExclude = ['Super Admin', 'Admin', 'Standard User'].includes(currentUser.role) && survey.status === 'Review';
   const canResearcherEdit = ['Super Admin', 'Admin', 'Standard User'].includes(currentUser.role);
+  // P1-F-110/111 — open the "Add expert to wave" CTA only when Running + user has Editor-level role (SA / Admin / Standard User)
+  const canAddExpert = isRunning && ['Super Admin', 'Admin', 'Standard User'].includes(currentUser.role);
   const nonResponding = survey.emailStatus.filter(e => !survey.responses.find(r => r.expertId === e.expertId)).length;
 
   const responseBreakdown = survey.responses.reduce((acc, r) => {
@@ -643,10 +735,17 @@ export default function SurveyResults() {
             <p className="text-sm text-gray-500">{project?.name} · Wave {survey.wave}</p>
           </div>
           <div className="flex gap-2">
+            {canAddExpert && (
+              <Button variant="secondary" size="sm" onClick={() => setShowAddExpertModal(true)}>
+                <UserPlus size={13} /> Add expert to wave
+              </Button>
+            )}
             <Button variant="secondary" size="sm" onClick={handleExportCSV}><Download size={13} /> Export CSV</Button>
             <Button variant="secondary" size="sm" onClick={() => navigate(`/projects/${projectId}`)}>← Back to Project</Button>
           </div>
         </div>
+
+        {showAddExpertModal && <AddExpertToWaveModal survey={survey} onClose={() => setShowAddExpertModal(false)} />}
 
         <Card className="p-12 text-center">
           <div className="text-5xl font-bold mb-3" style={{ color: '#9CA3AF' }}>0%</div>
@@ -680,6 +779,11 @@ export default function SurveyResults() {
           <p className="text-sm text-gray-500">{project?.name} · Wave {survey.wave}</p>
         </div>
         <div className="flex items-center gap-2">
+          {canAddExpert && (
+            <Button variant="secondary" size="sm" onClick={() => setShowAddExpertModal(true)}>
+              <UserPlus size={13} /> Add expert to wave
+            </Button>
+          )}
           {isRunning && (
             <Button variant="secondary" size="sm" onClick={handleSendReminder}>
               <Send size={13} /> Send Reminder ({nonResponding})
@@ -696,6 +800,8 @@ export default function SurveyResults() {
           </Button>
         </div>
       </div>
+
+      {showAddExpertModal && <AddExpertToWaveModal survey={survey} onClose={() => setShowAddExpertModal(false)} />}
 
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-4 mb-5">
@@ -925,6 +1031,15 @@ export default function SurveyResults() {
               </table>
             </div>
           </Card>
+
+          {/* Pending invitations (P1-F-112) — wave-expert-addition requests awaiting approval */}
+          <PendingInvitationsSection
+            survey={survey}
+            currentUser={currentUser}
+            experts={experts}
+            approveWaveExpertAddition={approveWaveExpertAddition}
+            rejectWaveExpertAddition={rejectWaveExpertAddition}
+          />
 
           {/* Email delivery panel */}
           <Card className="overflow-hidden">

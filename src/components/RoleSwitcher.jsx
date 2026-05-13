@@ -25,6 +25,7 @@ export default function RoleSwitcher() {
   const roleEntries = [
     { key: 'superadmin', user: USERS.superadmin },
     { key: 'admin', user: USERS.admin },
+    { key: 'adminOutOfPerimeter', user: USERS.adminOutOfPerimeter },
     { key: 'researcher', user: USERS.researcher },
   ];
 

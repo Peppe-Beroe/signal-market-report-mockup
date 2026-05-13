@@ -2,6 +2,7 @@ export const USERS = {
   superadmin: { id: 'u1', name: 'Maria Santos', role: 'Super Admin', email: 'maria.santos@beroe.com', avatar: 'MS' },
   admin: { id: 'u2', name: 'Sarah Chen', role: 'Admin', email: 'sarah.chen@beroe.com', avatar: 'SC', domain: 'Industry', spendingPool: 'Metals & Mining', category: 'Steel', responsibleCategories: [{ domain: 'Industry', spendingPool: 'Metals & Mining', category: 'Steel' }] },
   researcher: { id: 'u3', name: 'Marco Rossi', role: 'Standard User', email: 'm.rossi@beroe.com', avatar: 'MR', domain: 'Industry', spendingPool: 'Chemicals', category: 'Polypropylene', responsibleCategories: [] },
+  adminOutOfPerimeter: { id: 'u4', name: 'Priya Mehta', role: 'Admin', email: 'p.mehta@beroe.com', avatar: 'PM', domain: 'Process', spendingPool: 'Chemicals', category: 'Polypropylene', responsibleCategories: [{ domain: 'Process', spendingPool: 'Chemicals', category: 'Polypropylene' }] },
 };
 
 export const EXPERTS = [
@@ -11,6 +12,8 @@ export const EXPERTS = [
   { id: 'e4', name: 'Sophie Dubois', email: 's.dubois@arcelormittal.com', company: 'ArcelorMittal', title: 'Market Analyst', domain: 'Industry', spendingPool: 'Metals & Mining', category: 'Flat Steel', geography: 'Europe', waves: 1, surveysSent: 1, surveysResponded: 1, responsesAccepted: 0, status: 'Active' },
   { id: 'e5', name: 'Carlos Mendez', email: 'c.mendez@ternium.com', company: 'Ternium', title: 'Procurement Director', domain: 'Industry', spendingPool: 'Metals & Mining', category: 'Steel', geography: 'Latin America', waves: 2, surveysSent: 3, surveysResponded: 2, responsesAccepted: 2, status: 'Active' },
   { id: 'e6', name: 'Linda Park', email: 'l.park@posco.com', company: 'POSCO', title: 'Strategic Buyer', domain: 'Industry', spendingPool: 'Metals & Mining', category: 'Steel', geography: 'Asia-Pacific', waves: 1, surveysSent: 1, surveysResponded: 0, responsesAccepted: 0, status: 'Opted-out' },
+  { id: 'e7', name: 'Hans Mueller', email: 'h.mueller@thyssenkrupp.com', company: 'ThyssenKrupp', title: 'Senior Procurement Manager', domain: 'Industry', spendingPool: 'Metals & Mining', category: 'Steel', geography: 'Europe', waves: 0, surveysSent: 0, surveysResponded: 0, responsesAccepted: 0, status: 'Active' },
+  { id: 'e8', name: 'Yuki Tanaka', email: 'y.tanaka@nipponsteel.com', company: 'Nippon Steel', title: 'Strategic Sourcing Lead', domain: 'Industry', spendingPool: 'Metals & Mining', category: 'Steel', geography: 'Asia-Pacific', waves: 0, surveysSent: 0, surveysResponded: 0, responsesAccepted: 0, status: 'Active' },
 ];
 
 export const PROJECTS = [
@@ -82,6 +85,38 @@ export const SURVEYS = [
       { expertId: 'e4', expertName: 'Sophie Dubois', status: 'delivered', lastEvent: '2026-03-05' },
       { expertId: 'e5', expertName: 'Carlos Mendez', status: 'bounced', lastEvent: '2026-03-05' },
       { expertId: 'e6', expertName: 'Linda Park', status: 'opted_out', lastEvent: '2026-03-01' },
+    ],
+    // Mid-Running expert addition (P1-F-110 → P1-F-112) — pending proposals awaiting category Admin / SA approval
+    pendingExpertAdditions: [
+      {
+        id: 'pwa1',
+        mode: 'new',
+        proposedByUserId: 'u3',
+        proposedByName: 'Marco Rossi',
+        proposedAt: '2026-03-14 10:42',
+        expertPayload: {
+          name: 'Emma Bennett',
+          email: 'e.bennett@britishsteel.com',
+          company: 'British Steel',
+          title: 'Group Procurement Director',
+          domain: 'Industry',
+          spendingPool: 'Metals & Mining',
+          category: 'Steel',
+          geography: 'Europe',
+        },
+        routedTo: { adminIds: ['u2'], superAdminId: 'u1' },
+        status: 'pending',
+      },
+      {
+        id: 'pwa2',
+        mode: 'existing',
+        proposedByUserId: 'u4',
+        proposedByName: 'Priya Mehta',
+        proposedAt: '2026-03-14 14:08',
+        expertPayload: { expertId: 'e7' },
+        routedTo: { adminIds: ['u2'], superAdminId: 'u1' },
+        status: 'pending',
+      },
     ],
   },
   {
@@ -413,6 +448,8 @@ export const AUDIT_EVENTS = [
   { id: 'a18', user: 'Sarah Chen', action: 'Dataset transferred to DataHub', target: 'Polypropylene Supply Outlook', targetType: 'survey', timestamp: '2026-03-15 10:00', details: '5 responses exported to DataHub' },
   { id: 'a19', user: 'Sarah Chen', action: 'Response overridden by researcher', target: 'Steel Price Outlook', targetType: 'survey', timestamp: '2026-03-09 11:20', details: 'Anna Kowalski response overridden via phone — clarification on EU demand commentary' },
   { id: 'a20', user: 'Sarah Chen', action: 'Offline response logged by researcher', target: 'Steel Price Outlook', targetType: 'survey', timestamp: '2026-03-10 16:05', details: 'Sophie Dubois response logged via whatsapp' },
+  { id: 'a21', user: 'Marco Rossi', action: 'Wave expert addition proposed', target: 'Steel Price Outlook', targetType: 'survey', timestamp: '2026-03-14 10:42', details: 'New expert Emma Bennett (British Steel, Steel/Europe) — routed to Sarah Chen, Maria Santos' },
+  { id: 'a22', user: 'Priya Mehta', action: 'Wave expert addition proposed', target: 'Steel Price Outlook', targetType: 'survey', timestamp: '2026-03-14 14:08', details: 'Existing expert Hans Mueller (ThyssenKrupp, Steel/Europe) — out-of-perimeter, routed to Sarah Chen, Maria Santos' },
 ];
 
 export const INTERNAL_USERS = [
@@ -436,6 +473,8 @@ export const NOTIFICATIONS = [
   { id: 'n3', type: 'proposal', message: 'Marco Rossi proposed adding Priya Mehta to Q2 Steel Market Signal', timestamp: '2 days ago', read: true, link: '/people' },
   { id: 'n4', type: 'invite', message: 'Platform invite request for Anna Lewis was approved', timestamp: '3 days ago', read: true, link: '/people' },
   { id: 'n5', type: 'alert', message: 'Response rate below 40% on Steel Price Outlook — 3 days remaining', timestamp: '4 days ago', read: true, link: '/projects/p1/surveys/s1/results' },
+  { id: 'n6', type: 'proposal', message: 'Marco Rossi proposed adding new expert Emma Bennett to Steel Price Outlook (Running)', timestamp: '2 hours ago', read: false, link: '/projects/p1/surveys/s1/results' },
+  { id: 'n7', type: 'proposal', message: 'Priya Mehta proposed adding Hans Mueller to Steel Price Outlook (Running)', timestamp: '1 hour ago', read: false, link: '/projects/p1/surveys/s1/results' },
 ];
 
 export const TEMPLATES = [
